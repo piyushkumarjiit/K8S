@@ -31,56 +31,56 @@ AUTH_PASS=K33p@Gu3ss1ng
 UNICAST_PEER_IP=$KUBE_LBNODE_2_IP
 ROUTER_ID="RouterID1"
 
+# if [[ $1 == "" ]]
+# then
+# 	echo "KUBE_VIP_1_IP not passed. Unable to proceed."
+# 	exit 1
+# fi
+
+# if [[ $2 == "" ]]
+# then
+# 	echo "UNICAST_PEER_IP not passed. Unable to proceed."
+# 	exit 1
+# fi	
+
 if [[ $1 == "" ]]
 then
-	echo "KUBE_VIP_1_IP not passed. Unable to proceed."
-	exit 1
+	echo "PRIORITY not passed. Using default value: "$PRIORITY
+else
+	PRIORITY="$1"
+	echo "Using passed PRIORITY: "$PRIORITY
 fi
 
 if [[ $2 == "" ]]
 then
-	echo "UNICAST_PEER_IP not passed. Unable to proceed."
-	exit 1
-fi	
+	echo "INTERFACE not passed. Using default value: "$INTERFACE
+else
+	INTERFACE="$2"
+	echo "Using passed INTERFACE: "$INTERFACE
+fi
 
 if [[ $3 == "" ]]
 then
-	echo "PRIORITY not passed. Using default value: "$PRIORITY
+	echo "AUTH_PASS not passed. Using default value: "$AUTH_PASS
 else
-	PRIORITY="$3"
-	echo "Using passed PRIORITY: "$PRIORITY
+	AUTH_PASS="$3"
+	echo "Using passed AUTH_PASS: "$AUTH_PASS
 fi
 
 if [[ $4 == "" ]]
 then
-	echo "INTERFACE not passed. Using default value: "$INTERFACE
+	echo "API_PORT not passed. Using default value: "$API_PORT
 else
-	INTERFACE="$4"
-	echo "Using passed INTERFACE: "$INTERFACE
+	API_PORT="$4"
+	echo "Using passed API_PORT: "$API_PORT
 fi
 
 if [[ $5 == "" ]]
 then
-	echo "AUTH_PASS not passed. Using default value: "$AUTH_PASS
-else
-	AUTH_PASS="$5"
-	echo "Using passed AUTH_PASS: "$AUTH_PASS
-fi
-
-if [[ $6 == "" ]]
-then
-	echo "API_PORT not passed. Using default value: "$API_PORT
-else
-	API_PORT="$6"
-	echo "Using passed API_PORT: "$API_PORT
-fi
-
-if [[ $7 == "" ]]
-then
 	UNICAST_SRC_IP="$(hostname -I | cut -d" " -f 1)"
 	echo "UNICAST_SRC_IP not passed. Using default value: "$UNICAST_SRC_IP
 else
-	UNICAST_SRC_IP="$7"
+	UNICAST_SRC_IP="$5"
 	echo "Using passed PRIORITY: "$UNICAST_SRC_IP
 fi
 
