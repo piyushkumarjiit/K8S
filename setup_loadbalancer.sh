@@ -35,9 +35,6 @@ then
 	exit 1
 fi	
 
-UNICAST_SRC_IP="$(hostname -I | cut -d" " -f 1)"
-echo "Using localhost IP Address as UNICAST_SRC_IP: " $UNICAST_SRC_IP
-
 if [[ $3 == "" ]]
 then
 	echo "PRIORITY not passed. Using default value: "$PRIORITY
@@ -68,6 +65,15 @@ then
 else
 	API_PORT="$6"
 	echo "Using passed API_PORT: "$API_PORT
+fi
+
+if [[ $7 == "" ]]
+then
+	UNICAST_SRC_IP="$(hostname -I | cut -d" " -f 1)"
+	echo "UNICAST_SRC_IP not passed. Using default value: "$UNICAST_SRC_IP
+else
+	UNICAST_SRC_IP="$7"
+	echo "Using passed PRIORITY: "$UNICAST_SRC_IP
 fi
 
 
@@ -197,7 +203,7 @@ nc -zv $KUBE_VIP_1_IP $API_PORT
 nc -vz $KUBE_VIP_1_IP $API_PORT > file.txt 2>&1
 #Check the 
 
-if [[ $(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?) == 0 || $(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?) ]]
+if [[ $(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?) == 0 || $(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?) == 0 ]]
 then 
 	echo "Route seems to be available."
 else
