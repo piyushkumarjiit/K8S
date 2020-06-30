@@ -3,7 +3,14 @@
 
 
 #Add IP Addresses and Hostnames in hosts file
-echo -n "$MASTERS_IN_HOSTS" | tee -a /etc/hosts
+if [[ $NODES_IN_CLUSTER != "" ]]
+then
+	echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+	echo "Hosts file updated."
+else
+	echo "$NODES_IN_CLUSTER not set. Exiting."
+	exit 1
+fi
 
 # cat >> /etc/hosts<<EOF
 # $KUBE_MASTER_1_IP  $KUBE_MASTER_1_HOSTNAME
@@ -13,7 +20,7 @@ echo -n "$MASTERS_IN_HOSTS" | tee -a /etc/hosts
 # EOF
 
 #Add IP Addresses and Hostnames in hosts file
-echo -n "$WORKERS_IN_HOSTS" | tee -a /etc/hosts
+#echo -n "$WORKERS_IN_HOSTS" | tee -a /etc/hosts
 # cat >> /etc/hosts<<EOF
 # $KUBE_WORKER_1_IP  $KUBE_WORKER_1_HOSTNAME
 # $KUBE_WORKER_2_IP  $KUBE_WORKER_2_HOSTNAME
