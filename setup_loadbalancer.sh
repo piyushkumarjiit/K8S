@@ -202,8 +202,10 @@ nc -zv $KUBE_VIP_1_IP $API_PORT
 #Run Netcat and save the result in text file
 nc -vz $KUBE_VIP_1_IP $API_PORT > file.txt 2>&1
 #Check the 
+LB_CONNECTED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
+LB_REFUSED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
 
-if [[ $(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?) == 0 || $(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?) == 0 ]]
+if [[ ($LB_CONNECTED == 0 ) || ($LB_REFUSED == 0) ]]
 then 
 	echo "Route seems to be available."
 else
