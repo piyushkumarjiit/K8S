@@ -21,23 +21,18 @@ API_PORT=6443
 INTERFACE=ens192
 AUTH_PASS=K33p@Gu3ss1ng
 UNICAST_PEER_IP=$KUBE_LBNODE_2_IP
+ROUTER_ID="RouterID1"
 
 if [[ $1 == "" ]]
 then
 	echo "KUBE_VIP_1_IP not passed. Unable to proceed."
 	exit 1
-else
-	UNICAST_PEER_IP="$1"
-	echo "Using passed UNICAST_PEER_IP: "$UNICAST_PEER_IP
 fi
 
 if [[ $2 == "" ]]
 then
 	echo "UNICAST_PEER_IP not passed. Unable to proceed."
 	exit 1
-else
-	UNICAST_PEER_IP="$2"
-	echo "Using passed UNICAST_PEER_IP: "$UNICAST_PEER_IP
 fi	
 
 UNICAST_SRC_IP="$(hostname -I | cut -d" " -f 1)"
@@ -101,11 +96,16 @@ sysctl --system
 cd ~
 echo "Downloading the template files from github."
 #Get the keepalived_template.conf and create a copy
+wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_primary_template.conf"
+cp keepalived_primary_template.conf keepalived.conf
+
 #Get the haproxy_template.cfg and create a copy
+wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
+cp haproxy_template.cfg haproxy.cfg
 
 echo "Updating the keepalived template."
-cp keepalived_template.conf keepalived.conf
 #Update the placeholders with value for primary
+sed -i "s*###r0ut3r_1d###*$ROUTER_ID*g" keepalived.conf
 sed -i "s*###1nt3rf@c3###*$INTERFACE*g" keepalived.conf
 sed -i "s*###pr10r1ty###*$PRIORITY*g" keepalived.conf
 sed -i "s*###un1c@st_src_1p###*$UNICAST_SRC_IP*g" keepalived.conf
@@ -115,12 +115,12 @@ sed -i "s*###v1rtu@l_1p@ddr3ss###*$KUBE_VIP_1_IP*g" keepalived.conf
 echo "Done."
 
 echo "Updating the haproxy template."
-cp haproxy_template.cfg haproxy.cfg
 #Update the placeholders with value for primary
 sed -i "s*###vip_@ddr3ss###*$KUBE_VIP_1_IP*g" haproxy.cfg
 sed -i "s*###n0d31_1p_@ddr###*$KUBE_MASTER_1_IP*g" haproxy.cfg
 sed -i "s*###n0d32_1p_@ddr###*$KUBE_MASTER_2_IP*g" haproxy.cfg
 sed -i "s*###n0d33_1p_@ddr###*$KUBE_MASTER_3_IP*g" haproxy.cfg
+sed -i "s*###AP1_P0RT###*$API_PORT*g" haproxy.cfg
 echo "Done."
 
 #Identify if it is Ubuntu or Centos/RHEL
