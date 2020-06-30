@@ -96,7 +96,7 @@ sysctl --system
 cd ~
 echo "Downloading the template files from github."
 #Get the keepalived_template.conf and create a copy
-wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_primary_template.conf"
+wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf"
 cp keepalived_primary_template.conf keepalived.conf
 
 #Get the haproxy_template.cfg and create a copy
