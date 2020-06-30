@@ -16,32 +16,30 @@
 # KUBE_MASTER_3_IP="192.168.2.186"
 
 
-KUBE_VIP_1_IP="$KUBE_VIP_1_IP"
-KUBE_LBNODE_1_IP="$KUBE_LBNODE_1_IP"
-KUBE_LBNODE_2_IP="$KUBE_LBNODE_2_IP"
-KUBE_MASTER_1_IP="$KUBE_MASTER_1_IP"
-KUBE_MASTER_2_IP="$KUBE_MASTER_2_IP"
-KUBE_MASTER_3_IP="$KUBE_MASTER_3_IP"
+# KUBE_VIP_1_IP="$KUBE_VIP_1_IP"
+# KUBE_MASTER_1_IP="$KUBE_MASTER_1_IP"
+# KUBE_MASTER_2_IP="$KUBE_MASTER_2_IP"
+# KUBE_MASTER_3_IP="$KUBE_MASTER_3_IP"
 
 #LB config related variables
 PRIORITY=200
 API_PORT=6443
 INTERFACE=ens192
 AUTH_PASS=K33p@Gu3ss1ng
-UNICAST_PEER_IP=$KUBE_LBNODE_2_IP
+#UNICAST_PEER_IP=$KUBE_LBNODE_2_IP
 ROUTER_ID="RouterID1"
 
-# if [[ $1 == "" ]]
-# then
-# 	echo "KUBE_VIP_1_IP not passed. Unable to proceed."
-# 	exit 1
-# fi
+if [[ "$KUBE_VIP" == "" ]]
+then
+	echo "Virtual Address (KUBE_VIP) not set. Unable to proceed."
+	exit 1
+fi
 
-# if [[ $2 == "" ]]
-# then
-# 	echo "UNICAST_PEER_IP not passed. Unable to proceed."
-# 	exit 1
-# fi	
+if [[ "$UNICAST_PEER_IP" == "" ]]
+then
+	echo "List of keeplaived peers (UNICAST_PEER_IP) not passed. Unable to proceed."
+	exit 1
+fi	
 
 if [[ $1 == "" ]]
 then
@@ -84,6 +82,31 @@ else
 	echo "Using passed PRIORITY: "$UNICAST_SRC_IP
 fi
 
+#Other Load Balancer nodes. Used in keepalived conf. Passed by main script and seprated by "%"
+TEMP_PEER_IPS=$(echo $UNICAST_PEER_IP | sed 's#%#\n#g')
+#All Master nodes part of the cluster. Used in haproxy.cfg. Passed by main script and seprated by "%"
+TEMP_MASTER_IPS=$(echo $MASTER_PEER_IP | sed 's#%#\n#g')
+#HAProxy.cfg server node params. This can be updated if needed.
+LB_PARAMS="check port $API_PORT inter 5000 fall 5"
+
+node=1
+FINAL_SERVER_STRING=""
+for server in ${TEMP_MASTER_IPS[*]}
+do
+	if [[ "$FINAL_SERVER_STRING" == "" ]]
+	then
+						       #server node1 ###n0d31_1p_@ddr###:###AP1_P0RT### check port ###AP1_P0RT### inter 5000 fall 5
+		FINAL_SERVER_STRING=$(echo "server $node $server:$API_PORT $LB_PARAMS \n" )
+		echo "First Value added to FINAL_SERVER_STRING"
+		node=$($node + 1)
+	else
+		FINAL_SERVER_STRING=$("/t $FINAL_SERVER_STRING" + $(echo "server $node $server:$API_PORT $LB_PARAMS \n" ))
+		echo "Value added to FINAL_SERVER_STRING"
+		node=$($node + 1)
+	fi
+done
+echo "All server entries ready."
+echo "$FINAL_SERVER_STRING"
 
 #Secondary
 #PRIORITY="100"
@@ -108,34 +131,48 @@ sysctl -p
 sysctl --system
 
 cd ~
-echo "Downloading the template files from github."
-#Get the keepalived_template.conf and create a copy
-wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf"
-cp keepalived_primary_template.conf keepalived.conf
+if [[ -f "keepalived.conf" ]]
+then
+	echo "Downloading the template files from github."
+	#Get the keepalived_template.conf and create a copy
+	wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf"
+	cp keepalived_template.conf keepalived.conf
+	echo "Updating the keepalived.conf."
+	#Update the placeholders with value for primary
+	sed -i "s*###r0ut3r_1d###*$ROUTER_ID*g" keepalived.conf
+	sed -i "s*###1nt3rf@c3###*$INTERFACE*g" keepalived.conf
+	sed -i "s*###pr10r1ty###*$PRIORITY*g" keepalived.conf
+	sed -i "s*###un1c@st_src_1p###*$UNICAST_SRC_IP*g" keepalived.conf
+	#sed -i "s*###un1c@st_p33r###*$UNICAST_PEER_IP*g" keepalived.conf
+	sed -i "s*###@uth_p@ss###*$AUTH_PASS*g" keepalived.conf
+	sed -i "s*###v1rtu@l_1p@ddr3ss###*$KUBE_VIP_1_IP*g" keepalived.conf
+	#Multiple nodes with newline thus had to use awk. Sed does not handle newline properly
+	awk -i inplace -v srch="###un1c@st_p33r###" -v repl="$TEMP_PEER_IPS" '{ sub(srch,repl,$0); print $0 }' keepalived.conf
+	echo "keepalived.conf updated."
+else
+	echo "Found keepalived.conf in current direcotry. Going to use it 'as is'."
+fi
 
-#Get the haproxy_template.cfg and create a copy
-wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
-cp haproxy_template.cfg haproxy.cfg
+if [[ -f "haproxy.cfg" ]]
+then
+	echo "Downloading the template files from github."
+	#Get the haproxy_template.cfg and create a copy
+	wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
+	cp haproxy_template.cfg haproxy.cfg
+	echo "Updating the haproxy.cfg."
+	#Update the placeholders with value for primary
+	sed -i "s*###vip_@ddr3ss###*$KUBE_VIP_1_IP*g" haproxy.cfg
+	# sed -i "s*###n0d31_1p_@ddr###*$KUBE_MASTER_1_IP*g" haproxy.cfg
+	# sed -i "s*###n0d32_1p_@ddr###*$KUBE_MASTER_2_IP*g" haproxy.cfg
+	# sed -i "s*###n0d33_1p_@ddr###*$KUBE_MASTER_3_IP*g" haproxy.cfg
+	sed -i "s*###AP1_P0RT###*$API_PORT*g" haproxy.cfg
+	#Multiple nodes with newline thus had to use awk. Sed does not handle newline properly
+	awk -i inplace -v srch="###S3rv3r###" -v repl="$FINAL_SERVER_STRING" '{ sub(srch,repl,$0); print $0 }' haproxy.cfg
+	echo "haproxy.cfg updated."
+else
+	echo "Found haproxy.cfg in current direcotry. Going to use it 'as is'."
+fi 
 
-echo "Updating the keepalived template."
-#Update the placeholders with value for primary
-sed -i "s*###r0ut3r_1d###*$ROUTER_ID*g" keepalived.conf
-sed -i "s*###1nt3rf@c3###*$INTERFACE*g" keepalived.conf
-sed -i "s*###pr10r1ty###*$PRIORITY*g" keepalived.conf
-sed -i "s*###un1c@st_src_1p###*$UNICAST_SRC_IP*g" keepalived.conf
-sed -i "s*###un1c@st_p33r###*$UNICAST_PEER_IP*g" keepalived.conf
-sed -i "s*###@uth_p@ss###*$UNICAST_PEER_IP*g" keepalived.conf
-sed -i "s*###v1rtu@l_1p@ddr3ss###*$KUBE_VIP_1_IP*g" keepalived.conf
-echo "Done."
-
-echo "Updating the haproxy template."
-#Update the placeholders with value for primary
-sed -i "s*###vip_@ddr3ss###*$KUBE_VIP_1_IP*g" haproxy.cfg
-sed -i "s*###n0d31_1p_@ddr###*$KUBE_MASTER_1_IP*g" haproxy.cfg
-sed -i "s*###n0d32_1p_@ddr###*$KUBE_MASTER_2_IP*g" haproxy.cfg
-sed -i "s*###n0d33_1p_@ddr###*$KUBE_MASTER_3_IP*g" haproxy.cfg
-sed -i "s*###AP1_P0RT###*$API_PORT*g" haproxy.cfg
-echo "Done."
 
 #Identify if it is Ubuntu or Centos/RHEL
 distro=$(cat /etc/*-release | awk '/ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
@@ -145,25 +182,25 @@ then
 	#Needs testing
 	echo "Calling apt update."
 	#Call update
-	sudo apt-get update
+	apt-get update
 
 	#Disable UFW
-	sudo ufw disable
+	ufw disable
 
 	#Install haproxy keepalived; 
-	sudo apt-get -y install haproxy keepalived
+	apt-get -y install haproxy keepalived
 
 	#Update keepalived.conf
-	sudo mv keepalived.conf /etc/keepalived/keepalived.conf
+	mv keepalived.conf /etc/keepalived/keepalived.conf
 
 	#Start keepalived service
-	sudo systemctl enable keepalived.service && systemctl start keepalived.service
+	systemctl enable keepalived.service && systemctl start keepalived.service
 
 	#Update HAProxy config (haproxy.cfg)
-	sudo mv haproxy.cfg /etc/haproxy/haproxy.cfg
+	mv haproxy.cfg /etc/haproxy/haproxy.cfg
 	
 	#Start HAProxy service
-	sudo systemctl start haproxy.service  && systemctl enable haproxy.service
+	systemctl start haproxy.service  && systemctl enable haproxy.service
 
 	echo "Both the services should be up. Lets check."
 
@@ -175,23 +212,23 @@ then
 
 	#Disable and Stop firewalld. Unless firewalld is stopped, HAProxy would not work
 	echo "Disabling firewalld."
-	sudo systemctl disable firewalld
-	sudo systemctl stop firewalld
+	systemctl disable firewalld
+	systemctl stop firewalld
 
 	#Install haproxy keepalived; 
 	echo "Installing haproxy and keepalived."
-	sudo dnf -y  install haproxy keepalived
+	dnf -y  install haproxy keepalived
 
 	#Update keepalived.conf
 	echo "Replacing the default keepalived.conf with our updated version."
-	sudo mv keepalived.conf /etc/keepalived/keepalived.conf
+	mv keepalived.conf /etc/keepalived/keepalived.conf
 
 	#Start keepalived service
-	sudo systemctl enable keepalived.service && systemctl start keepalived.service
+	systemctl enable keepalived.service && systemctl start keepalived.service
 
 	#Update HAProxy config (haproxy.cfg)
 	echo "Replacing the default haproxy.cfg with our updated version."
-	sudo mv haproxy.cfg /etc/haproxy/haproxy.cfg
+	mv haproxy.cfg /etc/haproxy/haproxy.cfg
 	
 	#Only for Non Primary node.
 	#Run below command on Primary keepalived node to switch VIP to Secondary node. 
@@ -199,7 +236,7 @@ then
 	#sudo systemctl stop keepalived
 	
 	#Start HAProxy service
-	sudo systemctl start haproxy.service  && systemctl enable haproxy.service
+	systemctl start haproxy.service  && systemctl enable haproxy.service
 
 	#Run below command on Primary keepalived node to switch VIP back to Primary node.
 	#sudo systemctl start keepalived
