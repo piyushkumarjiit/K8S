@@ -29,6 +29,8 @@ AUTH_PASS=K33p@Gu3ss1ng
 #UNICAST_PEER_IP=$KUBE_LBNODE_2_IP
 ROUTER_ID="RouterID1"
 
+echo "----------- Setting up Load Balancing in $hostname ------------"
+
 if [[ "$KUBE_VIP" == "" ]]
 then
 	echo "Virtual Address (KUBE_VIP) not set. Unable to proceed."
@@ -184,6 +186,7 @@ then
 	#Get the keepalived_template.conf and create a copy
 	wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf"
 	cp keepalived_template.conf keepalived.conf
+	rm keepalived_template.conf
 	echo "Updating the keepalived.conf."
 	#Update the placeholders with value for primary
 	sed -i "s*###r0ut3r_1d###*$ROUTER_ID*g" keepalived.conf
@@ -206,6 +209,7 @@ then
 	#Get the haproxy_template.cfg and create a copy
 	wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
 	cp haproxy_template.cfg haproxy.cfg
+	rm haproxy_template.cfg
 	echo "Updating the haproxy.cfg."
 	#Update the placeholders with value for primary
 	sed -i "s*###vip_@ddr3ss###*$KUBE_VIP*g" haproxy.cfg
@@ -301,9 +305,11 @@ LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $
 if [[ ($LB_CONNECTED == 0 ) || ($LB_REFUSED == 0) ]]
 then 
 	echo "Route seems to be available."
+	echo "----------- Load Balancing set up complete in $hostname ------------"
 else
 	echo "No route found. Please check firewall config."
 	nc -vz $KUBE_VIP $API_PORT
+	echo "----------- Load Balancing set up Failed in $hostname ------------"
 fi
 
-echo "Script (setting_loadbalancer) completed."
+#echo "Script (setting_loadbalancer) completed."

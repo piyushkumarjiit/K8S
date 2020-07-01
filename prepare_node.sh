@@ -5,6 +5,7 @@
 # 	CALLING_NODE=$1
 # fi
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
+echo "----------- Preparing $hostname ------------"
 #Take backup of old hosts file. In case we need to restore/cleanup
 cat /etc/hosts > hosts.txt
 #Add IP Addresses and Hostnames in hosts file
@@ -122,5 +123,6 @@ systemctl daemon-reload
 systemctl enable kubelet && sudo systemctl start kubelet
 
 echo "Script completed."
+echo "----------- $hostname ready for next step ------------"
 
 

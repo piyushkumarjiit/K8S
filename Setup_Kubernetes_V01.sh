@@ -1,6 +1,8 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
+#./Setup_Kubernetes_V01.sh > setup.log 2>&1
+
 export KUBE_VIP_1_HOSTNAME="VIP"
 export KUBE_VIP_1_IP="192.168.2.6"
 export KUBE_LBNODE_1_HOSTNAME="KubeLBNode1"
@@ -114,10 +116,10 @@ then
 				echo "Ignoring node as it would be UNICAST_SRC_IP"
 			else
 				FINAL_UNICAST_PEER_IP="$UNICAST_PEER_IP%$FINAL_UNICAST_PEER_IP"
-				echo "Value added to UNICAST_SRC_IP"
+				#echo "Value added to UNICAST_SRC_IP"
 			fi
 		done
-		echo "FINAL_UNICAST_PEER_IP: $FINAL_UNICAST_PEER_IP"
+		#echo "FINAL_UNICAST_PEER_IP: $FINAL_UNICAST_PEER_IP"
 		#Create 1 string by concatenating all Master nodes. Use % as separator to make it easy in util to separate
 		MASTER_PEER_IP=$(echo ${MASTER_NODE_IPS[*]} | sed 's# #%#g')
 
@@ -145,7 +147,7 @@ then
 	    export KUBE_VIP="$KUBE_VIP_1_IP"
 	    export UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
 		export MASTER_PEER_IP=$MASTER_PEER_IP
-		export CALLING_NODE "$CURRENT_NODE_IP"
+		export CALLING_NODE=$CURRENT_NODE_IP
 	    wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/setup_loadbalancer.sh"
 	    chmod 755 setup_loadbalancer.sh
 	    ./setup_loadbalancer.sh
@@ -296,6 +298,9 @@ do
 		bash -c "./certificate_mover.sh"
 		echo "Trying to add Master ndoe to cluster."
 		bash -c "$MASTER_JOIN_COMMAND"
+		'cp /etc/kubernetes/admin.conf $HOME/
+		chown $(id -u):$(id -g) $HOME/admin.conf
+		export KUBECONFIG=$HOME/admin.conf'
 		echo "Exiting."
 		exit
 		EOF
