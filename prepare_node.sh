@@ -1,13 +1,21 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
-
+if [[ $1 != "" ]]
+then
+	CALLING_NODE=$1
+fi
+CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 
 #Add IP Addresses and Hostnames in hosts file
-if [[ $NODES_IN_CLUSTER != "" ]]
+if [[ ($NODES_IN_CLUSTER != "" ) && ("$CURRENT_NODE" != "$CALLING_NODE" ) ]]
 then
 	echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
 	echo "Hosts file updated."
+elif [[ "$CURRENT_NODE" == "$CALLING_NODE" ]]
+then
+	echo "Hosts file already update for Primary node by main script."
 else
+	#statements
 	echo "$NODES_IN_CLUSTER not set. Exiting."
 	exit 1
 fi
