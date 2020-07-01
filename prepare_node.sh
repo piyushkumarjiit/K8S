@@ -38,6 +38,7 @@ fi
 # Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
 setenforce 0
 sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+echo "SELINUX updated."
 
 #Setup IP tables for Bridged Traffic
 bash -c 'cat <<EOF >  /etc/sysctl.d/k8s.conf
@@ -45,6 +46,7 @@ net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 EOF'
 
+echo "IP tables updated."
 sysctl --system
 
 #Disable Swap
@@ -56,11 +58,13 @@ swapoff -a
 sed -ir 's/.*-swap/#&/' /etc/fstab
 #Or
 #sudo sed -i "s*/dev/mapper/cl*#/dev/mapper/cl*g" /etc/fstab
+echo "Swap disabled."
 
 #Disable and Stop firewalld. Unless firewalld is stopped, HAProxy would not work
 systemctl disable firewalld
 systemctl stop firewalld
 
+echo "firewalld disabled."
 #Add kubernetes repo
 bash -c 'cat << EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
@@ -72,6 +76,8 @@ repo_gpgcheck=1
 gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
 exclude=kubelet kubeadm kubectl
 EOF'
+
+echo "Kubernetes repo added."
 
 #Add Docker repo
 dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
@@ -98,6 +104,7 @@ bash -c 'cat <<- EOF > /etc/docker/daemon.json
 }
 EOF'
 
+echo "Cgroup drivers updated."
 #On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
 systemctl enable --now kubelet
@@ -106,5 +113,6 @@ systemctl enable --now kubelet
 systemctl daemon-reload
 systemctl enable kubelet && sudo systemctl start kubelet
 
+echo "Script completed."
 
 
