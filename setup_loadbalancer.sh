@@ -238,13 +238,13 @@ then
 	apt-get -y install haproxy keepalived
 
 	#Update keepalived.conf
-	mv $(pwd)/keepalived.conf /etc/keepalived/keepalived.conf
+	mv $TARGET_DIR/keepalived.conf /etc/keepalived/keepalived.conf
 
 	#Start keepalived service
 	systemctl enable keepalived.service && systemctl start keepalived.service
 
 	#Update HAProxy config (haproxy.cfg)
-	mv $(pwd)/haproxy.cfg /etc/haproxy/haproxy.cfg
+	mv $TARGET_DIR/haproxy.cfg /etc/haproxy/haproxy.cfg
 	
 	#Start HAProxy service
 	systemctl start haproxy.service  && systemctl enable haproxy.service
@@ -295,8 +295,8 @@ nc -zv "$KUBE_VIP $API_PORT"
 #Run Netcat and save the result in text file
 #nc -vz "$KUBE_VIP $API_PORT" > file.txt 2>&1
 #Check the 
-LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
-LB_REFUSED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep refused > /dev/null 2>&1; echo $?)
+LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
+LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
 
 if [[ ($LB_CONNECTED == 0 ) || ($LB_REFUSED == 0) ]]
 then 
