@@ -5,7 +5,8 @@ then
 	CALLING_NODE=$1
 fi
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
-
+#Take backup of old hosts file. In case we need to restore/cleanup
+cat /etc/hosts > hosts.txt
 #Add IP Addresses and Hostnames in hosts file
 if [[ ($NODES_IN_CLUSTER != "" ) && ("$CURRENT_NODE" != "$CALLING_NODE" ) ]]
 then
@@ -47,7 +48,7 @@ net.bridge.bridge-nf-call-iptables = 1
 EOF'
 
 echo "IP tables updated."
-sysctl --system
+sysctl -q --system
 
 #Disable Swap
 swapoff -a
