@@ -22,13 +22,16 @@ export KUBE_WORKER_3_IP="192.168.2.227"
 #Port where Control Plane API server would bind on Load Balancer
 export KUBE_MASTER_API_PORT="6443"
 
+export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
+
 
 export MASTER_NODE_IPS=($KUBE_MASTER_1_IP $KUBE_MASTER_2_IP $KUBE_MASTER_3_IP)
 export WORKER_NODE_IPS=($KUBE_WORKER_1_IP $KUBE_WORKER_2_IP $KUBE_WORKER_3_IP)
 export KUBE_CLUSTER_NODES=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
 export LB_NODES_IP=($KUBE_LBNODE_1_IP $KUBE_LBNODE_2_IP)
+export ALL_NODES=(${KUBE_CLUSTER_NODES[*]} ${LB_NODES_IP[*]})
 
-export USERNAME="ichigo"
+export USERNAME="root"
 export EXTERNAL_LB_ENABLED="true"
 
 #USER_PASSWORD=$(cat passwd.txt)
@@ -74,7 +77,7 @@ echo -n "$NODES_IN_CLUSTER" | sudo tee -a /etc/hosts
 
 ssh-keygen -t rsa
 
-for node in ${KUBE_CLUSTER_NODES[*]}
+for node in ${ALL_NODES[*]}
 do
 	echo "Adding keys for $node"
 	ssh-copy-id -i ~/.ssh/id_rsa.pub "$USERNAME"@$node
@@ -97,73 +100,93 @@ ssh-add ~/.ssh/id_rsa #Assuming id_rsa is the name of the private key file
 if [[ $EXTERNAL_LB_ENABLED == "true" ]]
 then
 	PRIORITY=200
+	UNICAST_PEER_IP=""
 	#Iterate over all Addresses mentioned in LB_NODES_IP array
-	for host in ${LB_NODES_IP[*]}
+	for node in ${LB_NODES_IP[*]}
 	do
+		#Priority passed to LB subscript in decreasing order. Could be overridden if needed.
 		PRIORITY="$(($PRIORITY - 1))"
-		#Iterate over all Addresses mentioned in LB_NODES_IP array and set UNICAST_PEER_IP
+		#Iterate over all Addresses mentioned in LB_NODES_IP array and set UNICAST_PEER_IP which is set in keepalived.conf
 		for UNICAST_PEER_IP in ${LB_NODES_IP[*]}
 		do
-			if [[ "$UNICAST_PEER_IP" == "$host" ]]
+			if [[ "$UNICAST_PEER_IP" == "$node" ]]
 			then
-				echo "Ignoring host as it would be UNICAST_SRC_IP"
+				echo "Ignoring node as it would be UNICAST_SRC_IP"
 			else
-				FINAL_UNICAST_PEER_IP="$UNICAST_PEER_IP \n $FINAL_UNICAST_PEER_IP"
+				FINAL_UNICAST_PEER_IP="$UNICAST_PEER_IP%$FINAL_UNICAST_PEER_IP"
 				echo "Value added to UNICAST_SRC_IP"
 			fi
 		done
 		echo "FINAL_UNICAST_PEER_IP: $FINAL_UNICAST_PEER_IP"
+		#Create 1 string by concatenating all Master nodes. Use % as separator to make it easy in util to separate
+		MASTER_PEER_IP=$(echo ${MASTER_NODE_IPS[*]} | sed 's# #%#g')
+
+		# Script=$( cat <<- HERE
+		# echo "Connected to $host"
+		# cd ~
+		# export KUBE_VIP="$KUBE_VIP_1_IP"
+		# export UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
+		# export MASTER_PEER_IP=$MASTER_PEER_IP
+		# wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/setup_loadbalancer.sh"
+		# chmod 755 setup_loadbalancer.sh
+		# sudo ./setup_loadbalancer.sh $PRIORITY $INTERFACE $AUTH_PASS $KUBE_MASTER_API_PORT $host
+		# # rm setup_loadbalancer.sh
+		# echo "Exiting."
+		# exit
+		# HERE
+		# )
+#ssh -t user@host ${Script}
 
 	    #scp ~/setup_loadbalancer.sh "${USER}"@$host:
 	    echo "SSH to target LB Node."
-	    ssh -tt "${USERNAME}"@$host <<- EOF
+	    ssh "${USERNAME}"@$node <<- EOF
+	    echo "Connected to $node"
 	    cd ~
-	    KUBE_VIP_1_IP="$KUBE_VIP_1_IP"
-		KUBE_LBNODE_1_IP="$KUBE_LBNODE_1_IP"
-		KUBE_LBNODE_2_IP="$KUBE_LBNODE_2_IP"
-		KUBE_MASTER_1_IP="$KUBE_MASTER_1_IP"
-		KUBE_MASTER_2_IP="$KUBE_MASTER_2_IP"
-		KUBE_MASTER_3_IP="$KUBE_MASTER_3_IP"
-	    wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/setup_loadbalancer.sh"
+	    export KUBE_VIP="$KUBE_VIP_1_IP"
+	    export UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
+		export MASTER_PEER_IP=$MASTER_PEER_IP
+		export CALLING_NODE "$CURRENT_NODE_IP"
+	    wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/setup_loadbalancer.sh"
 	    chmod 755 setup_loadbalancer.sh
-	    UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
-	    KUBE_VIP_IP=$KUBE_VIP_1_IP
-	    sudo ./setup_loadbalancer.sh $PRIORITY $INTERFACE $AUTH_PASS $KUBE_MASTER_API_PORT $host
+	    ./setup_loadbalancer.sh
+	    #./setup_loadbalancer.sh $PRIORITY $INTERFACE $AUTH_PASS $KUBE_MASTER_API_PORT $node
+	    #rm setup_loadbalancer.sh
 	    echo "Exiting."
 	    exit
 		EOF
-		echo "LB Config executed on $host"
+		echo "LB Config executed on $node"
 	done
 	echo "Load balancer setup complete."
 else
 	echo "Skipping load balancer setup."
 fi
 
-
 #Call Helper script to setup common elements
-for host in ${KUBE_CLUSTER_NODES[*]}
+for node in ${KUBE_CLUSTER_NODES[*]}
 do
-	ssh -tt "${USERNAME}"@$host <<- EOF
+	ssh -tt "${USERNAME}"@$node <<- EOF
+    echo "Connected to $node"
     cd ~
-    wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
-    chmod 755 setup_loadbalancer.sh
-    NODES_IN_CLUSTER="$NODES_IN_CLUSTER"
-	sudo ./prepare_node.sh
+    export NODES_IN_CLUSTER="$NODES_IN_CLUSTER"
+    export CALLING_NODE "$CURRENT_NODE_IP"
+    wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
+    chmod 755 prepare_node.sh
+	./prepare_node.sh
 	echo "Exiting."
 	exit
 	EOF
-echo "Prep script completed on $host"
+echo "Prep script completed on $node"
 done
 
 echo "Nodes prepared."
-
 LB_CONNECTED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
 LB_REFUSED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
-
+PROCESSING_NODE=0
 for node in ${MASTER_NODE_IPS[*]}
 do
-	if [[ $LB_REFUSED == 0 ]] #Until first Master node is ready, we get refused from nc
+	if [[ $PROCESSING_NODE == 0 ]] #Until first Master node is ready, we get refused from nc
 	then
+		PROCESSING_NODE+=1
 		#Run below as sudo on Primary Master node
 		echo "Setting up Primary master node."
 		#Save the old config
@@ -197,6 +220,7 @@ do
 		then
 			#New YAML from K8s.io docs
 			kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
+			sleep 60
 
 			#There is processing involved for Calico. Update these YAMLs for local use before proceeding
 			#wget "https://docs.projectcalico.org/v3.5/getting-started/kubernetes/installation/hosted/etcd.yaml"
@@ -231,38 +255,47 @@ do
 
 		#If certificates are deleted, regenerate them using below command
 		#kubeadm init phase upload-certs --upload-certs
+
+		#Set the home directory in target server for scp
+		if [[ "$USERNAME" == "root" ]]
+		then
+			TARGET_DIR="/root"
+		else
+			TARGET_DIR="/home/$USERNAME"
+		fi
 		
-		for host in ${MASTER_NODE_IPS[*]}; do
+		for host in ${MASTER_NODE_IPS[*]}
+		do
 			if [[ "$host" != "$node" ]]
 			then
+				echo "Connected to $host"
 				#Once Primary Node is setup, run below command to copy certificates to other nodes
-			    scp /etc/kubernetes/pki/ca.crt "$USERNAME"@$host:/home/$USERNAME
-			    scp /etc/kubernetes/pki/ca.key "$USERNAME"@$host:/home/$USERNAME
-			    scp /etc/kubernetes/pki/sa.key "$USERNAME"@$host:/home/$USERNAME
-			    scp /etc/kubernetes/pki/sa.pub "$USERNAME"@$host:/home/$USERNAME
-			    scp /etc/kubernetes/pki/front-proxy-ca.crt "$USERNAME"@$host:/home/$USERNAME
-			    scp /etc/kubernetes/pki/front-proxy-ca.key "$USERNAME"@$host:/home/$USERNAME
-			    scp /etc/kubernetes/pki/etcd/ca.crt "$USERNAME"@$host:/home/$USERNAME/etcd-ca.crt
+			    scp /etc/kubernetes/pki/ca.crt "$USERNAME"@$host:$TARGET_DIR
+			    scp /etc/kubernetes/pki/ca.key "$USERNAME"@$host:$TARGET_DIR
+			    scp /etc/kubernetes/pki/sa.key "$USERNAME"@$host:$TARGET_DIR
+			    scp /etc/kubernetes/pki/sa.pub "$USERNAME"@$host:$TARGET_DIR
+			    scp /etc/kubernetes/pki/front-proxy-ca.crt "$USERNAME"@$host:$TARGET_DIR
+			    scp /etc/kubernetes/pki/front-proxy-ca.key "$USERNAME"@$host:$TARGET_DIR
+			    scp /etc/kubernetes/pki/etcd/ca.crt "$USERNAME"@$host:$TARGET_DIR/etcd-ca.crt
 			    # Quote this line if you are using external etcd
-			    scp /etc/kubernetes/pki/etcd/ca.key "$USERNAME"@$host:/home/$USERNAME/etcd-ca.key
+			    scp /etc/kubernetes/pki/etcd/ca.key "$USERNAME"@$host:$TARGET_DIR/etcd-ca.key
 			else
 				echo "Certificate already present."
 			fi
 		done
 		echo "Certificates copy step complete."
-	elif [[ $LB_CONNECTED == 0 ]]
-	then
+	else
 		#Add other Master nodes
-		host=$node
+		echo "Trying to move certificates to their respective locations on $node"
 		#Before running kubadm join on non primary nodes, move certificates in respective locations
-		ssh -tt "$USERNAME"@$host <<- EOF
+		ssh "$USERNAME"@$node <<- EOF
 		cd ~
-		USER=$USERNAME
+		export USERNAME=$USERNAME
 		wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/certificate_mover.sh"
 		chmod 755 
-		sudo bash -c "./certificate_mover.sh"
+		bash -c "./certificate_mover.sh"
 		echo "Trying to add Master ndoe to cluster."
-		sudo bash -c "$MASTER_JOIN_COMMAND"
+		bash -c "$MASTER_JOIN_COMMAND"
 		echo "Exiting."
 		exit
 		EOF
@@ -278,9 +311,10 @@ for node in ${WORKER_NODE_IPS[*]}
 do
 	#Add Pods to cluster
 	echo "Setting up worker nodes"
-	host=$node
+
 	#Try to SSH into each node
-	ssh "$USERNAME"@$host <<- EOF
+	ssh "$USERNAME"@$node <<- EOF
+	echo "Connected to $node"
 	bash -c "$WORKER_JOIN_COMMAND"
 	echo "Exiting."
 	exit
@@ -291,7 +325,10 @@ echo "All workers added."
 
 sleep 180
 #Check all nodes have joined the cluster. Only needed for Master.
-sudo kubeadm get nodes
+sudo kubectl get nodes
+
+#Check all nodes have joined the cluster. Only needed for Master.
+sudo kubectl get pods
 
 #Check Cluster info
 sudo kubectl cluster-info
@@ -299,13 +336,4 @@ sudo kubectl cluster-info
 #Check health of cluster
 sudo kubectl get cs
 
-#Download and Install Helm
-sudo wget "https://get.helm.sh/helm-v3.2.0-linux-amd64.tar.gz"
-#Create helm Directory
-mkdir helm
-#Untar Helm to a helm direcory and strip parent directory during extract
-sudo tar -zxf helm-v3.2.0-linux-amd64.tar.gz -C ~/helm --strip-components=1
-#Change permission
-sudo chmod +x helm
-#Move helm
-sudo mv ~/helm/helm /usr/local/bin/helm
+
