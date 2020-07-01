@@ -92,20 +92,20 @@ else
 fi
 
 #Take backup of old hosts file. In case we need to restore/cleanup
-cat /etc/hosts > hosts.txt
-#Add IP Addresses and Hostnames in hosts file
-if [[ ($NODES_IN_CLUSTER != "" ) && ("$CURRENT_NODE" != "$CALLING_NODE" ) ]]
-then
-	echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-	echo "Hosts file updated."
-elif [[ "$CURRENT_NODE" == "$CALLING_NODE" ]]
-then
-	echo "Hosts file already update for Primary node by main script."
-else
-	#statements
-	echo "NODES_IN_CLUSTER not set. Exiting."
-	exit 1
-fi
+# cat /etc/hosts > hosts.txt
+# #Add IP Addresses and Hostnames in hosts file
+# if [[ ($NODES_IN_CLUSTER != "" ) && ("$CURRENT_NODE" != "$CALLING_NODE" ) ]]
+# then
+# 	echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+# 	echo "Hosts file updated."
+# elif [[ "$CURRENT_NODE" == "$CALLING_NODE" ]]
+# then
+# 	echo "Hosts file already update for Primary node by main script."
+# else
+# 	#statements
+# 	echo "NODES_IN_CLUSTER not set. Exiting."
+# 	exit 1
+# fi
 
 #Check the current status of Load balance config
 LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
@@ -290,8 +290,8 @@ then
 	#sudo systemctl start keepalived
 	echo "Both the services should be up. Lets check."
 fi
-
-nc -zv "$KUBE_VIP $API_PORT"
+sleep 60
+nc -zv $KUBE_VIP $API_PORT
 #Run Netcat and save the result in text file
 #nc -vz "$KUBE_VIP $API_PORT" > file.txt 2>&1
 #Check the 
@@ -303,7 +303,7 @@ then
 	echo "Route seems to be available."
 else
 	echo "No route found. Please check firewall config."
-	nc -vz "$KUBE_VIP $API_PORT"
+	nc -vz $KUBE_VIP $API_PORT
 fi
 
 echo "Script (setting_loadbalancer) completed."
