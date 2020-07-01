@@ -16,7 +16,7 @@ then
 	echo "Hosts file already update for Primary node by main script."
 else
 	#statements
-	echo "$NODES_IN_CLUSTER not set. Exiting."
+	echo "NODES_IN_CLUSTER not set. Exiting."
 	exit 1
 fi
 

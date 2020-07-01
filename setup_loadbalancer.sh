@@ -82,6 +82,18 @@ else
 	echo "Using passed PRIORITY: "$UNICAST_SRC_IP
 fi
 
+
+#Check the current status of Load balance config
+LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
+LB_REFUSED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep refused > /dev/null 2>&1; echo $?)
+
+if [[ $LB_CONNECTED == 0 || $LB_REFUSED == 0 ]]
+then
+	echo "Load balancer seems to be running on the sepcified VIP. Unable to proceed. Exiting."
+	exit 1
+fi
+
+echo "Proceeding with LB config."
 #Other Load Balancer nodes. Used in keepalived conf. Passed by main script and seprated by "%"
 TEMP_PEER_IPS=$(echo $UNICAST_PEER_IP | sed 's#%#\n#g')
 #All Master nodes part of the cluster. Used in haproxy.cfg. Passed by main script and seprated by "%"
@@ -91,18 +103,18 @@ LB_PARAMS="check port $API_PORT inter 5000 fall 5"
 
 node=1
 FINAL_SERVER_STRING=""
-for server in ${TEMP_MASTER_IPS[*]}
+for SERVER in ${TEMP_MASTER_IPS[*]}
 do
 	if [[ "$FINAL_SERVER_STRING" == "" ]]
 	then
 						       #server node1 ###n0d31_1p_@ddr###:###AP1_P0RT### check port ###AP1_P0RT### inter 5000 fall 5
-		FINAL_SERVER_STRING=$(echo "server $node $server:$API_PORT $LB_PARAMS \n" )
+		FINAL_SERVER_STRING=$(echo "server $node $SERVER:$API_PORT $LB_PARAMS \n" )
 		echo "First Value added to FINAL_SERVER_STRING"
-		node=$($node + 1)
+		node=$(($node + 1))
 	else
-		FINAL_SERVER_STRING=$("/t $FINAL_SERVER_STRING" + $(echo "server $node $server:$API_PORT $LB_PARAMS \n" ))
+		FINAL_SERVER_STRING=$("/t $FINAL_SERVER_STRING" + $(echo "server SERVER$node $SERVER:$API_PORT $LB_PARAMS \n" ))
 		echo "Value added to FINAL_SERVER_STRING"
-		node=$($node + 1)
+		node="$(($node + 1))"
 	fi
 done
 echo "All server entries ready."
@@ -120,18 +132,25 @@ setenforce 0
 sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 echo "Done."
 
-#To allow HAProxy to bind to non local ports
-echo "Updating to allow non local binding for HAProxy."
-bash -c 'cat <<- EOF >>/etc/sysctl.conf
-net.ipv4.ip_nonlocal_bind=1
-EOF'
-echo "Done."
+#Check if non local bind is already allowed
+NON_LOCAL_BIND_ALLOWED=$(cat /etc/sysctl.conf | grep net.ipv4.ip_nonlocal_bind=1 > /dev/null 2>&1; echo $?)
+if [[ $NON_LOCAL_BIND_ALLOWED != 0 ]]
+then	
+	#To allow HAProxy to bind to non local ports
+	echo "Updating to allow non local binding for HAProxy."
+	bash -c 'cat <<- EOF >>/etc/sysctl.conf
+	net.ipv4.ip_nonlocal_bind=1
+	EOF'
+	echo "Done."
+else
+	echo "Non local bind already setup in /etc/sysctl."
+fi
 
 sysctl -p
 sysctl --system
 
 cd ~
-if [[ -f "keepalived.conf" ]]
+if [[ -f $(pwd)/keepalived.conf ]]
 then
 	echo "Downloading the template files from github."
 	#Get the keepalived_template.conf and create a copy
@@ -145,7 +164,7 @@ then
 	sed -i "s*###un1c@st_src_1p###*$UNICAST_SRC_IP*g" keepalived.conf
 	#sed -i "s*###un1c@st_p33r###*$UNICAST_PEER_IP*g" keepalived.conf
 	sed -i "s*###@uth_p@ss###*$AUTH_PASS*g" keepalived.conf
-	sed -i "s*###v1rtu@l_1p@ddr3ss###*$KUBE_VIP_1_IP*g" keepalived.conf
+	sed -i "s*###v1rtu@l_1p@ddr3ss###*$KUBE_VIP*g" keepalived.conf
 	#Multiple nodes with newline thus had to use awk. Sed does not handle newline properly
 	awk -i inplace -v srch="###un1c@st_p33r###" -v repl="$TEMP_PEER_IPS" '{ sub(srch,repl,$0); print $0 }' keepalived.conf
 	echo "keepalived.conf updated."
@@ -153,7 +172,7 @@ else
 	echo "Found keepalived.conf in current direcotry. Going to use it 'as is'."
 fi
 
-if [[ -f "haproxy.cfg" ]]
+if [[ -f $(pwd)/haproxy.cfg ]]
 then
 	echo "Downloading the template files from github."
 	#Get the haproxy_template.cfg and create a copy
@@ -161,7 +180,7 @@ then
 	cp haproxy_template.cfg haproxy.cfg
 	echo "Updating the haproxy.cfg."
 	#Update the placeholders with value for primary
-	sed -i "s*###vip_@ddr3ss###*$KUBE_VIP_1_IP*g" haproxy.cfg
+	sed -i "s*###vip_@ddr3ss###*$KUBE_VIP*g" haproxy.cfg
 	# sed -i "s*###n0d31_1p_@ddr###*$KUBE_MASTER_1_IP*g" haproxy.cfg
 	# sed -i "s*###n0d32_1p_@ddr###*$KUBE_MASTER_2_IP*g" haproxy.cfg
 	# sed -i "s*###n0d33_1p_@ddr###*$KUBE_MASTER_3_IP*g" haproxy.cfg
@@ -191,13 +210,13 @@ then
 	apt-get -y install haproxy keepalived
 
 	#Update keepalived.conf
-	mv keepalived.conf /etc/keepalived/keepalived.conf
+	mv $(pwd)/keepalived.conf /etc/keepalived/keepalived.conf
 
 	#Start keepalived service
 	systemctl enable keepalived.service && systemctl start keepalived.service
 
 	#Update HAProxy config (haproxy.cfg)
-	mv haproxy.cfg /etc/haproxy/haproxy.cfg
+	mv $(pwd)/haproxy.cfg /etc/haproxy/haproxy.cfg
 	
 	#Start HAProxy service
 	systemctl start haproxy.service  && systemctl enable haproxy.service
@@ -221,14 +240,14 @@ then
 
 	#Update keepalived.conf
 	echo "Replacing the default keepalived.conf with our updated version."
-	mv keepalived.conf /etc/keepalived/keepalived.conf
+	mv $(pwd)/keepalived.conf /etc/keepalived/keepalived.conf
 
 	#Start keepalived service
 	systemctl enable keepalived.service && systemctl start keepalived.service
 
 	#Update HAProxy config (haproxy.cfg)
 	echo "Replacing the default haproxy.cfg with our updated version."
-	mv haproxy.cfg /etc/haproxy/haproxy.cfg
+	mv $(pwd)/haproxy.cfg /etc/haproxy/haproxy.cfg
 	
 	#Only for Non Primary node.
 	#Run below command on Primary keepalived node to switch VIP to Secondary node. 
@@ -243,19 +262,19 @@ then
 	echo "Both the services should be up. Lets check."
 fi
 
-nc -zv $KUBE_VIP_1_IP $API_PORT
+nc -zv "$KUBE_VIP $API_PORT"
 #Run Netcat and save the result in text file
-nc -vz $KUBE_VIP_1_IP $API_PORT > file.txt 2>&1
+nc -vz "$KUBE_VIP $API_PORT" > file.txt 2>&1
 #Check the 
-LB_CONNECTED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
-LB_REFUSED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
+LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
+LB_REFUSED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep refused > /dev/null 2>&1; echo $?)
 
 if [[ ($LB_CONNECTED == 0 ) || ($LB_REFUSED == 0) ]]
 then 
 	echo "Route seems to be available."
 else
 	echo "No route found. Please check firewall config."
-	nc -vz $KUBE_VIP_1_IP $API_PORT
+	nc -vz "$KUBE_VIP $API_PORT"
 fi
 
 echo "Script (setting_loadbalancer) completed."
