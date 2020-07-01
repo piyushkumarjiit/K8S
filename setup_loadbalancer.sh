@@ -82,6 +82,14 @@ else
 	echo "Using passed PRIORITY: "$UNICAST_SRC_IP
 fi
 
+USERNAME="$(whoami)"
+#Set the home directory in target server for scp
+if [[ "$USERNAME" == "root" ]]
+then
+	TARGET_DIR="/root"
+else
+	TARGET_DIR="/home/$USERNAME"
+fi
 
 #Check the current status of Load balance config
 LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
@@ -108,11 +116,14 @@ do
 	if [[ "$FINAL_SERVER_STRING" == "" ]]
 	then
 						       #server node1 ###n0d31_1p_@ddr###:###AP1_P0RT### check port ###AP1_P0RT### inter 5000 fall 5
-		FINAL_SERVER_STRING=$(echo "server $node $SERVER:$API_PORT $LB_PARAMS \n" )
+		FINAL_SERVER_STRING=$(echo "server SERVER$node $SERVER:$API_PORT $LB_PARAMS")
+		FINAL_SERVER_STRING+=$'\n'
 		echo "First Value added to FINAL_SERVER_STRING"
 		node=$(($node + 1))
 	else
-		FINAL_SERVER_STRING=$("/t $FINAL_SERVER_STRING" + $(echo "server SERVER$node $SERVER:$API_PORT $LB_PARAMS \n" ))
+		FINAL_SERVER_STRING+=$'\t'
+		FINAL_SERVER_STRING+="$(echo -e "server SERVER$node $SERVER:$API_PORT $LB_PARAMS" )"
+		FINAL_SERVER_STRING+=$'\n'
 		echo "Value added to FINAL_SERVER_STRING"
 		node="$(($node + 1))"
 	fi
@@ -142,15 +153,16 @@ then
 	net.ipv4.ip_nonlocal_bind=1
 	EOF'
 	echo "Done."
+	sysctl -q -p
 else
 	echo "Non local bind already setup in /etc/sysctl."
 fi
-
-sysctl -p
-sysctl --system
+#Reload settings from all system configuration files.
+sysctl -q --system
 
 cd ~
-if [[ -f $(pwd)/keepalived.conf ]]
+echo "Current Path:  $(pwd)"
+if [[ -r $TARGET_DIR/keepalived.conf ]]
 then
 	echo "Downloading the template files from github."
 	#Get the keepalived_template.conf and create a copy
@@ -170,9 +182,10 @@ then
 	echo "keepalived.conf updated."
 else
 	echo "Found keepalived.conf in current direcotry. Going to use it 'as is'."
+	read -p " Press any key to continue: "
 fi
 
-if [[ -f $(pwd)/haproxy.cfg ]]
+if [[ -r $TARGET_DIR/haproxy.cfg ]]
 then
 	echo "Downloading the template files from github."
 	#Get the haproxy_template.cfg and create a copy
@@ -190,6 +203,7 @@ then
 	echo "haproxy.cfg updated."
 else
 	echo "Found haproxy.cfg in current direcotry. Going to use it 'as is'."
+	read -p " Press any key to continue: "
 fi 
 
 
@@ -265,7 +279,7 @@ fi
 
 nc -zv "$KUBE_VIP $API_PORT"
 #Run Netcat and save the result in text file
-nc -vz "$KUBE_VIP $API_PORT" > file.txt 2>&1
+#nc -vz "$KUBE_VIP $API_PORT" > file.txt 2>&1
 #Check the 
 LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
 LB_REFUSED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep refused > /dev/null 2>&1; echo $?)
