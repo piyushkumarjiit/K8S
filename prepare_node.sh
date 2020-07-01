@@ -10,8 +10,15 @@ cat /etc/hosts > hosts.txt
 #Add IP Addresses and Hostnames in hosts file
 if [[ ($NODES_IN_CLUSTER != "" ) && ("$CURRENT_NODE" != "$CALLING_NODE" ) ]]
 then
-	echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-	echo "Hosts file updated."
+	NODES_ADDED=$(ping -c 1 $CALLING_NODE  > /dev/null 2>&1; echo $?)
+	if [[ $NODES_ADDED != "0" ]]
+	then
+		echo "Ping failed. Updating hosts file."
+		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+		echo "Hosts file updated."
+	else
+		echo "Nodes already present in hosts file."
+	fi
 elif [[ "$CURRENT_NODE" == "$CALLING_NODE" ]]
 then
 	echo "Hosts file already update for Primary node by main script."
