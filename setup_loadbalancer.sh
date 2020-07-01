@@ -247,6 +247,7 @@ then
 
 	#Update HAProxy config (haproxy.cfg)
 	echo "Replacing the default haproxy.cfg with our updated version."
+	echo "Expected path: $(pwd)/haproxy.cfg"
 	mv $(pwd)/haproxy.cfg /etc/haproxy/haproxy.cfg
 	
 	#Only for Non Primary node.
