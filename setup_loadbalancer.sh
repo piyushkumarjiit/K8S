@@ -91,6 +91,22 @@ else
 	TARGET_DIR="/home/$USERNAME"
 fi
 
+#Take backup of old hosts file. In case we need to restore/cleanup
+cat /etc/hosts > hosts.txt
+#Add IP Addresses and Hostnames in hosts file
+if [[ ($NODES_IN_CLUSTER != "" ) && ("$CURRENT_NODE" != "$CALLING_NODE" ) ]]
+then
+	echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+	echo "Hosts file updated."
+elif [[ "$CURRENT_NODE" == "$CALLING_NODE" ]]
+then
+	echo "Hosts file already update for Primary node by main script."
+else
+	#statements
+	echo "NODES_IN_CLUSTER not set. Exiting."
+	exit 1
+fi
+
 #Check the current status of Load balance config
 LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
 LB_REFUSED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep refused > /dev/null 2>&1; echo $?)
@@ -162,7 +178,7 @@ sysctl -q --system
 
 cd ~
 echo "Current Path:  $(pwd)"
-if [[ -r $TARGET_DIR/keepalived.conf ]]
+if [[ ! -r $TARGET_DIR/keepalived.conf ]]
 then
 	echo "Downloading the template files from github."
 	#Get the keepalived_template.conf and create a copy
@@ -182,10 +198,9 @@ then
 	echo "keepalived.conf updated."
 else
 	echo "Found keepalived.conf in current direcotry. Going to use it 'as is'."
-	read -p " Press any key to continue: "
 fi
 
-if [[ -r $TARGET_DIR/haproxy.cfg ]]
+if [[ ! -r $TARGET_DIR/haproxy.cfg ]]
 then
 	echo "Downloading the template files from github."
 	#Get the haproxy_template.cfg and create a copy
@@ -203,7 +218,6 @@ then
 	echo "haproxy.cfg updated."
 else
 	echo "Found haproxy.cfg in current direcotry. Going to use it 'as is'."
-	read -p " Press any key to continue: "
 fi 
 
 
@@ -254,7 +268,7 @@ then
 
 	#Update keepalived.conf
 	echo "Replacing the default keepalived.conf with our updated version."
-	mv $(pwd)/keepalived.conf /etc/keepalived/keepalived.conf
+	mv $TARGET_DIR/keepalived.conf /etc/keepalived/keepalived.conf
 
 	#Start keepalived service
 	systemctl enable keepalived.service && systemctl start keepalived.service
@@ -262,7 +276,7 @@ then
 	#Update HAProxy config (haproxy.cfg)
 	echo "Replacing the default haproxy.cfg with our updated version."
 	echo "Expected path: $(pwd)/haproxy.cfg"
-	mv $(pwd)/haproxy.cfg /etc/haproxy/haproxy.cfg
+	mv $TARGET_DIR/haproxy.cfg /etc/haproxy/haproxy.cfg
 	
 	#Only for Non Primary node.
 	#Run below command on Primary keepalived node to switch VIP to Secondary node. 

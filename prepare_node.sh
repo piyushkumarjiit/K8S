@@ -1,9 +1,9 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
-if [[ $1 != "" ]]
-then
-	CALLING_NODE=$1
-fi
+# if [[ $1 != "" ]]
+# then
+# 	CALLING_NODE=$1
+# fi
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 #Take backup of old hosts file. In case we need to restore/cleanup
 cat /etc/hosts > hosts.txt
