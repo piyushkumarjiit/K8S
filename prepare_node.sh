@@ -24,11 +24,12 @@ do
 			echo "Backed up /etc/hosts file."
 		fi
 		#Add Master IP Addresses and Hostnames in hosts file
-		NODES_IN_CLUSTER=$(cat <<- SETVAR
-		${ALL_NODE_IPS[$index]}	$node
-		SETVAR
-		)
-		echo "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
+		# NODES_IN_CLUSTER=$(cat <<- SETVAR
+		# ${ALL_NODE_IPS[$index]}	$node
+		# SETVAR
+		# )
+		# echo "$NODES_IN_CLUSTER" | tee -a /etc/hosts
 		#echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
 		echo "Node added to /etc/hosts file."
 		NODES_IN_CLUSTER=""
