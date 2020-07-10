@@ -1,5 +1,6 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
+echo "========== Connected to $(hostname)) ============"
 echo "Cleanup script started."
 
 #Below is newly added. Need to be tested against original ones.
