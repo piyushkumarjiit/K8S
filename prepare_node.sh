@@ -63,17 +63,30 @@ else
 fi
 
 #Check if IP tables contain K8s config
-BRIDGED_MODE=$(cat /etc/sysctl.d/k8s.conf | grep -w 'net.bridge.bridge-nf-call-iptables = 1' > /dev/null 2>&1; echo $?)
-if [[ -r /etc/sysctl.d/k8s.conf && (BRIDGED_MODE == 0) ]]
+
+if [[ -r /etc/sysctl.d/k8s.conf ]]
 then
-	"K8s.conf already exists and contains IP tables rules."
+	BRIDGED_MODE=$(cat /etc/sysctl.d/k8s.conf | grep -w 'net.bridge.bridge-nf-call-iptables = 1' > /dev/null 2>&1; echo $?)
+	if [[ BRIDGED_MODE == 0 ]]
+	then 
+		"K8s.conf already exists and contains IP tables rules."
+	else
+		"Adding IP tables rules to existing K8s file."
+		#Setup IP tables for Bridged Traffic
+		bash -c 'cat <<EOF >  /etc/sysctl.d/k8s.conf
+		net.bridge.bridge-nf-call-ip6tables = 1
+		net.bridge.bridge-nf-call-iptables = 1
+		EOF'
+		echo "File (k8s.conf) updated."
+	fi
 else
-	#Setup IP tables for Bridged Traffic
-	bash -c 'cat <<EOF >  /etc/sysctl.d/k8s.conf
-	net.bridge.bridge-nf-call-ip6tables = 1
-	net.bridge.bridge-nf-call-iptables = 1
-	EOF'
-	echo "IP tables updated."
+		"Creating k8s.conf and adding IP tables rules."
+		#Setup IP tables for Bridged Traffic
+		bash -c 'cat <<EOF >  /etc/sysctl.d/k8s.conf
+		net.bridge.bridge-nf-call-ip6tables = 1
+		net.bridge.bridge-nf-call-iptables = 1
+		EOF'
+		echo "IP tables updated."
 fi
 
 #Check if swap is already commented out in fstab
