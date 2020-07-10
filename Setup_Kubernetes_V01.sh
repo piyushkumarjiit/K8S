@@ -2,6 +2,7 @@
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
 #./Setup_Kubernetes_V01.sh > setup.log 2>&1
+#./Setup_Kubernetes_V01.sh | tee setup.log
 
 export KUBE_VIP_1_HOSTNAME="VIP"
 export KUBE_VIP_1_IP="192.168.2.6"
@@ -40,42 +41,42 @@ export EXTERNAL_LB_ENABLED="true"
 
 networking_type="calico"
 
-#Add Master IP Addresses and Hostnames in hosts file
-NODES_IN_CLUSTER=$(cat <<SETVAR
-$KUBE_VIP_1_IP  $KUBE_VIP_1_HOSTNAME
-$KUBE_MASTER_1_IP  $KUBE_MASTER_1_HOSTNAME
-$KUBE_MASTER_2_IP  $KUBE_MASTER_2_HOSTNAME
-$KUBE_MASTER_3_IP  $KUBE_MASTER_3_HOSTNAME
-$KUBE_WORKER_1_IP  $KUBE_WORKER_1_HOSTNAME
-$KUBE_WORKER_2_IP  $KUBE_WORKER_2_HOSTNAME
-$KUBE_WORKER_3_IP  $KUBE_WORKER_3_HOSTNAME
-$KUBE_LBNODE_1_IP $KUBE_LBNODE_1_HOSTNAME
-$KUBE_LBNODE_2_IP $KUBE_LBNODE_2_HOSTNAME
-SETVAR
-)
+ALL_NODES_ACCESSIBLE="true"
+for node in ${ALL_NODES[*]}
+do
+	if [[ $NODES_ACCESSIBLE != 0  &&  $NODES_IN_CLUSTER != "" ]]
+	then
+		echo "Node: $node inaccessible. Need to update hosts file."
+		ALL_NODES_ACCESSIBLE="false"
+	fi
+done
+
+#Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
+if [[ $ALL_NODES_ACCESSIBLE == "false" ]]
+then
+		echo "Ping failed. Updating hosts file."
+		#Take backup of old hosts file. In case we need to restore/cleanup
+		cat /etc/hosts > hosts.txt
+		#Add Master IP Addresses and Hostnames in hosts file
+		NODES_IN_CLUSTER=$(cat <<- SETVAR
+		$KUBE_VIP_1_IP  $KUBE_VIP_1_HOSTNAME
+		$KUBE_MASTER_1_IP  $KUBE_MASTER_1_HOSTNAME
+		$KUBE_MASTER_2_IP  $KUBE_MASTER_2_HOSTNAME
+		$KUBE_MASTER_3_IP  $KUBE_MASTER_3_HOSTNAME
+		$KUBE_WORKER_1_IP  $KUBE_WORKER_1_HOSTNAME
+		$KUBE_WORKER_2_IP  $KUBE_WORKER_2_HOSTNAME
+		$KUBE_WORKER_3_IP  $KUBE_WORKER_3_HOSTNAME
+		$KUBE_LBNODE_1_IP $KUBE_LBNODE_1_HOSTNAME
+		$KUBE_LBNODE_2_IP $KUBE_LBNODE_2_HOSTNAME
+		SETVAR
+		)
+		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+		echo "Hosts file updated."
+else
+	echo "All nodes accessible. No change needed."
+fi
+
 echo -n "$NODES_IN_CLUSTER" | sudo tee -a /etc/hosts
-
-# sudo bash -c "cat >> /etc/hosts<<EOF
-# $KUBE_MASTER_1_IP  $KUBE_MASTER_1_HOSTNAME
-# $KUBE_MASTER_2_IP  $KUBE_MASTER_2_HOSTNAME
-# $KUBE_MASTER_3_IP  $KUBE_MASTER_3_HOSTNAME
-# $KUBE_VIP_1_IP  $KUBE_VIP_1_HOSTNAME
-# EOF"
-
-#Add Worker IP Addresses and Hostnames in hosts file
-# WORKERS_IN_HOSTS=$(cat <<SETVAR
-# $KUBE_WORKER_1_IP  $KUBE_WORKER_1_HOSTNAME
-# $KUBE_WORKER_2_IP  $KUBE_WORKER_2_HOSTNAME
-# $KUBE_WORKER_3_IP  $KUBE_WORKER_3_HOSTNAME
-# SETVAR
-# )
-# echo -n "$WORKERS_IN_HOSTS" | sudo tee -a /etc/hosts
-
-# sudo bash -c "cat >> /etc/hosts<<EOF
-# $KUBE_WORKER_1_IP  $KUBE_WORKER_1_HOSTNAME
-# $KUBE_WORKER_2_IP  $KUBE_WORKER_2_HOSTNAME
-# $KUBE_WORKER_3_IP  $KUBE_WORKER_3_HOSTNAME
-# EOF"
 
 ssh-keygen -t rsa
 
@@ -85,14 +86,6 @@ do
 	ssh-copy-id -i ~/.ssh/id_rsa.pub "$USERNAME"@$node
 done
 echo "Added keys for all nodes."
-
-# ssh-copy-id -i ~/.ssh/id_rsa.pub $USERNAME@$KUBE_MASTER_1_HOSTNAME
-# ssh-copy-id -i ~/.ssh/id_rsa.pub $USERNAME@$KUBE_MASTER_2_HOSTNAME
-# ssh-copy-id -i ~/.ssh/id_rsa.pub $USERNAME@$KUBE_MASTER_3_HOSTNAME
-# ssh-copy-id -i ~/.ssh/id_rsa.pub $USERNAME@$KUBE_WORKER_1_HOSTNAME
-# ssh-copy-id -i ~/.ssh/id_rsa.pub $USERNAME@$KUBE_WORKER_2_HOSTNAME
-# ssh-copy-id -i ~/.ssh/id_rsa.pub $USERNAME@$KUBE_WORKER_3_HOSTNAME
-
 
 #From K8s Docs
 eval $(ssh-agent)
@@ -152,7 +145,7 @@ then
 	    chmod 755 setup_loadbalancer.sh
 	    ./setup_loadbalancer.sh
 	    #./setup_loadbalancer.sh $PRIORITY $INTERFACE $AUTH_PASS $KUBE_MASTER_API_PORT $node
-	    #rm setup_loadbalancer.sh
+	    rm setup_loadbalancer.sh
 	    echo "Exiting."
 	    exit
 		EOF
@@ -170,10 +163,11 @@ do
     echo "Connected to $node"
     cd ~
     export NODES_IN_CLUSTER="$NODES_IN_CLUSTER"
-    export CALLING_NODE "$CURRENT_NODE_IP"
+    export CALLING_NODE=$CURRENT_NODE_IP
     wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
     chmod 755 prepare_node.sh
 	./prepare_node.sh
+	rm ./prepare_node.sh
 	echo "Exiting."
 	exit
 	EOF
@@ -200,6 +194,8 @@ do
 		MASTER_JOIN_COMMAND=$(tail -n12 kubeadm_init_output.txt | head -n3 )
 		#Extract command used to initialize Worker nodes
 		WORKER_JOIN_COMMAND=$(tail -n2 kubeadm_init_output.txt)
+		#Set permissions for prying eyes.
+		chown $(id -u):$(id -g) $HOME/kubeadm_init_output.txt
 
 		#Alternate way
 		# MYVAR=$(cat kubeadm_init_output.txt)
@@ -239,6 +235,7 @@ do
 		else
 			export kubever=$(kubectl version | base64 | tr -d '\n')
 			kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+			echo "Weave set up."
 		fi
 		#Takes some time for nodes to be ready
 		sleep 60
@@ -251,14 +248,8 @@ do
 			echo "Primary master node not ready. Please check."
 			exit 1
 		fi
-		#Certificate Distribution to other Master nodes
-		echo "Trying to copy certificates to other nodes."
-		USER=$USERNAME # User we have setup ssh for
 
-		#If certificates are deleted, regenerate them using below command
-		#kubeadm init phase upload-certs --upload-certs
-
-		#Set the home directory in target server for scp
+		#Set the home directory in target server for scp. $HOME does not work due to difference in users on src and tgt
 		if [[ "$USERNAME" == "root" ]]
 		then
 			TARGET_DIR="/root"
@@ -266,6 +257,13 @@ do
 			TARGET_DIR="/home/$USERNAME"
 		fi
 		
+		#Certificate Distribution to other Master nodes
+		echo "Trying to copy certificates to other nodes."
+		USER=$USERNAME # User we have setup ssh for
+
+		#If certificates are deleted, regenerate them using below command
+		#kubeadm init phase upload-certs --upload-certs
+
 		for host in ${MASTER_NODE_IPS[*]}
 		do
 			if [[ "$host" != "$node" ]]
@@ -288,23 +286,25 @@ do
 		echo "Certificates copy step complete."
 	else
 		#Add other Master nodes
-		echo "Trying to move certificates to their respective locations on $node"
-		#Before running kubadm join on non primary nodes, move certificates in respective locations
+		echo "Adding other Master nodes. Trying to add $node"
+
 		ssh "$USERNAME"@$node <<- EOF
 		cd ~
 		export USERNAME=$USERNAME
+		#Before running kubadm join on non primary nodes, move certificates in respective locations
+		echo "Trying to move certificates to their respective locations on $node"
+		#Fetch the certificate_mover.sh from github
 		wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/certificate_mover.sh"
-		chmod 755 
+		chmod 755 certificate_mover.sh
 		bash -c "./certificate_mover.sh"
-		echo "Trying to add Master ndoe to cluster."
+		echo "Trying to add Master node to cluster."
 		bash -c "$MASTER_JOIN_COMMAND"
-		'cp /etc/kubernetes/admin.conf $HOME/
-		chown $(id -u):$(id -g) $HOME/admin.conf
-		export KUBECONFIG=$HOME/admin.conf'
+		echo "Trying to copy '$HOME/admin.conf' over"
+		bash -c 'cp /etc/kubernetes/admin.conf $HOME/; chown $(id -u):$(id -g) $HOME/admin.conf ; export KUBECONFIG=$HOME/admin.conf'
 		echo "Exiting."
 		exit
 		EOF
-		echo "Back from node: "$node
+		echo "Master node: $node added."
 	fi
 done
 echo "All Masters added."
@@ -319,12 +319,12 @@ do
 
 	#Try to SSH into each node
 	ssh "$USERNAME"@$node <<- EOF
-	echo "Connected to $node"
+	echo "Trying to add Worker node:$node to cluster."
 	bash -c "$WORKER_JOIN_COMMAND"
 	echo "Exiting."
 	exit
 	EOF
-	echo "Back from worker: "$node
+	echo "Back from Worker: "$node
 done
 echo "All workers added."
 
