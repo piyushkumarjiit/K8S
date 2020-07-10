@@ -29,7 +29,7 @@ AUTH_PASS=K33p@Gu3ss1ng
 #UNICAST_PEER_IP=$KUBE_LBNODE_2_IP
 ROUTER_ID="RouterID1"
 
-echo "----------- Setting up Load Balancing in $hostname ------------"
+echo "----------- Setting up Load Balancing in $(hostname) ------------"
 
 if [[ "$KUBE_VIP" == "" ]]
 then
@@ -81,32 +81,33 @@ then
 	echo "UNICAST_SRC_IP not passed. Using default value: "$UNICAST_SRC_IP
 else
 	UNICAST_SRC_IP="$5"
-	echo "Using passed PRIORITY: "$UNICAST_SRC_IP
+	echo "Using passed UNICAST_SRC_IP: "$UNICAST_SRC_IP
 fi
 
-USERNAME="$(whoami)"
-#Set the home directory in target server for scp
-if [[ "$USERNAME" == "root" ]]
-then
-	TARGET_DIR="/root"
-else
-	TARGET_DIR="/home/$USERNAME"
-fi
-
-#Take backup of old hosts file. In case we need to restore/cleanup
-# cat /etc/hosts > hosts.txt
-# #Add IP Addresses and Hostnames in hosts file
-# if [[ ($NODES_IN_CLUSTER != "" ) && ("$CURRENT_NODE" != "$CALLING_NODE" ) ]]
+# USERNAME="$(whoami)"
+# #Set the home directory in target server for scp
+# if [[ "$USERNAME" == "root" ]]
 # then
-# 	echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-# 	echo "Hosts file updated."
-# elif [[ "$CURRENT_NODE" == "$CALLING_NODE" ]]
-# then
-# 	echo "Hosts file already update for Primary node by main script."
+# 	TARGET_DIR="/root"
 # else
-# 	#statements
+# 	TARGET_DIR="/home/$USERNAME"
+# fi
+
+#Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
+# NODES_ADDED=$(ping -c 1 $CALLING_NODE  > /dev/null 2>&1; echo $?)
+# if [[ $NODES_ADDED != 0  &&  $NODES_IN_CLUSTER != "" ]]
+# then
+# 		echo "Ping failed. Updating hosts file."
+# 		#Take backup of old hosts file. In case we need to restore/cleanup
+# 		cat /etc/hosts > hosts.txt
+# 		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+# 		echo "Hosts file updated."
+# elif [[ $NODES_IN_CLUSTER != "" ]]
+# then
 # 	echo "NODES_IN_CLUSTER not set. Exiting."
 # 	exit 1
+# else
+# 	echo "Hosts file already updated for Primary node by main script."
 # fi
 
 #Check the current status of Load balance config
@@ -149,17 +150,18 @@ done
 echo "All server entries ready."
 echo "$FINAL_SERVER_STRING"
 
-#Secondary
-#PRIORITY="100"
-#UNICAST_SRC_IP="$KUBE_LBNODE_2_IP"
-#UNICAST_PEER_IP="KUBE_LBNODE_1_IP"
-
-
-# Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
-echo "Disabling SELINUX."
-setenforce 0
-sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
-echo "Done."
+#Check the status of SELinux and disable if needed.
+SELINUX_STATUS=$(cat /etc/selinux/config | grep 'SELINUX=enforcing' > /dev/null 2>&1; echo $?)
+if [[ $SELINUX_STATUS == 0 ]]
+then	
+	# Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
+	echo "Disabling SELINUX."
+	setenforce 0
+	sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+	echo "Done."
+else
+	echo "SELinux not set as enforcing. No change needed."
+fi
 
 #Check if non local bind is already allowed
 NON_LOCAL_BIND_ALLOWED=$(cat /etc/sysctl.conf | grep net.ipv4.ip_nonlocal_bind=1 > /dev/null 2>&1; echo $?)
@@ -180,7 +182,7 @@ sysctl -q --system
 
 cd ~
 echo "Current Path:  $(pwd)"
-if [[ ! -r $TARGET_DIR/keepalived.conf ]]
+if [[ ! -r $HOME/keepalived.conf ]]
 then
 	echo "Downloading the template files from github."
 	#Get the keepalived_template.conf and create a copy
@@ -203,7 +205,7 @@ else
 	echo "Found keepalived.conf in current direcotry. Going to use it 'as is'."
 fi
 
-if [[ ! -r $TARGET_DIR/haproxy.cfg ]]
+if [[ ! -r $HOME/haproxy.cfg ]]
 then
 	echo "Downloading the template files from github."
 	#Get the haproxy_template.cfg and create a copy
@@ -224,7 +226,6 @@ else
 	echo "Found haproxy.cfg in current direcotry. Going to use it 'as is'."
 fi 
 
-
 #Identify if it is Ubuntu or Centos/RHEL
 distro=$(cat /etc/*-release | awk '/ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
 
@@ -234,26 +235,20 @@ then
 	echo "Calling apt update."
 	#Call update
 	apt-get update
-
 	#Disable UFW
 	ufw disable
-
 	#Install haproxy keepalived; 
 	apt-get -y install haproxy keepalived
-
 	#Update keepalived.conf
-	mv $TARGET_DIR/keepalived.conf /etc/keepalived/keepalived.conf
-
+	mv $HOME/keepalived.conf /etc/keepalived/keepalived.conf
 	#Start keepalived service
 	systemctl enable keepalived.service && systemctl start keepalived.service
-
 	#Update HAProxy config (haproxy.cfg)
-	mv $TARGET_DIR/haproxy.cfg /etc/haproxy/haproxy.cfg
-	
+	mv $HOME/haproxy.cfg /etc/haproxy/haproxy.cfg	
 	#Start HAProxy service
 	systemctl start haproxy.service  && systemctl enable haproxy.service
 
-	echo "Both the services should be up. Lets check."
+	echo "Both the services should be up. Let's check."
 
 elif [[ $distro == "centos" ]]
 then
@@ -261,10 +256,17 @@ then
 	#Update packages.
 	sudo yum update -y
 
-	#Disable and Stop firewalld. Unless firewalld is stopped, HAProxy would not work
-	echo "Disabling firewalld."
-	systemctl disable firewalld
-	systemctl stop firewalld
+	#Disable and Stop firewalld. firewalld blocks HAProxy and needs exception rules or be disabled.
+	FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
+	if [[ FIREWALLD_STATUS -gt 0 ]]
+	then
+		#Stop and disable firewalld
+		sudo systemctl stop firewalld
+		sudo systemctl disable firewalld
+		echo "Disabled firewalld. Please enable with direct rules."
+	else
+		echo "Firewalld seems to be disabled. Continuing."
+	fi
 
 	#Install haproxy keepalived; 
 	echo "Installing haproxy and keepalived."
@@ -272,7 +274,7 @@ then
 
 	#Update keepalived.conf
 	echo "Replacing the default keepalived.conf with our updated version."
-	mv $TARGET_DIR/keepalived.conf /etc/keepalived/keepalived.conf
+	mv $HOME/keepalived.conf /etc/keepalived/keepalived.conf
 
 	#Start keepalived service
 	systemctl enable keepalived.service && systemctl start keepalived.service
@@ -280,7 +282,7 @@ then
 	#Update HAProxy config (haproxy.cfg)
 	echo "Replacing the default haproxy.cfg with our updated version."
 	echo "Expected path: $(pwd)/haproxy.cfg"
-	mv $TARGET_DIR/haproxy.cfg /etc/haproxy/haproxy.cfg
+	mv $HOME/haproxy.cfg /etc/haproxy/haproxy.cfg
 	
 	#Only for Non Primary node.
 	#Run below command on Primary keepalived node to switch VIP to Secondary node. 
@@ -294,7 +296,7 @@ then
 	#sudo systemctl start keepalived
 	echo "Both the services should be up. Lets check."
 fi
-sleep 60
+sleep 20
 nc -zv $KUBE_VIP $API_PORT
 #Run Netcat and save the result in text file
 #nc -vz "$KUBE_VIP $API_PORT" > file.txt 2>&1
@@ -305,11 +307,11 @@ LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $
 if [[ ($LB_CONNECTED == 0 ) || ($LB_REFUSED == 0) ]]
 then 
 	echo "Route seems to be available."
-	echo "----------- Load Balancing set up complete in $hostname ------------"
+	echo "----------- Load Balancing set up complete in $(hostname) ------------"
 else
 	echo "No route found. Please check firewall config."
 	nc -vz $KUBE_VIP $API_PORT
-	echo "----------- Load Balancing set up Failed in $hostname ------------"
+	echo "----------- Load Balancing set up Failed in $(hostname) ------------"
 fi
 
 #echo "Script (setting_loadbalancer) completed."
