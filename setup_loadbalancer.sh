@@ -111,8 +111,8 @@ fi
 # fi
 
 #Check the current status of Load balance config
-LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
-LB_REFUSED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep refused > /dev/null 2>&1; echo $?)
+LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
+LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
 echo "Results of Con: $LB_CONNECTED and Ref: $LB_REFUSED"
 if [[ $LB_CONNECTED == 0 || $LB_REFUSED == 0 ]]
 then
@@ -160,7 +160,7 @@ then
 	sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 	echo "Done."
 else
-	echo "SELinux not set as enforcing. No change needed."
+	echo "SELinux already set as permissive. No change needed."
 fi
 
 #Check if non local bind is already allowed
