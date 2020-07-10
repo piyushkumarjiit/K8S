@@ -4,8 +4,13 @@
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 echo "----------- Preparing $(hostname) ------------"
 
-#Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
+if [[ (${ALL_NODE_NAMES[*]} == "") || (${ALL_NODE_IPS[*]} == "") ]]
+then
+	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
+	exit 1
+fi
 
+#Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do
@@ -23,7 +28,8 @@ do
 		${ALL_NODE_IPS[$index]}	$node
 		SETVAR
 		)
-		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+		echo "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+		#echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
 		echo "Node added to /etc/hosts file."
 		NODES_IN_CLUSTER=""
 	else
@@ -127,7 +133,7 @@ then
 	echo "Kubernetes repo already present."
 else
 	#Add kubernetes repo
-	bash -c 'cat << EOF > /etc/yum.repos.d/kubernetes.repo
+	bash -c 'cat <<-EOF > /etc/yum.repos.d/kubernetes.repo
 	[kubernetes]
 	name=Kubernetes
 	baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
@@ -149,7 +155,7 @@ yum update -y
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 #yum install yum-utils
 yum install -y container-selinux
-yum module -y disable container-tools
+yum module disable container-tools -y
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)

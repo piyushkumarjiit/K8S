@@ -9,7 +9,7 @@ kubectl delete node $CURRENT_NODE
 kubeadm reset
 
 #Remove packages installed by yum
-yum -y remove docker-ce kubelet kubeadm kubectl haproxy keepalived
+yum -y remove docker-ce kubelet kubeadm kubectl haproxy keepalived container-selinux
 
 #sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
 #sudo apt-get autoremove  

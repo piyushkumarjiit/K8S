@@ -111,6 +111,7 @@ fi
 # fi
 
 #Check the current status of Load balance config
+echo "Try: nc -vz $KUBE_VIP $API_PORT"
 LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
 LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
 echo "Results of Con: $LB_CONNECTED and Ref: $LB_REFUSED"
