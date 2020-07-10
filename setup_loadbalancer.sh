@@ -113,7 +113,7 @@ fi
 #Check the current status of Load balance config
 LB_CONNECTED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep Connected > /dev/null 2>&1; echo $?)
 LB_REFUSED=$(nc -vz "$KUBE_VIP $API_PORT" |& grep refused > /dev/null 2>&1; echo $?)
-
+echo "Results of Con: $LB_CONNECTED and Ref: $LB_REFUSED"
 if [[ $LB_CONNECTED == 0 || $LB_REFUSED == 0 ]]
 then
 	echo "Load balancer seems to be running on the sepcified VIP. Unable to proceed. Exiting."
