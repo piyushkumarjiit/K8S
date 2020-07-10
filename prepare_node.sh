@@ -59,14 +59,14 @@ then
 	sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
 	echo "Done."
 else
-	echo "SELinux not set as enforcing. No change needed."
+	echo "SELinux already set as permissive. No change needed."
 fi
 
 #Check if IP tables contain K8s config
 BRIDGED_MODE=$(cat /etc/sysctl.d/k8s.conf | grep -w 'net.bridge.bridge-nf-call-iptables = 1' > /dev/null 2>&1; echo $?)
 if [[ -r /etc/sysctl.d/k8s.conf && (BRIDGED_MODE == 0) ]]
 then
-	"K8s.conf exists and contains IP tables rules."
+	"K8s.conf already exists and contains IP tables rules."
 else
 	#Setup IP tables for Bridged Traffic
 	bash -c 'cat <<EOF >  /etc/sysctl.d/k8s.conf
@@ -109,30 +109,34 @@ fi
 
 sysctl -q --system
 
-echo "firewalld disabled."
-#Add kubernetes repo
-bash -c 'cat << EOF > /etc/yum.repos.d/kubernetes.repo
-[kubernetes]
-name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-exclude=kubelet kubeadm kubectl
-EOF'
-echo "Kubernetes repo added."
+if [[ -r /etc/yum.repos.d/kubernetes.repo ]]
+then
+	echo "Kubernetes repo already present."
+else
+	#Add kubernetes repo
+	bash -c 'cat << EOF > /etc/yum.repos.d/kubernetes.repo
+	[kubernetes]
+	name=Kubernetes
+	baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+	enabled=1
+	gpgcheck=1
+	repo_gpgcheck=1
+	gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+	exclude=kubelet kubeadm kubectl
+	EOF'
+	echo "Kubernetes repo added."
+fi
+
+#Update packages.
+yum update -y
 
 #Manually install containerd.io
 #yum install -y https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.6-3.3.el7.x86_64.rpm
 
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 #yum install yum-utils
-yum install container-selinux
-yum module disable container-tools
-
-#Update packages.
-yum update -y
+yum install -y container-selinux
+yum module -y disable container-tools
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
