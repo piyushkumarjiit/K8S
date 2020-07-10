@@ -95,6 +95,14 @@ exclude=kubelet kubeadm kubectl
 EOF'
 echo "Kubernetes repo added."
 
+#Manually install containerd.io
+#yum install -y https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.6-3.3.el7.x86_64.rpm
+
+#containerd.io package is related to the runc conflicting with the runc package from the container-tools
+#yum install yum-utils
+yum install container-selinux
+yum module disable container-tools
+
 #Update packages.
 yum update -y
 
