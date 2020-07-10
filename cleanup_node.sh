@@ -21,6 +21,7 @@ rm -f "/etc/yum.repos.d/kubernetes.repo"
 #Remove extra files created.
 rm -f "/etc/sysctl.d/k8s.conf"
 rm -f "/etc/docker/daemon.json"
+#rm -f "~/prepare*.*"
 
 #Remove folders
 rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd
