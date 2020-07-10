@@ -5,21 +5,49 @@ CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 echo "----------- Preparing $(hostname) ------------"
 
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
-NODES_ADDED=$(ping -c 1 $CALLING_NODE  > /dev/null 2>&1; echo $?)
-if [[ $NODES_ADDED != 0  &&  $NODES_IN_CLUSTER != "" ]]
-then
-		echo "Ping failed. Updating hosts file."
-		#Take backup of old hosts file. In case we need to restore/cleanup
-		cat /etc/hosts > hosts.txt
+
+index=0
+for node in ${ALL_NODE_NAMES[*]}
+do
+	NODE_ACCESSIBLE=$(ping -q -c 1 -W 1 $node > /dev/null 2>&1; echo $?)
+	if [[ $NODE_ACCESSIBLE != 0 ]]
+	then
+		echo "Node: $node inaccessible. Need to update hosts file."
+		if [[ $index == 0 ]]
+		then
+			cat /etc/hosts > hosts.txt
+			echo "Backed up /etc/hosts file."
+		fi
+		#Add Master IP Addresses and Hostnames in hosts file
+		NODES_IN_CLUSTER=$(cat <<- SETVAR
+		${ALL_NODE_IPS[$index]}	$node
+		SETVAR
+		)
 		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-		echo "Hosts file updated."
-elif [[ $NODES_IN_CLUSTER != "" ]]
-then
-	echo "NODES_IN_CLUSTER not set. Exiting."
-	exit 1
-else
-	echo "Hosts file already updated for Primary node by main script."
-fi
+		echo "Node added to /etc/hosts file."
+		NODES_IN_CLUSTER=""
+	else
+		echo "Node accessible. No need to update /etc/hosts file"
+	fi
+	index+=1
+done
+
+
+# NODES_ADDED=$(ping -c 1 $CALLING_NODE  > /dev/null 2>&1; echo $?)
+# if [[ $NODES_ADDED != 0  &&  $NODES_IN_CLUSTER != "" ]]
+# then
+# 		echo "Ping failed. Updating hosts file."
+# 		#Take backup of old hosts file. In case we need to restore/cleanup
+# 		cat /etc/hosts > hosts.txt
+# 		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
+# 		echo "Hosts file updated."
+# elif [[ $NODES_IN_CLUSTER != "" ]]
+# then
+# 	echo "NODES_IN_CLUSTER not set. Exiting."
+# 	exit 1
+# else
+# 	echo "Hosts file already updated for Primary node by main script."
+# fi
 
 #Check the status of SELinux and disable if needed.
 SELINUX_STATUS=$(cat /etc/selinux/config | grep 'SELINUX=enforcing' > /dev/null 2>&1; echo $?)
