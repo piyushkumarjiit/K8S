@@ -17,10 +17,12 @@ echo "SELINUX enabled for restart."
 
 #Enable Swap manually
 #sed -ir 's/.*-swap/#&/' /etc/fstab
+echo "Swap enabled for restart."
 
 #Enable and Start firewalld.
 #systemctl enable firewalld
 #systemctl start firewalld
+echo "firewalld enabled and started."
 
 #Below is newly added. Need to be tested against original ones.
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
@@ -33,7 +35,7 @@ yum -y remove docker-ce kubelet kubeadm kubectl haproxy keepalived
 
 #sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
 #sudo apt-get autoremove  
-sudo rm -rf ~/.kube
+
 
 #Delete Repos
 rm -f "/etc/yum.repos.d/docker-ce.repo"
@@ -44,7 +46,7 @@ rm -f "/etc/sysctl.d/k8s.conf"
 rm -f "/etc/docker/daemon.json"
 
 #Remove folders
-rm -Rf /etc/cni/net.d /root/.kube /var/lib/etcd
+rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd
 
 #Reset the IP Tables
 iptables -F ; iptables -X ; iptables -t nat -F ; iptables -t nat -X; iptables -t mangle -F ; iptables -t mangle -X
