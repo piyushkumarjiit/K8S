@@ -7,7 +7,7 @@ echo "----------- Preparing $(hostname) ------------"
 if [[ ($(${ALL_NODE_NAMES[*]}) == "") || ($(${ALL_NODE_IPS[*]}) == "") ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
-	echo "Node Names: $(${ALL_NODE_NAMES[*]}) and Node IPs: $(${ALL_NODE_IPS[*]}) "
+	echo "Node Names: ${ALL_NODE_NAMES[*]} and Node IPs: ${ALL_NODE_IPS[*]} "
 	exit 1
 fi
 
