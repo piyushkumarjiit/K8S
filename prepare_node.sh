@@ -4,6 +4,9 @@
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 echo "----------- Preparing $(hostname) ------------"
 
+export ALL_NODE_NAMES=($TEMP_NODE_NAMES)
+export ALL_NODE_IPS=($TEMP_NODE_IPS)
+
 if [[ ($(${ALL_NODE_NAMES[*]}) == "") || ($(${ALL_NODE_IPS[*]}) == "") ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
