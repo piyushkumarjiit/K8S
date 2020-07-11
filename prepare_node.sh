@@ -134,7 +134,7 @@ then
 	echo "Kubernetes repo already present."
 else
 	#Add kubernetes repo
-	bash -c 'cat <<-EOF > /etc/yum.repos.d/kubernetes.repo
+	cat <<-'EOF' > /etc/yum.repos.d/kubernetes.repo
 	[kubernetes]
 	name=Kubernetes
 	baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
@@ -143,8 +143,8 @@ else
 	repo_gpgcheck=1
 	gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
 	exclude=kubelet kubeadm kubectl
-	EOF'
-	echo "Kubernetes repo added."
+	EOF
+echo "Kubernetes repo added."
 fi
 
 #Update packages.
