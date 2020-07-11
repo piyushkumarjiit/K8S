@@ -11,6 +11,7 @@ if [[ ${ALL_NODE_NAMES[*]} == "" || ${ALL_NODE_IPS[*]} == "" ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
 	echo "Node Names: ${ALL_NODE_NAMES[*]} and Node IPs: ${ALL_NODE_IPS[*]} "
+	echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
 	exit 1
 fi
 
