@@ -154,9 +154,9 @@ yum update -y
 #yum install -y https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.6-3.3.el7.x86_64.rpm
 
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
-#yum install -y yum-utils
-#yum install -y container-selinux
-#yum module -y disable container-tools
+yum install -y yum-utils
+yum install -y container-selinux
+yum module -y disable container-tools
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
