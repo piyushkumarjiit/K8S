@@ -157,7 +157,9 @@ yum update -y
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 yum install -y yum-utils
 yum install -y container-selinux
+echo "installed container-selinux"
 yum module -y disable container-tools
+echo "Disabled container-tools"
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
