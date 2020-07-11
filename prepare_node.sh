@@ -11,6 +11,7 @@ then
 	exit 1
 fi
 
+echo "Value of ALL_NODE_NAMES ${ALL_NODE_NAMES[*]} and ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
 index=0
 for node in ${ALL_NODE_NAMES[*]}
@@ -35,9 +36,9 @@ do
 		echo "Node added to /etc/hosts file."
 		NODES_IN_CLUSTER=""
 	else
-		echo "Node accessible. No need to update /etc/hosts file"
+		echo "Node: $node accessible. No need to update /etc/hosts file"
 	fi
-	index+=1
+	((index++))
 done
 
 
