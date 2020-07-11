@@ -22,10 +22,10 @@ rm -f "/etc/yum.repos.d/kubernetes.repo"
 #Remove extra files created.
 rm -f "/etc/sysctl.d/k8s.conf"
 rm -f "/etc/docker/daemon.json"
-#rm -f "~/prepare*.*"
+rm -f "~/prepare*.*"
 
 #Remove folders
-rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd
+rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd /etc/kubernetes/pki
 
 #Enable and Start firewalld.
 #systemctl enable firewalld
@@ -42,7 +42,7 @@ echo "Swap enabled for restart."
 echo "SELINUX enabled for restart."
 
 #Restore the /etc/hosts file
-if [[ -r hosts.txt ]]
+if [[ -r hosts.txt && $CALLING_NODE != $CURRENT_NODE ]]
 then
 	cat hosts.txt > /etc/hosts
 	echo "Hosts file overwritten."

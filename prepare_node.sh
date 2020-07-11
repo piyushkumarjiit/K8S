@@ -182,7 +182,7 @@ then
 		echo "Docker seems to be working but you need to disconnect and reconnect for usermod changes to reflect."
 		echo "Reconnect and rerun the script. Exiting."
 		sleep 10
-		exit 1
+		#exit 1
 	else
 		echo "Unable to install Docker. Trying the nobest option as last resort."
 		sleep 2
