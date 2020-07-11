@@ -158,7 +158,7 @@ yum update -y
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 yum install -y yum-utils
 #yum install -y container-selinux
-yum -y install "http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.119.2-1.911c772.el7_8.noarch.rpm"
+yum -y install http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.119.2-1.911c772.el7_8.noarch.rpm
 echo "installed container-selinux"
 #Disable the module that causes conflict
 yum module -y disable container-tools
