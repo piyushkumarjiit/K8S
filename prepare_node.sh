@@ -4,12 +4,14 @@
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 echo "----------- Preparing $(hostname) ------------"
 
-if [[ (${ALL_NODE_NAMES[*]} == "") || (${ALL_NODE_IPS[*]} == "") ]]
+if [[ ($(${ALL_NODE_NAMES[*]}) == "") || ($(${ALL_NODE_IPS[*]}) == "") ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
-	echo "${ALL_NODE_NAMES[*]} and ${ALL_NODE_IPS[*]} "
+	echo "Node Names: $(${ALL_NODE_NAMES[*]}) and Node IPs: $(${ALL_NODE_IPS[*]}) "
 	exit 1
 fi
+
+
 
 echo "Value of ALL_NODE_NAMES ${ALL_NODE_NAMES[*]} and ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
@@ -158,7 +160,9 @@ yum update -y
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 yum install -y yum-utils
 #yum install -y container-selinux
-yum -y install http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.119.2-1.911c772.el7_8.noarch.rpm
+#
+yum -y install http://vault.centos.org/centos/7.3.1611/extras/x86_64/Packages/container-selinux-2.19-2.1.el7.noarch.rpm
+
 echo "installed container-selinux"
 #Disable the module that causes conflict
 yum module -y disable container-tools
@@ -232,8 +236,17 @@ else
 	echo "Cgroup drivers updated."
 fi
 
-#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
-yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+if [[  NODE_TYPE == "Master" ]]
+then
+	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
+	yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+	echo "Installed kubelet kubeadm kubectl on Master node."
+else
+	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
+	yum install -y kubelet kubeadm --disableexcludes=kubernetes
+	echo "Installed kubelet kubectl on Worker node."
+fi
+
 #systemctl enable --now kubelet
 #Restart kublet
 systemctl daemon-reload

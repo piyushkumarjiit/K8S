@@ -12,6 +12,8 @@ kubeadm reset
 #Remove packages installed by yum
 yum -y remove docker-ce kubelet kubeadm kubectl haproxy keepalived container-selinux
 
+yum -y autoremove
+
 #sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
 #sudo apt-get autoremove  
 
@@ -23,9 +25,12 @@ rm -f "/etc/yum.repos.d/kubernetes.repo"
 rm -f "/etc/sysctl.d/k8s.conf"
 rm -f "/etc/docker/daemon.json"
 rm -f "~/prepare*.*"
+rm -f "~/cleanup_node*.*"
 
 #Remove folders
-rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd /etc/kubernetes/pki
+rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd /etc/kubernetes/pki 
+rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
+groupdel docker
 
 #Enable and Start firewalld.
 #systemctl enable firewalld
