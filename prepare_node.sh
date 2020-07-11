@@ -7,14 +7,14 @@ echo "----------- Preparing $(hostname) ------------"
 export ALL_NODE_NAMES=($TEMP_NODE_NAMES)
 export ALL_NODE_IPS=($TEMP_NODE_IPS)
 
-if [[ ($(${ALL_NODE_NAMES[*]}) == "") || ($(${ALL_NODE_IPS[*]}) == "") ]]
+if [[ ${ALL_NODE_NAMES[*]} == "" || ${ALL_NODE_IPS[*]} == "" ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
 	echo "Node Names: ${ALL_NODE_NAMES[*]} and Node IPs: ${ALL_NODE_IPS[*]} "
 	exit 1
 fi
 
-
+echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
 
 echo "Value of ALL_NODE_NAMES ${ALL_NODE_NAMES[*]} and ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
