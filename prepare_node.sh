@@ -7,6 +7,7 @@ echo "----------- Preparing $(hostname) ------------"
 if [[ (${ALL_NODE_NAMES[*]} == "") || (${ALL_NODE_IPS[*]} == "") ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
+	echo "${ALL_NODE_NAMES[*]} and ${ALL_NODE_IPS[*]} "
 	exit 1
 fi
 
@@ -87,9 +88,9 @@ then
 		echo "File (k8s.conf) updated."
 	fi
 else
-		"Creating k8s.conf and adding IP tables rules."
+		echo "Creating k8s.conf and adding IP tables rules."
 		#Setup IP tables for Bridged Traffic
-		bash -c 'cat <<EOF >  /etc/sysctl.d/k8s.conf
+		bash -c 'cat <<-EOF >  /etc/sysctl.d/k8s.conf
 		net.bridge.bridge-nf-call-ip6tables = 1
 		net.bridge.bridge-nf-call-iptables = 1
 		EOF'
