@@ -79,9 +79,9 @@ then
 	then 
 		"K8s.conf already exists and contains IP tables rules."
 	else
-		"Adding IP tables rules to existing K8s file."
+		echo "Adding IP tables rules to existing K8s file."
 		#Setup IP tables for Bridged Traffic
-		bash -c 'cat <<EOF >  /etc/sysctl.d/k8s.conf
+		bash -c 'cat <<-EOF >  /etc/sysctl.d/k8s.conf
 		net.bridge.bridge-nf-call-ip6tables = 1
 		net.bridge.bridge-nf-call-iptables = 1
 		EOF'
