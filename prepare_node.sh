@@ -179,9 +179,10 @@ then
 	DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 	if [[ $DOCKER_INSTALLED == 0 ]]
 	then
-		echo "Docker seems to be working but you need to disconnect and reconnect for usermod changes to reflect."
-		echo "Reconnect and rerun the script. Exiting."
-		sleep 10
+		echo "Docker seems to be working."
+		#echo "But you might need to disconnect and reconnect for usermod changes to reflect."
+		#echo "Reconnect and rerun the script. Exiting."
+		#sleep 10
 		#exit 1
 	else
 		echo "Unable to install Docker. Trying the nobest option as last resort."
