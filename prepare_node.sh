@@ -156,7 +156,13 @@ echo "Kubernetes repo added."
 fi
 
 #Add EPEL Repo
-yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+#yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+#Enable the plugin adn then the rhcontainerbot/container-selinux repo for smooth Docker install
+sudo dnf -y install 'dnf-command(copr)'
+sudo dnf -y copr enable rhcontainerbot/container-selinux
+#Add CRI-O Repo. Will be tried later
+#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:${VERSION}.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:${VERSION}/CentOS_8/devel:kubic:libcontainers:stable:cri-o:${VERSION}.repo
 
 #Update packages.
 yum update -y
@@ -203,7 +209,6 @@ then
 		echo "Unable to install Docker. Trying the nobest option as last resort."
 		sleep 2
 		sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-		docker-ce-17.12.1.ce-1.el7.centos
 		sudo dnf -y  install docker-ce --nobest
 		sudo usermod -aG docker $USER
 		#Enable Docker to start on start up
