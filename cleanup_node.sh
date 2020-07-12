@@ -45,6 +45,8 @@ rm -f ~/prepare*.*
 rm -f ~/cleanup_node*.*
 echo "Files created by setup script deleted."
 
+umount /var/lib/docker/aufs
+
 #Remove folders
 rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd /etc/kubernetes/pki 
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
