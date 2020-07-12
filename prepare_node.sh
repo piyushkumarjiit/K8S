@@ -24,24 +24,37 @@ do
 	NODE_ACCESSIBLE=$(ping -q -c 1 -W 1 $node > /dev/null 2>&1; echo $?)
 	if [[ $NODE_ACCESSIBLE != 0 ]]
 	then
-		echo "Node: $node inaccessible. Need to update hosts file."
+		echo "Node: $node inaccessible. Need to update hosts file."		
 		if [[ $index == 0 ]]
 		then
 			cat /etc/hosts > hosts.txt
 			echo "Backed up /etc/hosts file."
 		fi
 		#Add Master IP Addresses and Hostnames in hosts file
+		#echo "Index: $index"
 		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
+
 		# NODES_IN_CLUSTER=$(cat <<- SETVAR
-		# ${ALL_NODE_IPS[$index]}	$node
+		# ${ALL_NODE_IPS[index]}	$node
 		# SETVAR
 		# )
+		# #echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
 		# echo "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-		#echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-		echo "Node added to /etc/hosts file."
-		#NODES_IN_CLUSTER=""
+		echo "Hosts file updated."
+		NODES_IN_CLUSTER=""
+		#Extra logic for source node. Current node is pingable but not sshable so need to add entry to etc.hosts
+	elif [[ $CURRENT_NODE_NAME == $node ]]
+    	then
+    	echo "Node $node is source node and can be pinged."
+    	if [[ $index == 0 ]]
+		then
+			cat /etc/hosts > hosts.txt
+			echo "Backed up /etc/hosts file."
+		fi
+		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
+		echo "Hosts file updated."
 	else
-		echo "Node: $node accessible. No need to update /etc/hosts file"
+		echo "Node $node is accessible."
 	fi
 	((index++))
 done
@@ -192,6 +205,11 @@ echo "Install CRI-O"
 yum -y -q install cri-o
 echo "Installed CRI-O"
 
+#Install TC
+echo "Installing iproute-tc"
+dnf -y -q install iproute-tc
+echo "Installed iproute-tc"
+
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 if [[ $DOCKER_INSTALLED -gt 0 ]]
@@ -269,6 +287,7 @@ else
 	echo "Docker restarted."
 fi
 
+
 echo "Installing kubelet kubeadm and kubectl."
 if [[  NODE_TYPE == "Worker" ]]
 then
@@ -288,6 +307,26 @@ fi
 systemctl daemon-reload
 systemctl enable kubelet 
 systemctl start kubelet
+
+#Set CGroup drivers and Service privileg
+if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
+then
+	echo "Updating /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf"
+	cat <<-EOF >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+	'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs 
+	--runtime-cgroups=/systemd/system.slice 
+	--kubelet-cgroups=/systemd/system.slice"'
+	EOF
+
+	cat <<-EOF >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+	'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests 
+	--allow-privileged=true 
+	--fail-swap-on=false"'
+	EOF
+	echo "File updated."
+else
+	echo "File /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf does not exist."
+fi
 
 if [[ $RESTART_NEEDED == 0 ]]
 then
