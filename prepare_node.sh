@@ -181,7 +181,7 @@ yum -y -q update
 
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 echo "Install yum-utils"
-yum install -y yum-utils
+yum -y -q install yum-utils
 echo "Installed yum-utils"
 #yum install -y container-selinux
 #echo "installed container-selinux"
