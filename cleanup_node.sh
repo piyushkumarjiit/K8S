@@ -48,6 +48,9 @@ echo "Files created by setup script deleted."
 echo "Unmounting /aufs"
 umount /var/lib/docker/aufs
 
+echo "Pruning Docker"
+docker system prune -af
+
 #Remove folders
 rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd /etc/kubernetes/pki 
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
