@@ -10,12 +10,12 @@ export ALL_NODE_IPS=($TEMP_NODE_IPS)
 if [[ ${ALL_NODE_NAMES[*]} == "" || ${ALL_NODE_IPS[*]} == "" ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
-	echo "Node Names: ${ALL_NODE_NAMES[*]} and Node IPs: ${ALL_NODE_IPS[*]} "
-	echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
+	#echo "Node Names: ${ALL_NODE_NAMES[*]} and Node IPs: ${ALL_NODE_IPS[*]} "
+	#echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
 	exit 1
 fi
 
-echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
+#echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
 
 echo "Value of ALL_NODE_NAMES ${ALL_NODE_NAMES[*]} and ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
@@ -159,16 +159,22 @@ fi
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
 sudo dnf -y install 'dnf-command(copr)'
+#Below repo seems to be a dev one so use with caution
 sudo dnf -y copr enable rhcontainerbot/container-selinux
-#Add CRI-O Repo. Will be tried later
-#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
-#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:${VERSION}.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:${VERSION}/CentOS_8/devel:kubic:libcontainers:stable:cri-o:${VERSION}.repo
+#Add CRI-O Repo.
+#For CentOS8
+sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:${VERSION}.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:${VERSION}/CentOS_8/devel:kubic:libcontainers:stable:cri-o:${VERSION}.repo
+
+#For CentOS7
+#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
+#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
 
 #Update packages.
 yum update -y
 
-#Manually install containerd.io
-#yum install -y https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.6-3.3.el7.x86_64.rpm
+#Install CRI-O
+yum -y install cri-o
 
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 yum install -y yum-utils
@@ -242,11 +248,18 @@ else
 	"exec-opts": ["native.cgroupdriver=systemd"],
 	"log-driver": "json-file",
 	"log-opts": {"max-size": "100m"},
-	"storage-driver": "overlay2"
+	"storage-driver": "overlay2",
+  	"storage-opts": [
+    "overlay2.override_kernel_check=true"
+  	]
 	}
 	EOF'
 	echo "Cgroup drivers updated."
 fi
+
+# Restart Docker for changes to take effect
+systemctl daemon-reload
+systemctl restart docker
 
 if [[  NODE_TYPE == "Master" ]]
 then
@@ -262,7 +275,8 @@ fi
 #systemctl enable --now kubelet
 #Restart kublet
 systemctl daemon-reload
-systemctl enable kubelet && sudo systemctl start kubelet
+systemctl enable kubelet 
+systemctl start kubelet
 
 if [[ $RESTART_NEEDED == 0 ]]
 then
