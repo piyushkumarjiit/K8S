@@ -20,13 +20,13 @@ then
 fi
 
 #Remove packages installed by yum
-yum -y remove kubelet kubeadm kubectl
-yum -y remove docker-ce docker-ce-cli containerd.io
-yum -y haproxy keepalived
-yum -y remove container-selinux
-yum -y cri-o
+yum -y -q remove kubelet kubeadm kubectl
+yum -y -q remove docker-ce docker-ce-cli containerd.io
+yum -y -q haproxy keepalived
+yum -y -q remove container-selinux
+yum -y -q cri-o
 echo " Yum remove step completed."
-yum -y autoremove
+yum -y -q autoremove
 
 #sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
 #sudo apt-get autoremove  
