@@ -128,8 +128,8 @@ FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" 
 if [[ FIREWALLD_STATUS -gt 0 ]]
 then
 	#Stop and disable firewalld
-	sudo systemctl stop firewalld
-	sudo systemctl disable firewalld
+	systemctl stop firewalld
+	systemctl disable firewalld
 	echo "Disabled firewalld. Please enable with direct rules."
 else
 	echo "Firewalld seems to be disabled. Continuing."
@@ -158,33 +158,34 @@ fi
 #Add EPEL Repo
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
-sudo dnf -y install 'dnf-command(copr)'
+dnf -y install 'dnf-command(copr)'
 #Below repo seems to be a dev one so use with caution
-sudo dnf -y copr enable rhcontainerbot/container-selinux
+dnf -y copr enable rhcontainerbot/container-selinux
 #Add CRI-O Repo.
 #For CentOS8
-sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
-sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:${VERSION}.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:${VERSION}/CentOS_8/devel:kubic:libcontainers:stable:cri-o:${VERSION}.repo
+curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
+curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
 #For CentOS7
 #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
 #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
+#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
 #Update packages.
 yum update -y
 
-#Install CRI-O
-yum -y install cri-o
-
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 yum install -y yum-utils
-yum install -y container-selinux
-#yum -y install http://vault.centos.org/centos/7.3.1611/extras/x86_64/Packages/container-selinux-2.19-2.1.el7.noarch.rpm
-echo "installed container-selinux"
-
+#yum install -y container-selinux
+#echo "installed container-selinux"
 #Disable the module that causes conflict
-yum module -y disable container-tools
-echo "Disabled container-tools"
+#yum module -y disable container-tools
+#echo "Disabled container-tools"
+
+#Install CRI-O
+yum -y install cri-o
+echo "installed CRI-O"
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
@@ -193,13 +194,13 @@ then
 	#Install Docker on server
 	echo "Docker does not seem to be available. Trying to install Docker."
 	curl -fsSL https://get.docker.com -o get-docker.sh
-	sudo sh get-docker.sh
-	sudo usermod -aG docker $USER
+	sh get-docker.sh
+	usermod -aG docker $USER
 	RESTART_NEEDED=0
 	#Enable Docker to start on start up
-	sudo systemctl enable docker
+	systemctl enable docker
 	#Start Docker
-	sudo systemctl start docker
+	systemctl start docker
 	#Remove temp file.
 	rm get-docker.sh
 	#Check again
@@ -214,13 +215,13 @@ then
 	else
 		echo "Unable to install Docker. Trying the nobest option as last resort."
 		sleep 2
-		sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-		sudo dnf -y  install docker-ce --nobest
-		sudo usermod -aG docker $USER
+		dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+		dnf -y  install docker-ce --nobest
+		usermod -aG docker $USER
 		#Enable Docker to start on start up
-		sudo systemctl enable docker
+		systemctl enable docker
 		#Start Docker
-		sudo systemctl start docker
+		systemctl start docker
 		#Check again
 		DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 		if [[ $DOCKER_INSTALLED != 0 ]]

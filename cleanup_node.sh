@@ -24,6 +24,7 @@ yum -y remove kubelet kubeadm kubectl
 yum -y remove docker-ce docker-ce-cli containerd.io
 yum -y haproxy keepalived
 yum -y remove container-selinux
+yum -y cri-o
 echo " Yum remove step completed."
 yum -y autoremove
 
