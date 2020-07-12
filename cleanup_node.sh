@@ -6,14 +6,14 @@ echo "Cleanup script started."
 #Below is newly added. Need to be tested against original ones.
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
-KUBEADM_AVAILABLE=$(kuberadm version > /dev/null 2>&1; echo $?)
+KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
 if [[ $KUBECTL_AVAILABLE == 0 ]]
 then
 	kubectl drain $CURRENT_NODE --delete-local-data --force --ignore-daemonsets
 	kubectl delete node $CURRENT_NODE
 	echo "Kubectl delete node called."
 fi
-if [[ KUBEADM_AVAILABLE == 0 ]]
+if [[ $KUBEADM_AVAILABLE == 0 ]]
 then
 	kubeadm reset
 	echo "Kubeadm reset called."
@@ -25,7 +25,7 @@ yum -y -q remove docker-ce docker-ce-cli containerd.io
 yum -y -q haproxy keepalived
 yum -y -q remove container-selinux
 yum -y -q cri-o
-echo " Yum remove step completed."
+echo "Yum remove step completed."
 yum -y -q autoremove
 
 #sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
