@@ -92,7 +92,7 @@ sysctl -q --system
 
 echo "Cleanup script completed."
 
-if [[ $CURRENT_NODE_NAME != $CALLING_NODE_NAME && $DELETE_FAILED -gt 0 ]]
+if [[ ($CURRENT_NODE_NAME != $CALLING_NODE_NAME) && $DELETE_FAILED -gt 0 ]]
 then
 	echo "Cleanup done. Restarting the node to reset stuck handles."
 	shutdown -r
