@@ -1,7 +1,7 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 echo "========== Connected to $(hostname)) ============"
-echo "Cleanup script started."
+echo "Cleanup script initiated from node: $CALLING_NODE_NAME."
 
 #Current Node IP
 CURRENT_NODE_NAME="$(hostname)"
@@ -18,6 +18,9 @@ then
 	kubeadm reset
 	echo "Kubeadm reset called."
 fi
+
+echo "Pruning Docker"
+docker system prune -af
 
 #Remove packages installed by yum
 yum -y -q remove kubelet kubeadm kubectl
@@ -49,9 +52,8 @@ echo "Files created by setup script deleted."
 #umount /var/lib/docker/aufs
 #umount /var/lib/docker/containers
 
-echo "Pruning Docker"
-docker system prune -af
 
+DELETE_FAILED=$(rm -Rf /usr/lib/systemd/system/kubelet.service.d > /dev/null 2>&1; echo $?)
 #Remove folders
 rm -Rf /etc/cni/net.d /var/lib/etcd /etc/kubernetes/pki /usr/lib/systemd/system/kubelet.service.d
 rm -Rf /root/.kube ~/.kube
@@ -89,7 +91,7 @@ sysctl -q --system
 
 echo "Cleanup script completed."
 
-if [[ $CURRENT_NODE_NAME != $CALLING_NODE_NAME ]]
+if [[ $CURRENT_NODE_NAME != $CALLING_NODE_NAME || $DELETE_FAILED -gt 0 ]]
 then
 	echo "Cleanup done. Restarting the node to reset stuck handles."
 	shutdown -r
