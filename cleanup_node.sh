@@ -24,7 +24,7 @@ yum -y remove kubelet kubeadm kubectl
 yum -y remove docker-ce docker-ce-cli containerd.io
 yum -y haproxy keepalived
 yum -y remove container-selinux
-
+echo " Yum remove step completed."
 yum -y autoremove
 
 #sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
@@ -35,17 +35,19 @@ rm -f /etc/yum.repos.d/docker-ce.repo
 rm -f /etc/yum.repos.d/kubernetes.repo
 rm -f /etc/yum.repos.d/*rhcontainerbot:container-selinux.repo*
 rm -f /etc/yum.repos.d/*devel:kubic:libcontainers*
-	#statements
+echo "Repos deleted."
 
 #Remove extra files created.
 rm -f /etc/sysctl.d/k8s.conf
 rm -f /etc/docker/daemon.json
 rm -f ~/prepare*.*
 rm -f ~/cleanup_node*.*
+echo "Files created by setup script deleted."
 
 #Remove folders
 rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd /etc/kubernetes/pki 
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
+echo "Docker and Kubernetes config directories deleted."
 groupdel docker
 
 #Enable and Start firewalld.
@@ -73,7 +75,7 @@ fi
 
 #Reset the IP Tables
 iptables -F ; iptables -X ; iptables -t nat -F ; iptables -t nat -X; iptables -t mangle -F ; iptables -t mangle -X
-
+echo "IPTables reset completed."
 sysctl -q --system
 
 echo "Cleanup script completed."
