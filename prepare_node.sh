@@ -157,7 +157,7 @@ fi
 
 #Add EPEL Repo
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-#Enable the plugin adn then the rhcontainerbot/container-selinux repo for smooth Docker install
+#Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
 sudo dnf -y install 'dnf-command(copr)'
 sudo dnf -y copr enable rhcontainerbot/container-selinux
 #Add CRI-O Repo. Will be tried later
