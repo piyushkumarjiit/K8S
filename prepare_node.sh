@@ -256,20 +256,20 @@ else
 	}
 	EOF'
 	echo "Cgroup drivers updated."
+	# Restart Docker for changes to take effect
+	systemctl daemon-reload
+	systemctl restart docker
+	echo "Docker restarted."
 fi
 
-# Restart Docker for changes to take effect
-systemctl daemon-reload
-systemctl restart docker
-
-if [[  NODE_TYPE == "Master" ]]
+if [[  NODE_TYPE == "Worker" ]]
 then
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
-	yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+	yum install -y kubelet kubeadm --disableexcludes=kubernetes
 	echo "Installed kubelet kubeadm kubectl on Master node."
 else
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
-	yum install -y kubelet kubeadm --disableexcludes=kubernetes
+	yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
 	echo "Installed kubelet kubectl on Worker node."
 fi
 
