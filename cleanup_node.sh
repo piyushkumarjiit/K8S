@@ -45,14 +45,16 @@ rm -f ~/prepare*.*
 rm -f ~/cleanup_node*.*
 echo "Files created by setup script deleted."
 
-echo "Unmounting /aufs"
-umount /var/lib/docker/aufs
+#echo "Unmounting /aufs"
+#umount /var/lib/docker/aufs
+#umount /var/lib/docker/containers
 
 echo "Pruning Docker"
 docker system prune -af
 
 #Remove folders
-rm -Rf /etc/cni/net.d /root/.kube ~/.kube /var/lib/etcd /etc/kubernetes/pki 
+rm -Rf /etc/cni/net.d /var/lib/etcd /etc/kubernetes/pki /usr/lib/systemd/system/kubelet.service.d
+rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
 echo "Docker and Kubernetes config directories deleted."
 groupdel docker
