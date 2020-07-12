@@ -155,6 +155,9 @@ else
 echo "Kubernetes repo added."
 fi
 
+#Add EPEL Repo
+yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+
 #Update packages.
 yum update -y
 
@@ -163,11 +166,10 @@ yum update -y
 
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 yum install -y yum-utils
-#yum install -y container-selinux
-#
-yum -y install http://vault.centos.org/centos/7.3.1611/extras/x86_64/Packages/container-selinux-2.19-2.1.el7.noarch.rpm
-
+yum install -y container-selinux
+#yum -y install http://vault.centos.org/centos/7.3.1611/extras/x86_64/Packages/container-selinux-2.19-2.1.el7.noarch.rpm
 echo "installed container-selinux"
+
 #Disable the module that causes conflict
 yum module -y disable container-tools
 echo "Disabled container-tools"
@@ -201,6 +203,7 @@ then
 		echo "Unable to install Docker. Trying the nobest option as last resort."
 		sleep 2
 		sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+		docker-ce-17.12.1.ce-1.el7.centos
 		sudo dnf -y  install docker-ce --nobest
 		sudo usermod -aG docker $USER
 		#Enable Docker to start on start up
