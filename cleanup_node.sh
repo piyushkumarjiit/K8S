@@ -91,7 +91,7 @@ echo "Cleanup script completed."
 
 if [[ $CURRENT_NODE_NAME != $CURRENT_NODE_NAME ]]
 then
-	echo "All done. Restarting the node for changes to take effect."
+	echo "Cleanup done. Restarting the node to reset stuck handles."
 	shutdown -r
 else
 	echo "Script completed."
