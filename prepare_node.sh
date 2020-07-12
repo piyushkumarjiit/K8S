@@ -296,8 +296,8 @@ fi
 #systemctl enable --now kubelet
 #Restart kublet
 systemctl daemon-reload
-#systemctl enable kubelet 
-#systemctl start kubelet
+systemctl enable kubelet 
+systemctl start kubelet
 
 # #Set CGroup drivers and Service privileg
 # if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
