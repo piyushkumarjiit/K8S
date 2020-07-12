@@ -5,8 +5,8 @@ echo "Cleanup script started."
 
 #Below is newly added. Need to be tested against original ones.
 CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
-KUBECTL_AVAILABLE
-KUBEADM_AVAILABLE
+KUBECTL_AVAILABLE=$( kubectl version > /dev/null 2>&1; echo $?)
+KUBEADM_AVAILABLE=$( kuberadm version > /dev/null 2>&1; echo $?)
 if [[ $KUBECTL_AVAILABLE == 0 ]]
 then
 	kubectl drain $CURRENT_NODE --delete-local-data --force --ignore-daemonsets
