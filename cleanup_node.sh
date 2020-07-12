@@ -54,6 +54,7 @@ echo "Files created by setup script deleted."
 
 
 DELETE_FAILED=$(rm -Rf /usr/lib/systemd/system/kubelet.service.d > /dev/null 2>&1; echo $?)
+echo "Delete Falg: "$DELETE_FAILED
 #Remove folders
 rm -Rf /etc/cni/net.d /var/lib/etcd /etc/kubernetes/pki /usr/lib/systemd/system/kubelet.service.d
 rm -Rf /root/.kube ~/.kube
