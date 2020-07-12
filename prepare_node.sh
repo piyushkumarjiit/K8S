@@ -266,11 +266,11 @@ if [[  NODE_TYPE == "Worker" ]]
 then
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum install -y kubelet kubeadm --disableexcludes=kubernetes
-	echo "Installed kubelet kubeadm kubectl on Master node."
+	echo "Installed kubelet kubeadm on Worker node."
 else
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
-	echo "Installed kubelet kubectl on Worker node."
+	echo "Installed kubelet kubeadm kubectl on  Master node."
 fi
 
 #systemctl enable --now kubelet
