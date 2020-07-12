@@ -30,19 +30,10 @@ do
 			cat /etc/hosts > hosts.txt
 			echo "Backed up /etc/hosts file."
 		fi
-		#Add Master IP Addresses and Hostnames in hosts file
-		#echo "Index: $index"
+		#Add IP Addresses and Hostnames in hosts file
 		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
-
-		# NODES_IN_CLUSTER=$(cat <<- SETVAR
-		# ${ALL_NODE_IPS[index]}	$node
-		# SETVAR
-		# )
-		# #echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-		# echo "$NODES_IN_CLUSTER" | tee -a /etc/hosts
 		echo "Hosts file updated."
-		NODES_IN_CLUSTER=""
-		#Extra logic for source node. Current node is pingable but not sshable so need to add entry to etc.hosts
+		#Extra logic for current node. Current node is pingable but not sshable so need to add entry to etc.hosts
 	elif [[ $CURRENT_NODE_NAME == $node ]]
     	then
     	echo "Node $node is source node and can be pinged."
