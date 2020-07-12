@@ -74,7 +74,7 @@ echo "Swap enabled for restart."
 echo "SELINUX enabled for restart."
 
 #Restore the /etc/hosts file
-if [[ -r hosts.txt && $CURRENT_NODE_NAME != $CURRENT_NODE_NAME ]]
+if [[ -r hosts.txt && $CURRENT_NODE_NAME != $CALLING_NODE_NAME ]]
 then
 	cat hosts.txt > /etc/hosts
 	echo "Hosts file overwritten."
@@ -89,7 +89,7 @@ sysctl -q --system
 
 echo "Cleanup script completed."
 
-if [[ $CURRENT_NODE_NAME != $CURRENT_NODE_NAME ]]
+if [[ $CURRENT_NODE_NAME != $CALLING_NODE_NAME ]]
 then
 	echo "Cleanup done. Restarting the node to reset stuck handles."
 	shutdown -r
