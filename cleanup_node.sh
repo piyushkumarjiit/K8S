@@ -45,6 +45,7 @@ rm -f ~/prepare*.*
 rm -f ~/cleanup_node*.*
 echo "Files created by setup script deleted."
 
+echo "Unmounting /aufs"
 umount /var/lib/docker/aufs
 
 #Remove folders
