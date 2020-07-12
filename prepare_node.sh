@@ -267,7 +267,7 @@ systemctl enable kubelet && sudo systemctl start kubelet
 if [[ $RESTART_NEEDED == 0 ]]
 then
 	echo "All done. Restarting the node for changes to take effect."
-	shutdown -r
+	#shutdown -r
 else
 	echo "Script completed."
 	echo "----------- $(hostname) ready for next step ------------"
