@@ -158,9 +158,9 @@ fi
 #Add EPEL Repo
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
-dnf -y install 'dnf-command(copr)'
+dnf -y -q install 'dnf-command(copr)'
 #Below repo seems to be a dev one so use with caution
-dnf -y copr enable rhcontainerbot/container-selinux
+dnf -y -q copr enable rhcontainerbot/container-selinux
 #Add CRI-O Repo.
 #For CentOS8
 curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
@@ -173,7 +173,7 @@ curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo h
 #sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
 #Update packages.
-yum update -y
+yum -y -q update
 
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 yum install -y yum-utils
@@ -184,7 +184,7 @@ yum install -y yum-utils
 #echo "Disabled container-tools"
 
 #Install CRI-O
-yum -y install cri-o
+yum -y -q install cri-o
 echo "installed CRI-O"
 
 #Check if Docker needs to be installed
@@ -192,7 +192,7 @@ DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 if [[ $DOCKER_INSTALLED -gt 0 ]]
 then
 	#Install Docker on server
-	echo "Docker does not seem to be available. Trying to install Docker."
+	echo "Docker not available. Trying to install Docker."
 	curl -fsSL https://get.docker.com -o get-docker.sh
 	sh get-docker.sh
 	usermod -aG docker $USER
@@ -215,8 +215,8 @@ then
 	else
 		echo "Unable to install Docker. Trying the nobest option as last resort."
 		sleep 2
-		dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-		dnf -y  install docker-ce --nobest
+		dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+		dnf -y -q install docker-ce --nobest
 		usermod -aG docker $USER
 		#Enable Docker to start on start up
 		systemctl enable docker
@@ -265,11 +265,11 @@ fi
 if [[  NODE_TYPE == "Worker" ]]
 then
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
-	yum install -y kubelet kubeadm --disableexcludes=kubernetes
+	yum -y -q install kubelet kubeadm --disableexcludes=kubernetes
 	echo "Installed kubelet kubeadm on Worker node."
 else
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
-	yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+	yum -y -q install kubelet kubeadm kubectl --disableexcludes=kubernetes
 	echo "Installed kubelet kubeadm kubectl on  Master node."
 fi
 
