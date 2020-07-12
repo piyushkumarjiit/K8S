@@ -92,7 +92,7 @@ echo "Cleanup script completed."
 if [[ $CURRENT_NODE_NAME != $CURRENT_NODE_NAME ]]
 then
 	echo "All done. Restarting the node for changes to take effect."
-	#shutdown -r
+	shutdown -r
 else
 	echo "Script completed."
 	echo "----------- $(hostname) cleanup completed ------------"
