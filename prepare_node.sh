@@ -15,8 +15,6 @@ then
 	exit 1
 fi
 
-#echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
-
 echo "Value of ALL_NODE_NAMES ${ALL_NODE_NAMES[*]}"
 echo "Value of ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
@@ -41,7 +39,7 @@ do
 		# echo "$NODES_IN_CLUSTER" | tee -a /etc/hosts
 		#echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
 		echo "Node added to /etc/hosts file."
-		NODES_IN_CLUSTER=""
+		#NODES_IN_CLUSTER=""
 	else
 		echo "Node: $node accessible. No need to update /etc/hosts file"
 	fi
@@ -89,7 +87,7 @@ then
 	else
 		echo "Adding IP tables rules to existing K8s file."
 		#Setup IP tables for Bridged Traffic
-		bash -c 'cat <<-EOF >  /etc/sysctl.d/k8s.conf
+		bash -c 'cat <<-EOF >>  /etc/sysctl.d/k8s.conf
 		net.bridge.bridge-nf-call-ip6tables = 1
 		net.bridge.bridge-nf-call-iptables = 1
 		EOF'
@@ -276,10 +274,12 @@ if [[  NODE_TYPE == "Worker" ]]
 then
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum -y -q install kubelet kubeadm --disableexcludes=kubernetes
+	systemctl enable --now kubelet
 	echo "Installed kubelet kubeadm on Worker node."
 else
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum -y -q install kubelet kubeadm kubectl --disableexcludes=kubernetes
+	systemctl enable --now kubelet
 	echo "Installed kubelet kubeadm kubectl on Master node."
 fi
 

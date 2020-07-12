@@ -3,11 +3,11 @@
 echo "========== Connected to $(hostname)) ============"
 echo "Cleanup script started."
 
-#Below is newly added. Need to be tested against original ones.
-CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
+#Current Node IP
+CURRENT_NODE_NAME="$(hostname)"
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
-if [[ $KUBECTL_AVAILABLE == 0 ]]
+if [[ $KUBECTL_AVAILABLE == 0 || $KUBECTL_AVAILABLE == 1 ]]
 then
 	kubectl drain $CURRENT_NODE --delete-local-data --force --ignore-daemonsets
 	kubectl delete node $CURRENT_NODE
@@ -66,7 +66,7 @@ echo "Swap enabled for restart."
 echo "SELINUX enabled for restart."
 
 #Restore the /etc/hosts file
-if [[ -r hosts.txt && $CALLING_NODE != $CURRENT_NODE ]]
+if [[ -r hosts.txt && $CURRENT_NODE_NAME != $CURRENT_NODE_NAME ]]
 then
 	cat hosts.txt > /etc/hosts
 	echo "Hosts file overwritten."

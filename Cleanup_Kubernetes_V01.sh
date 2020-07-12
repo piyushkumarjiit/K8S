@@ -3,80 +3,58 @@
 
 #./Setup_Kubernetes_V01.sh > setup.log 2>&1
 #./Setup_Kubernetes_V01.sh | tee setup.log
+echo "------------ Cleanup script started --------------"
 
+#LB Details
 export KUBE_VIP_1_HOSTNAME="VIP"
 export KUBE_VIP_1_IP="192.168.2.6"
-export KUBE_LBNODE_1_HOSTNAME="KubeLBNode1"
-export KUBE_LBNODE_1_IP="192.168.2.205"
-export KUBE_LBNODE_2_HOSTNAME="KubeLBNode2"
-export KUBE_LBNODE_2_IP="192.168.2.111"
-export KUBE_MASTER_1_HOSTNAME="KubeMasterCentOS8"
-export KUBE_MASTER_1_IP="192.168.2.220"
-export KUBE_MASTER_2_HOSTNAME="KubeMaster2CentOS8"
-export KUBE_MASTER_2_IP="192.168.2.13"
-export KUBE_MASTER_3_HOSTNAME="KubeMaster3CentOS8"
-export KUBE_MASTER_3_IP="192.168.2.186"
-export KUBE_WORKER_1_HOSTNAME="KubeNode1CentOS8"
-export KUBE_WORKER_1_IP="192.168.2.251"
-export KUBE_WORKER_2_HOSTNAME="KubeNode2CentOS8"
-export KUBE_WORKER_2_IP="192.168.2.137"
-export KUBE_WORKER_3_HOSTNAME="KubeNode3CentOS8"
-export KUBE_WORKER_3_IP="192.168.2.227"
 #Port where Control Plane API server would bind on Load Balancer
 export KUBE_MASTER_API_PORT="6443"
-
+#Hostname of the node from where we run the script
+export CURRENT_NODE_NAME="$(hostname)"
+#IP of the node from where we run the script
 export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 
+#All Nodes running Load Balancer
+export LB_NODES_IP=("192.168.2.205" "192.168.2.111")
+export LB_NODES_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
+#All Master nodes
+export MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186")
+export MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost")
+#All Worker Nodes
+export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.137" "192.168.2.227")
+export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
+#All K8S nodes (Master + Worker)
+export KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
+export KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
+#All nodes we are trying to use
+export ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODES_IP[*]})
+export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODES_NAMES[*]})
 
-export MASTER_NODE_IPS=($KUBE_MASTER_1_IP $KUBE_MASTER_2_IP $KUBE_MASTER_3_IP)
-export WORKER_NODE_IPS=($KUBE_WORKER_1_IP $KUBE_WORKER_2_IP $KUBE_WORKER_3_IP)
-export KUBE_CLUSTER_NODES=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
-export LB_NODES_IP=($KUBE_LBNODE_1_IP $KUBE_LBNODE_2_IP)
-export ALL_NODES=(${KUBE_CLUSTER_NODES[*]} ${LB_NODES_IP[*]})
-
+#Username that we use to connect to remote machine via SSH
 export USERNAME="root"
-export EXTERNAL_LB_ENABLED="false"
 
-#USER_PASSWORD=$(cat passwd.txt)
+EXTERNAL_LB_ENABLED="false"
 
-networking_type="calico"
-
-ALL_NODES_ACCESSIBLE="true"
-for node in ${ALL_NODES[*]}
+index=0
+for node in ${ALL_NODE_IPS[*]}
 do
-	if [[ $NODES_ACCESSIBLE != 0  &&  $NODES_IN_CLUSTER != "" ]]
+	NODE_ACCESSIBLE=$(ping -q -c 1 -W 1 $node > /dev/null 2>&1; echo $?)
+	if [[ $NODE_ACCESSIBLE != 0 ]]
 	then
 		echo "Node: $node inaccessible. Need to update hosts file."
-		ALL_NODES_ACCESSIBLE="false"
+		if [[ $index == 0 ]]
+		then
+			cat /etc/hosts > hosts.txt
+			echo "Backed up /etc/hosts file."
+		fi
+		#Add Master IP Addresses and Hostnames in hosts file
+		#echo "Index: $index"
+		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
 	fi
+	((index++))
 done
 
-#Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
-if [[ $ALL_NODES_ACCESSIBLE == "false" ]]
-then
-		echo "Ping failed. Updating hosts file."
-		#Take backup of old hosts file. In case we need to restore/cleanup
-		cat /etc/hosts > hosts.txt
-		#Add Master IP Addresses and Hostnames in hosts file
-		NODES_IN_CLUSTER=$(cat <<- SETVAR
-		$KUBE_VIP_1_IP  $KUBE_VIP_1_HOSTNAME
-		$KUBE_MASTER_1_IP  $KUBE_MASTER_1_HOSTNAME
-		$KUBE_MASTER_2_IP  $KUBE_MASTER_2_HOSTNAME
-		$KUBE_MASTER_3_IP  $KUBE_MASTER_3_HOSTNAME
-		$KUBE_WORKER_1_IP  $KUBE_WORKER_1_HOSTNAME
-		$KUBE_WORKER_2_IP  $KUBE_WORKER_2_HOSTNAME
-		$KUBE_WORKER_3_IP  $KUBE_WORKER_3_HOSTNAME
-		$KUBE_LBNODE_1_IP $KUBE_LBNODE_1_HOSTNAME
-		$KUBE_LBNODE_2_IP $KUBE_LBNODE_2_HOSTNAME
-		SETVAR
-		)
-		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-		echo "Hosts file updated."
-else
-	echo "All nodes accessible. No change needed."
-fi
-
-echo -n "$NODES_IN_CLUSTER" | sudo tee -a /etc/hosts
 
 ssh-keygen -t rsa
 
@@ -122,7 +100,7 @@ then
 	    export KUBE_VIP="$KUBE_VIP_1_IP"
 	    export UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
 		export MASTER_PEER_IP=$MASTER_PEER_IP
-		export CALLING_NODE=$CURRENT_NODE_IP
+		export CURRENT_NODE_NAME=$CURRENT_NODE_NAME
 	    wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/cleanup_loadbalancer.sh"
 	    chmod 755 cleanup_loadbalancer.sh
 	    ./cleanup_loadbalancer.sh
@@ -139,21 +117,20 @@ else
 fi
 
 #Call Helper script to cleanup nodes
-for node in ${KUBE_CLUSTER_NODES[*]}
+for node in ${KUBE_CLUSTER_NODE_NAMES[*]}
 do
-	ssh -tt "${USERNAME}"@$node <<- EOF
-    echo "Connected to $node"
-    cd ~
-    export NODES_IN_CLUSTER="$NODES_IN_CLUSTER"
+	ssh "${USERNAME}"@$node <<- EOF
     export CALLING_NODE=$CURRENT_NODE_IP
+    cd ~
     wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/cleanup_node.sh"
     chmod 755 cleanup_node.sh
 	./cleanup_node.sh
-	rm ./cleanup_node.sh
+	sleep 1
+	rm -f ./cleanup_node.sh
 	echo "Exiting."
 	exit
 	EOF
-echo "Cleanup script completed on $node"
+	echo "Cleanup script completed on $node"
 done
 
-echo "Nodes cleaned."
+echo "------------ All Nodes cleaned --------------"
