@@ -34,6 +34,8 @@ yum -y autoremove
 rm -f /etc/yum.repos.d/docker-ce.repo
 rm -f /etc/yum.repos.d/kubernetes.repo
 rm -f /etc/yum.repos.d/*rhcontainerbot:container-selinux.repo*
+rm -f /etc/yum.repos.d/*devel:kubic:libcontainers*
+	#statements
 
 #Remove extra files created.
 rm -f /etc/sysctl.d/k8s.conf
