@@ -17,7 +17,8 @@ fi
 
 #echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
 
-echo "Value of ALL_NODE_NAMES ${ALL_NODE_NAMES[*]} and ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
+echo "Value of ALL_NODE_NAMES ${ALL_NODE_NAMES[*]}"
+echo "Value of ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
 index=0
 for node in ${ALL_NODE_NAMES[*]}
@@ -155,6 +156,7 @@ else
 echo "Kubernetes repo added."
 fi
 
+echo "Add COPR and CRI-O repos."
 #Add EPEL Repo
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
@@ -163,20 +165,24 @@ dnf -y -q install 'dnf-command(copr)'
 dnf -y -q copr enable rhcontainerbot/container-selinux
 #Add CRI-O Repo.
 #For CentOS8
-curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
 #sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
 #For CentOS7
 #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
 #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
 #sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
+echo "Added COPR and CRI-O repos."
+
 #Update packages.
 yum -y -q update
 
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
+echo "Install yum-utils"
 yum install -y yum-utils
+echo "Installed yum-utils"
 #yum install -y container-selinux
 #echo "installed container-selinux"
 #Disable the module that causes conflict
@@ -184,8 +190,9 @@ yum install -y yum-utils
 #echo "Disabled container-tools"
 
 #Install CRI-O
+echo "Install CRI-O"
 yum -y -q install cri-o
-echo "installed CRI-O"
+echo "Installed CRI-O"
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
@@ -193,8 +200,10 @@ if [[ $DOCKER_INSTALLED -gt 0 ]]
 then
 	#Install Docker on server
 	echo "Docker not available. Trying to install Docker."
-	curl -fsSL https://get.docker.com -o get-docker.sh
-	sh get-docker.sh
+	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+	dnf -y -q install docker-ce
+	#curl -fsSL https://get.docker.com -o get-docker.sh
+	#sh get-docker.sh
 	usermod -aG docker $USER
 	RESTART_NEEDED=0
 	#Enable Docker to start on start up
@@ -202,7 +211,7 @@ then
 	#Start Docker
 	systemctl start docker
 	#Remove temp file.
-	rm get-docker.sh
+	#rm get-docker.sh
 	#Check again
 	DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 	if [[ $DOCKER_INSTALLED == 0 ]]
@@ -230,7 +239,7 @@ then
 			sleep 2
 			exit 1
 		else
-			echo "Docker seems to be working but you need to disconnect and reconnect for usermod changes to reflect."
+			echo "Docker seems to be working but you may need to disconnect and reconnect for usermod changes to reflect."
 			sleep 5
 			exit 1
 		fi
@@ -262,6 +271,7 @@ else
 	echo "Docker restarted."
 fi
 
+echo "Installing kubelet kubeadm and kubectl."
 if [[  NODE_TYPE == "Worker" ]]
 then
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
@@ -270,7 +280,7 @@ then
 else
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum -y -q install kubelet kubeadm kubectl --disableexcludes=kubernetes
-	echo "Installed kubelet kubeadm kubectl on  Master node."
+	echo "Installed kubelet kubeadm kubectl on Master node."
 fi
 
 #systemctl enable --now kubelet
@@ -287,6 +297,3 @@ else
 	echo "Script completed."
 	echo "----------- $(hostname) ready for next step ------------"
 fi
-
-
-
