@@ -284,22 +284,21 @@ if [[  NODE_TYPE == "Worker" ]]
 then
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum -y -q install kubelet kubeadm --disableexcludes=kubernetes
-	#systemctl enable --now kubelet
+	systemctl enable --now kubelet
 	echo "Installed kubelet kubeadm on Worker node."
 else
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum -y -q install kubelet kubeadm kubectl --disableexcludes=kubernetes
-	#systemctl enable --now kubelet
+	systemctl enable --now kubelet
 	echo "Installed kubelet kubeadm kubectl on Master node."
 fi
 
-#systemctl enable --now kubelet
-#Restart kublet
+Restart kublet
 systemctl daemon-reload
 systemctl enable kubelet 
 systemctl start kubelet
 
-# #Set CGroup drivers and Service privileg
+# #Set CGroup drivers and Service privilege
 # if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
 # then
 # 	echo "Updating /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf"
