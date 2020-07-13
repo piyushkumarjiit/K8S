@@ -1,6 +1,6 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
-if [[ -z ${USERNAME} ]]
+if [[ -n $USERNAME ]]
 then
 	#Set the home directory in target server for scp
 	if [[ "$USERNAME" == "root" ]]
