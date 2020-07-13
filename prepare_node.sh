@@ -280,7 +280,7 @@ fi
 
 
 echo "Installing kubelet kubeadm and kubectl."
-if [[  NODE_TYPE == "Worker" ]]
+if [[  $NODE_TYPE == "Worker" ]]
 then
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum -y -q install kubelet kubeadm --disableexcludes=kubernetes
