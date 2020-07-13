@@ -34,16 +34,16 @@ do
 		echo "Hosts file updated."
 		NODES_IN_CLUSTER=""
 		#Extra logic for source node. Current node is pingable but not sshable so need to add entry to etc.hosts
-	elif [[ ($CURRENT_NODE_NAME == $node) && ($NODE_ALREADY_PRESENT != 0) ]]
-    	then
-    	echo "Node $node is source node and can be pinged."
-    	if [[ $index == 0 ]]
-		then
-			cat /etc/hosts > hosts.txt
-			echo "Backed up /etc/hosts file."
-		fi
-		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
-		echo "Hosts file updated."
+	# elif [[ ($CURRENT_NODE_NAME == $node) && ($NODE_ALREADY_PRESENT != 0) ]]
+ #    	then
+ #    	echo "Node $node is source node and can be pinged."
+ #    	if [[ $index == 0 ]]
+	# 	then
+	# 		cat /etc/hosts > hosts.txt
+	# 		echo "Backed up /etc/hosts file."
+	# 	fi
+	# 	echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
+	# 	echo "Hosts file updated."
 	else
 		echo "Node $node is accessible."
 	fi
@@ -194,6 +194,7 @@ then
 	#curl -fsSL https://get.docker.com -o get-docker.sh
 	#sh get-docker.sh
 	usermod -aG docker $USER
+	usermod -aG docker "$USERNAME"
 	RESTART_NEEDED=0
 	#Enable Docker to start on start up
 	systemctl enable docker
