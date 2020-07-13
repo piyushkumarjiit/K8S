@@ -10,18 +10,17 @@ export ALL_NODE_IPS=($TEMP_NODE_IPS)
 if [[ ${ALL_NODE_NAMES[*]} == "" || ${ALL_NODE_IPS[*]} == "" ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
-	#echo "Node Names: ${ALL_NODE_NAMES[*]} and Node IPs: ${ALL_NODE_IPS[*]} "
-	#echo "Node 3: ${ALL_NODE_NAMES[2]} and Node 3 IPs: ${ALL_NODE_IPS[2]} "
 	exit 1
 fi
 
-echo "Value of ALL_NODE_NAMES ${ALL_NODE_NAMES[*]}"
-echo "Value of ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
+echo "Value of passed ALL_NODE_NAMES ${ALL_NODE_NAMES[*]}"
+echo "Value of passed ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do
 	NODE_ACCESSIBLE=$(ping -q -c 1 -W 1 $node > /dev/null 2>&1; echo $?)
+	NODE_ALREADY_PRESENT=$(cat /etc/hosts | grep -w $node > /dev/null 2>&1; echo $?)
 	if [[ $NODE_ACCESSIBLE != 0 ]]
 	then
 		echo "Node: $node inaccessible. Need to update hosts file."		
@@ -30,11 +29,12 @@ do
 			cat /etc/hosts > hosts.txt
 			echo "Backed up /etc/hosts file."
 		fi
-		#Add IP Addresses and Hostnames in hosts file
+		#Add Master IP Addresses and Hostnames in hosts file
 		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
 		echo "Hosts file updated."
-		#Extra logic for current node. Current node is pingable but not sshable so need to add entry to etc.hosts
-	elif [[ $CURRENT_NODE_NAME == $node ]]
+		NODES_IN_CLUSTER=""
+		#Extra logic for source node. Current node is pingable but not sshable so need to add entry to etc.hosts
+	elif [[ ($CURRENT_NODE_NAME == $node) && ($NODE_ALREADY_PRESENT != 0) ]]
     	then
     	echo "Node $node is source node and can be pinged."
     	if [[ $index == 0 ]]
@@ -50,23 +50,6 @@ do
 	((index++))
 done
 
-
-# NODES_ADDED=$(ping -c 1 $CALLING_NODE  > /dev/null 2>&1; echo $?)
-# if [[ $NODES_ADDED != 0  &&  $NODES_IN_CLUSTER != "" ]]
-# then
-# 		echo "Ping failed. Updating hosts file."
-# 		#Take backup of old hosts file. In case we need to restore/cleanup
-# 		cat /etc/hosts > hosts.txt
-# 		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-# 		echo "Hosts file updated."
-# elif [[ $NODES_IN_CLUSTER != "" ]]
-# then
-# 	echo "NODES_IN_CLUSTER not set. Exiting."
-# 	exit 1
-# else
-# 	echo "Hosts file already updated for Primary node by main script."
-# fi
-
 #Check the status of SELinux and disable if needed.
 SELINUX_STATUS=$(cat /etc/selinux/config | grep 'SELINUX=enforcing' > /dev/null 2>&1; echo $?)
 if [[ $SELINUX_STATUS == 0 ]]
@@ -81,7 +64,6 @@ else
 fi
 
 #Check if IP tables contain K8s config
-
 if [[ -r /etc/sysctl.d/k8s.conf ]]
 then
 	BRIDGED_MODE=$(cat /etc/sysctl.d/k8s.conf | grep -w 'net.bridge.bridge-nf-call-iptables = 1' > /dev/null 2>&1; echo $?)
@@ -116,9 +98,7 @@ else
 	#Disable Swap
 	swapoff -a
 	#Disable Swap in fstab to ensure it does not get enabled on reboot
-	#We must also ensure that swap isn't re-enabled during a reboot on each server. Open up the /etc/fstab and comment out the swap entry like this:
 	#/dev/mapper/cl-swap     swap                    swap    defaults        0 0
-	#/dev/mapper/cl_kubemaster2centos8-swap swap                    swap    defaults        0 0
 	sed -ir 's/.*-swap/#&/' /etc/fstab
 	#Or
 	#sudo sed -i "s*/dev/mapper/cl*#/dev/mapper/cl*g" /etc/fstab
@@ -161,8 +141,10 @@ fi
 echo "Add COPR and CRI-O repos."
 #Add EPEL Repo
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
 dnf -y -q install 'dnf-command(copr)'
+
 #Below repo seems to be a dev one so use with caution
 dnf -y -q copr enable rhcontainerbot/container-selinux
 #Add CRI-O Repo.
@@ -197,9 +179,9 @@ yum -y -q install cri-o
 echo "Installed CRI-O"
 
 #Install TC
-echo "Installing iproute-tc"
-dnf -y -q install iproute-tc
-echo "Installed iproute-tc"
+#echo "Installing iproute-tc"
+#dnf -y -q install iproute-tc
+#echo "Installed iproute-tc"
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
@@ -277,7 +259,6 @@ else
 	systemctl restart docker
 	echo "Docker restarted."
 fi
-
 
 echo "Installing kubelet kubeadm and kubectl."
 if [[  $NODE_TYPE == "Worker" ]]
