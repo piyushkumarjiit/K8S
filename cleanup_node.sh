@@ -4,15 +4,16 @@ echo "========== Connected to $(hostname)) ============"
 echo "Cleanup script initiated from node: $CALLING_NODE_NAME."
 
 #Current Node IP
-CURRENT_NODE_NAME="$(hostname)"
+CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
+CURRENT_NODE_IP="$(hostname)"
 # kubectl/kubeadm might be installed but with missing config would returns 1
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
 
 if [[ $KUBECTL_AVAILABLE == 0 || $KUBECTL_AVAILABLE == 1 ]]
 then
-	kubectl drain $CURRENT_NODE_NAME --delete-local-data --force --ignore-daemonsets
-	kubectl delete node $CURRENT_NODE_NAME
+	kubectl drain $CURRENT_NODE_IP --delete-local-data --force --ignore-daemonsets
+	kubectl delete node $CURRENT_NODE_IP
 	echo "Kubectl delete node called."
 	yum -y -q remove kubelet kubectl
 	echo "kubelet kubectl removed."
