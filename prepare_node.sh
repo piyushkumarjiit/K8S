@@ -1,9 +1,8 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
-CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 echo "----------- Preparing $(hostname) ------------"
-
+CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
 export ALL_NODE_NAMES=($TEMP_NODE_NAMES)
 export ALL_NODE_IPS=($TEMP_NODE_IPS)
 
@@ -295,9 +294,9 @@ systemctl start kubelet
 # fi
 
 #Reset the cluster
-sudo kubeadm reset -f
-sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-sudo systemctl daemon-reload
+#sudo kubeadm reset -f
+#sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
+#sudo systemctl daemon-reload
 sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
 sleep 10
 echo "Reset complete."
