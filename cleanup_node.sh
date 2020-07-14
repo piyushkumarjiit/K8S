@@ -5,7 +5,7 @@ echo "Cleanup script initiated from node: $CALLING_NODE_NAME."
 
 #Current Node IP
 CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
-CURRENT_NODE_IP="$(hostname)"
+CURRENT_NODE_NAME="$(hostname)"
 # kubectl/kubeadm might be installed but with missing config would returns 1
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
