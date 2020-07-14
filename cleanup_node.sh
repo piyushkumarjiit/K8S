@@ -11,8 +11,8 @@ KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
 
 if [[ $KUBECTL_AVAILABLE == 0 || $KUBECTL_AVAILABLE == 1 ]]
 then
-	kubectl drain $CURRENT_NODE --delete-local-data --force --ignore-daemonsets
-	kubectl delete node $CURRENT_NODE
+	kubectl drain $CURRENT_NODE_NAME --delete-local-data --force --ignore-daemonsets
+	kubectl delete node $CURRENT_NODE_NAME
 	echo "Kubectl delete node called."
 	yum -y -q remove kubelet kubectl
 	echo "kubelet kubectl removed."
