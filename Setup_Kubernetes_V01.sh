@@ -38,9 +38,9 @@ export KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
 #All nodes we are trying to use
 export ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODE_IPS[*]})
 export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODE_NAMES[*]})
-#Should we use ClusterConfiguration YAML to set up master node or us kubeadm reset to set up cluster. Allowed values "YAML"/"kubeadm_reset"
-export SETUP_CLUSTER_VIA="kubeadm_reset"
-#Do we want to manuaaly copy the certificates
+#Should we use ClusterConfiguration yaml to set up master node or us kubeadm reset to set up cluster. Allowed values "yaml"/"endpoint"
+export SETUP_CLUSTER_VIA="endpoint"
+#Do we want to manually copy the certificates
 MANUALLY_COPY_CERTIFICATES="false"
 
 #Username that we use to connect to remote machine via SSH
@@ -56,7 +56,7 @@ WORKER_JOIN_COMMAND=""
 echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
 
 #K8S network type. Allowed values calico/flannel
-networking_type="flannel"
+networking_type="calico"
 
 if [[ $SETUP_PRIMARY_MASTER != "true" ]]
 then
@@ -130,7 +130,6 @@ do
 	fi
 	((index++))
 done
-
 
 #Setup key based SSH connection to all nodes
 ssh-keygen -t rsa
@@ -225,40 +224,17 @@ do
 done
 echo "All K8S nodes prepared."
 
-#ClusterConfig YAML Template
-# cat > kubeadm-config.yaml <<-EOF
+#ClusterConfig yaml Template
+# cat > kubeadm-config.yaml <<-'EOF'
 # apiVersion: kubeadm.k8s.io/v1beta2
 # kind: ClusterConfiguration
 # kubernetesVersion: v1.18.0
-# apiServerCertSANs:
-# - "192.168.2.6"
-# controlPlaneEndpoint: "192.168.2.6:6443"
-# etcd:
-#   local:
-#     extraArgs:
-#       listen-client-urls: "https://127.0.0.1:2379,https://192.168.2.13:2379"
-#       advertise-client-urls: "https://192.168.2.13:2379"
-#       listen-peer-urls: "https://192.168.2.13:2380"
-#       initial-advertise-peer-urls: "https://192.168.2.13:2380"
-#       initial-cluster: "KubeMaster2CentOS8.bifrost=https://192.168.2.13:2380"
-#     serverCertSANs:
-#       - 192.168.2.13
-#     peerCertSANs:
-#       - 192.168.2.13
+# controlPlaneEndpoint: 192.168.2.6:6443
 # networking:
-#     # For flannel use 10.244.0.0/16, calico uses 192.168.0.0/16
-#     podSubnet: "10.244.0.0/16"
+#     podSubnet: 10.244.0.0/16
 # EOF
 
-cat > kubeadm-config.yaml <<-'EOF'
-apiVersion: kubeadm.k8s.io/v1beta2
-kind: ClusterConfiguration
-kubernetesVersion: v1.18.0
-controlPlaneEndpoint: 192.168.2.6:6443
-networking:
-    podSubnet: 10.244.0.0/16
-EOF
-
+#To migrate old config file to new version
 #kubeadm config migrate --old-config old.yaml --new-config new.yaml
 
 #Set up the Primary Master node in the cluster.
@@ -272,39 +248,49 @@ then
 
 	#Run below as sudo on Primary Master node
 	echo "******* Setting up Primary master node ********"
-	if [[ $SETUP_CLUSTER_VIA == "YAML" ]]
+	if [[ $SETUP_CLUSTER_VIA == "yaml" ]]
 	then
 		echo "Setting up Via YAML."
 		#Save the old config
 		kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
 		kubeadm config print join-defaults > join.yaml
 		kubeadm config images pull --config kubeadm-config.yaml
-		sudo kubeadm init --config kubeadm-config.yaml --upload-certs | tee kubeadm_init_output.txt		
+		if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
+		then
+			#Call init with endpoint parameters needed for Load Balanced Config
+			sudo kubeadm init --config kubeadm-config.yaml | tee kubeadm_init_output.txt
+		else
+			#Call init with endpoint and certificate parameters needed for Load Balanced Config
+			sudo kubeadm init --config kubeadm-config.yaml --upload-certs | tee kubeadm_init_output.txt
+		fi
+
 	else
-		echo "Setting up Via kubeadm reset."
-		#Reset the cluster
-		# sudo kubeadm reset -f
-		# sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-		# sudo systemctl daemon-reload
-		# sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-		# sleep 10
-		# echo "Reset complete."
+		echo "Setting up Via endpoint."
 		#Save the old config
 		kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
 		#Call init with endpoint and certificate parameters needed for Load Balanced Config
 		echo "Initializing control plane with: kubeadm init --control-plane-endpoint $KUBE_VIP_1_IP:$API_PORT "
-		sudo kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
+		if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
+		then
+			#Call init with endpoint parameters needed for Load Balanced Config
+			sudo kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" | tee kubeadm_init_output.txt
+			#Save the output from the previous command as you need it to add other nodes to cluster
+		else
+			#Call init with endpoint and certificate parameters needed for Load Balanced Config
+			sudo kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
+			#Save the output from the previous command as you need it to add other nodes to cluster
+		fi
 	fi
 
 	echo "Done initializing control plane."
-	#Save the output from the previous command as you need it to add other nodes to cluster
+	
 	#Extract command used to initialize other Master nodes
 	MASTER_JOIN_COMMAND=$(tail -n12 kubeadm_init_output.txt | head -n3 )
 	echo $MASTER_JOIN_COMMAND > add_master.txt
 	#Extract command used to initialize Worker nodes
 	WORKER_JOIN_COMMAND=$(tail -n2 kubeadm_init_output.txt)
 	echo $WORKER_JOIN_COMMAND > add_worker.txt
-	#Set permissions for prying eyes.
+	#Set permissions to stop prying eyes.
 	chown $(id -u):$(id -g) kubeadm_init_output.txt
 	chown $(id -u):$(id -g) add_master.txt
 	chown $(id -u):$(id -g) add_worker.txt
@@ -353,7 +339,7 @@ then
 	#Certificate Distribution to other Master nodes
 	echo "Trying to copy certificates to other nodes."
 
-	if [[ $SETUP_CLUSTER_VIA == "YAML"  && MANUALLY_COPY_CERTIFICATES == "true" ]]
+	if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
 	then
 		#If certificates are deleted, regenerate them using below command
 		#kubeadm init phase upload-certs --upload-certs
@@ -375,7 +361,7 @@ then
 			    # Quote below line if you are using external etcd
 			    scp /etc/kubernetes/pki/etcd/ca.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR/etcd-ca.key
 			else
-				echo "Certificate already present."
+				echo "Certificates already present in Primary node."
 			fi
 		done
 		if [[ LOOP_COUNT -gt 0 ]]
@@ -385,7 +371,7 @@ then
 			echo "Certificate copy step failed."
 		fi
 	else
-		echo "Certificate copy not needed when using kubeadm reset."
+		echo "Certificate copy not needed when using --upload-certs flag."
 	fi
 fi
 	
@@ -400,7 +386,6 @@ then
 
 		elif [[ -n "$MASTER_JOIN_COMMAND" ]]
 		then
-
 			#Add other Master nodes
 			echo "Trying to add $node"
 			#SSH into other Master nodes
@@ -409,7 +394,7 @@ then
 			export USERNAME=$USERNAME
 			echo "Username set as: "$USERNAME
 			
-			if [[ $SETUP_CLUSTER_VIA == "YAML" ]]
+			if [[ $MANUALLY_COPY_CERTIFICATES == "true" ]]
 			then
 				#Before running kubadm join on non primary nodes, move certificates in respective locations
 				echo "Trying to move certificates to their respective locations on $node"
@@ -418,14 +403,6 @@ then
 				chmod 755 certificate_mover.sh
 				bash -c "./certificate_mover.sh"
 				bash -c "rm -f certificate_mover.sh"
-			else
-				echo "Certificate copy is not required when using YAML path to set up cluster. Proceeding with kubeadm reset"
-				#Reset the cluster. Only way I could get this to work seemlessly
-				# kubeadm reset -f
-				# rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-				# systemctl daemon-reload		
-				# iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-				# sleep 10
 			fi
 			
 			echo "Trying to add Master node to cluster."
@@ -440,6 +417,7 @@ then
 			echo " ChCommand \$(id -u):\$(id -g) \$HOME/.kube/config"
 			chown \$(id -u):\$(id -g) \$HOME/.kube/config
 			chown \$(id $ADMIN_USER -u):\$(id $ADMIN_USER -g) $USER_HOME/.kube/config
+			
 			echo "Exiting."
 			exit
 			EOF
@@ -470,11 +448,6 @@ then
 			#Try to SSH into each node
 			ssh "$USERNAME"@$node <<- EOF
 			echo "Trying to add Worker node:$node to cluster."
-			# kubeadm reset -f
-			# rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-			# systemctl daemon-reload
-			# iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-			# sleep 10
 			bash -c "$WORKER_JOIN_COMMAND"
 			echo "Exiting."
 			exit
@@ -491,8 +464,6 @@ then
 else
 	echo "Skipping adding workers."
 fi
-
-
 
 #Check all nodes have joined the cluster. Only needed for Master.
 kubectl get nodes
