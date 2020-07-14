@@ -34,6 +34,7 @@ export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_N
 
 #Username that we use to connect to remote machine via SSH
 export USERNAME="root"
+#Username that we woudl use for normal kubectl/kubeadm commands post install
 export ADMIN_USER="ichigo"
 export USER_HOME="/home/$ADMIN_USER"
 
@@ -41,7 +42,7 @@ export USER_HOME="/home/$ADMIN_USER"
 export EXTERNAL_LB_ENABLED="true"
 #K8S network driver
 networking_type="calico"
-
+#Check connectivity of all nodes
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do
@@ -72,31 +73,6 @@ do
 	fi
 	((index++))
 done
-
-#Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
-# if [[ $ALL_NODES_ACCESSIBLE == "false" ]]
-# then
-# 		echo "Ping failed. Updating hosts file."
-# 		#Take backup of old hosts file. In case we need to restore/cleanup
-# 		cat /etc/hosts > hosts.txt
-# 		#Add Master IP Addresses and Hostnames in hosts file
-# 		NODES_IN_CLUSTER=$(cat <<- SETVAR
-# 		$KUBE_VIP_1_IP  $KUBE_VIP_1_HOSTNAME
-# 		$KUBE_MASTER_1_IP  $KUBE_MASTER_1_HOSTNAME
-# 		$KUBE_MASTER_2_IP  $KUBE_MASTER_2_HOSTNAME
-# 		$KUBE_MASTER_3_IP  $KUBE_MASTER_3_HOSTNAME
-# 		$KUBE_WORKER_1_IP  $KUBE_WORKER_1_HOSTNAME
-# 		$KUBE_WORKER_2_IP  $KUBE_WORKER_2_HOSTNAME
-# 		$KUBE_WORKER_3_IP  $KUBE_WORKER_3_HOSTNAME
-# 		$KUBE_LBNODE_1_IP $KUBE_LBNODE_1_HOSTNAME
-# 		$KUBE_LBNODE_2_IP $KUBE_LBNODE_2_HOSTNAME
-# 		SETVAR
-# 		)
-# 		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-# 		echo "Hosts file updated."
-# else
-# 	echo "All nodes accessible. No change needed."
-# fi
 
 echo -n "$NODES_IN_CLUSTER" | sudo tee -a /etc/hosts
 
@@ -137,22 +113,6 @@ then
 		#echo "FINAL_UNICAST_PEER_IP: $FINAL_UNICAST_PEER_IP"
 		#Create 1 string by concatenating all Master nodes. Use % as separator to make it easy in util to separate
 		MASTER_PEER_IP=$(echo ${MASTER_NODE_IPS[*]} | sed 's# #%#g')
-
-		# Script=$( cat <<- HERE
-		# echo "Connected to $host"
-		# cd ~
-		# export KUBE_VIP="$KUBE_VIP_1_IP"
-		# export UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
-		# export MASTER_PEER_IP=$MASTER_PEER_IP
-		# wget "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/setup_loadbalancer.sh"
-		# chmod 755 setup_loadbalancer.sh
-		# sudo ./setup_loadbalancer.sh $PRIORITY $INTERFACE $AUTH_PASS $KUBE_MASTER_API_PORT $host
-		# # rm setup_loadbalancer.sh
-		# echo "Exiting."
-		# exit
-		# HERE
-		# )
-#ssh -t user@host ${Script}
 
 	    #scp ~/setup_loadbalancer.sh "${USER}"@$host:
 	    echo "SSH to target LB Node."
@@ -211,8 +171,6 @@ echo "All nodes prepared."
 LB_CONNECTED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
 LB_REFUSED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
 
-#read -p "Should we proceed to set up Primary node? (Yes/No): " user_reply
-
 #Run below as sudo on Primary Master node
 echo "******* Setting up Primary master node ********"
 
@@ -242,14 +200,6 @@ echo $WORKER_JOIN_COMMAND > add_worker.txt
 chown $(id -u):$(id -g) kubeadm_init_output.txt
 chown $(id -u):$(id -g) add_master.txt
 chown $(id -u):$(id -g) add_worker.txt
-
-#Alternate way
-# MYVAR=$(cat kubeadm_init_output.txt)
-# # retain the part before "Please note that the certificate-key gives access to cluster sensitive data"
-# MASTER_JOIN_COMMAND=${MYVAR%Please note that the certificate-key gives access to cluster sensitive data*}
-# # retain the part after "You can now join any number of the control-plane node running the following command on each as root:"
-# MASTER_JOIN_COMMAND=${MASTER_JOIN_COMMAND##*You can now join any number of the control-plane node running the following command on each as root:}
-# echo $MASTER_JOIN_COMMAND
 
 #If needed, regenerate join command from master
 #sudo kubeadm token create --print-join-command
