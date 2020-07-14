@@ -98,6 +98,11 @@ fi
 FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
 if [[ FIREWALLD_STATUS -gt 0 ]]
 then
+	# Setup your firewall settings
+	#firewall-cmd --zone=public --add-port=10250/tcp --permanent        # Port used by kubelet
+	#firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
+	#firewall-cmd --reload
+	
 	#Stop and disable firewalld
 	systemctl stop firewalld
 	systemctl disable firewalld
@@ -268,6 +273,14 @@ fi
 systemctl daemon-reload
 systemctl enable kubelet 
 systemctl start kubelet
+
+#Reset the cluster
+sudo kubeadm reset -f
+sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
+sudo systemctl daemon-reload
+sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+sleep 10
+echo "Reset complete."
 
 # #Set CGroup drivers and Service privilege
 # if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
