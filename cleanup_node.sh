@@ -10,6 +10,14 @@ CURRENT_NODE_NAME="$(hostname)"
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
 
+if [[ $KUBEADM_AVAILABLE == 0 || $KUBEADM_AVAILABLE == 1 ]]
+then
+	echo "Kubeadm reset called."
+	kubeadm reset -f
+	yum -y -q remove kubeadm
+	echo "kubeadm removed."
+fi
+
 if [[ $KUBECTL_AVAILABLE == 0 || $KUBECTL_AVAILABLE == 1 ]]
 then
 	kubectl drain $CURRENT_NODE_IP --delete-local-data --force --ignore-daemonsets
@@ -17,14 +25,6 @@ then
 	echo "Kubectl delete node called."
 	yum -y -q remove kubelet kubectl
 	echo "kubelet kubectl removed."
-fi
-
-if [[ $KUBEADM_AVAILABLE == 0 || $KUBEADM_AVAILABLE == 1 ]]
-then
-	echo "Kubeadm reset called."
-	kubeadm reset -f
-	yum -y -q remove kubeadm
-	echo "kubeadm removed."
 fi
 
 DOCKER_AVAILABLE=$(docker --version > /dev/null 2>&1; echo $?)
