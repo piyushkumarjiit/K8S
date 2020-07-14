@@ -20,8 +20,8 @@ fi
 
 if [[ $KUBEADM_AVAILABLE == 0 || $KUBEADM_AVAILABLE == 1 ]]
 then
-	kubeadm reset
 	echo "Kubeadm reset called."
+	kubeadm reset -f
 	yum -y -q remove kubeadm
 	echo "kubeadm removed."
 fi
