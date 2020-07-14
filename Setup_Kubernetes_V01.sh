@@ -6,28 +6,10 @@
 #./Setup_Kubernetes_V01.sh > >(tee setup.log) 2> >(tee setup.log >&2)
 #./Setup_Kubernetes_V01.sh |& tee -a setup.log
 
-# export KUBE_LBNODE_1_HOSTNAME="KubeLBNode1.bifrost"
-# export KUBE_LBNODE_1_IP="192.168.2.205"
-# export KUBE_LBNODE_2_HOSTNAME="KubeLBNode2.bifrost"
-# export KUBE_LBNODE_2_IP="192.168.2.111"
-# export KUBE_MASTER_1_HOSTNAME="KubeMasterCentOS8.bifrost"
-# export KUBE_MASTER_1_IP="192.168.2.220"
-# export KUBE_MASTER_2_HOSTNAME="KubeMaster2CentOS8.bifrost"
-# export KUBE_MASTER_2_IP="192.168.2.13"
-# export KUBE_MASTER_3_HOSTNAME="KubeMaster3CentOS8.bifrost"
-# export KUBE_MASTER_3_IP="192.168.2.186"
-# export KUBE_WORKER_1_HOSTNAME="KubeNode1CentOS8.bifrost"
-# export KUBE_WORKER_1_IP="192.168.2.251"
-# export KUBE_WORKER_2_HOSTNAME="KubeNode2CentOS8.bifrost"
-# export KUBE_WORKER_2_IP="192.168.2.137"
-# export KUBE_WORKER_3_HOSTNAME="KubeNode3CentOS8.bifrost"
-# export KUBE_WORKER_3_IP="192.168.2.227"
-
 #LB Details
 export KUBE_VIP_1_HOSTNAME="VIP"
 export KUBE_VIP_1_IP="192.168.2.6"
 #Port where Control Plane API server would bind on Load Balancer
-#export KUBE_MASTER_API_PORT="6443"
 export API_PORT="6443"
 #Hostname of the node from where we run the script
 export CURRENT_NODE_NAME="$(hostname)"
@@ -52,13 +34,13 @@ export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_N
 
 #Username that we use to connect to remote machine via SSH
 export USERNAME="root"
-#USER_PASSWORD=$(cat passwd.txt)
+export ADMIN_USER="ichigo"
+export USER_HOME="/home/$ADMIN_USER"
+
 #Do we want to setup Load Balancer
 export EXTERNAL_LB_ENABLED="true"
 #K8S network driver
 networking_type="calico"
-
-#echo "All IPs: ${ALL_NODE_IPS[*]} and all Names: ${ALL_NODE_NAMES[*]} "
 
 index=0
 for node in ${ALL_NODE_NAMES[*]}
@@ -67,26 +49,24 @@ do
 	NODE_ALREADY_PRESENT=$(cat /etc/hosts | grep -w $node > /dev/null 2>&1; echo $?)
 	if [[ $NODE_ACCESSIBLE != 0 ]]
 	then
-		echo "Node: $node inaccessible. Need to update hosts file."		
+		echo "Node: $node inaccessible. Need to update hosts file."
 		if [[ $index == 0 ]]
 		then
 			cat /etc/hosts > hosts.txt
 			echo "Backed up /etc/hosts file."
 		fi
-		#Add Master IP Addresses and Hostnames in hosts file
-		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
-		echo "Hosts file updated."
-		#Extra logic for source node. Current node is pingable but not sshable so need to add entry to etc.hosts
-	# elif [[ ($CURRENT_NODE_NAME == $node) && ($NODE_ALREADY_PRESENT != 0) ]]
- #    	then
- #    	echo "Node $node is source node and can be pinged."
- #    	if [[ $index == 0 ]]
-	# 	then
-	# 		cat /etc/hosts > hosts.txt
-	# 		echo "Backed up /etc/hosts file."
-	# 	fi
-	# 	echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
-	# 	echo "Hosts file updated."
+		NODE_NAMES_LENGTH=${#ALL_NODE_NAMES[*]}
+		NODE_IPS_LENGTH=${#ALL_NODE_NAMES[*]}
+		if [[ $NODE_NAMES_LENGTH == $NODE_IPS_LENGTH ]]
+		then			
+			#Add Master IP Addresses and Hostnames in hosts file
+			echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
+			echo "Hosts file updated."
+		else
+			echo "Number of Host Names do not match with Host IPs provided. Unable to update /etc/hosts. Exiting."
+			sleep 2
+			exit 1
+		fi
 	else
 		echo "Node $node is accessible."
 	fi
@@ -213,7 +193,7 @@ do
     echo "Connected to Kube node: $node"
     cd ~
     export NODE_TYPE=$NODE_TYPE
-    export USERNAME="$USER"
+    export USERNAME="$ADMIN_USER"
     export TEMP_NODE_NAMES="${KUBE_CLUSTER_NODE_NAMES[*]}"
     export TEMP_NODE_IPS="${KUBE_CLUSTER_NODE_IPS[*]}"
     export CALLING_NODE_NAME=$CURRENT_NODE_NAME
@@ -237,12 +217,12 @@ LB_REFUSED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; e
 echo "******* Setting up Primary master node ********"
 
 #Reset the cluster
-#sudo kubeadm reset -f
-#sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-#sudo systemctl daemon-reload
-#sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-#sleep 120
-#echo "Reset complete."
+sudo kubeadm reset -f
+sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
+sudo systemctl daemon-reload
+sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+sleep 10
+echo "Reset complete."
 #Save the old config
 kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
 echo "LB Details: "$KUBE_VIP_1_IP $API_PORT
@@ -275,8 +255,12 @@ chown $(id -u):$(id -g) add_worker.txt
 #sudo kubeadm token create --print-join-command
 
 #Create Kube config Folder.
+mkdir -p $USER_HOME/.kube
 mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
+sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+echo "ChCommand: chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config"
+sudo chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
 echo "Kube config copied to Home."
 
@@ -309,13 +293,6 @@ kubectl get nodes
 
 #Certificate Distribution to other Master nodes
 echo "Trying to copy certificates to other nodes."
-#Set the home directory in target server for scp. $HOME does not work due to difference in users on src and tgt
-if [[ "$USERNAME" == "root" ]]
-then
-	TARGET_DIR="/root"
-else
-	TARGET_DIR="/home/$USERNAME"
-fi
 
 #If certificates are deleted, regenerate them using below command
 #kubeadm init phase upload-certs --upload-certs
@@ -363,11 +340,11 @@ do
 		echo "Username set as: "$USERNAME
 
 		#Reset the cluster. Only way I could get this to work seemlessly
-		#kubeadm reset -f
-		#rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-		#systemctl daemon-reload		
-		#iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-		#sleep 120
+		kubeadm reset -f
+		rm -Rf/etc/cni/net.d /root/.kube ~/.kube
+		systemctl daemon-reload		
+		iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+		sleep 10
 
 		#Before running kubadm join on non primary nodes, move certificates in respective locations
 		echo "Trying to move certificates to their respective locations on $node"
@@ -378,10 +355,16 @@ do
 		bash -c "rm -f certificate_mover.sh"
 		echo "Trying to add Master node to cluster."
 		bash -c "$MASTER_JOIN_COMMAND"
-		mkdir -p \$HOME/.kube
+	
 		echo "Trying to copy '$HOME/admin.conf' over"
+		mkdir -p \$HOME/.kube
+		mkdir -p $USER_HOME/.kube
+		echo "Command: /etc/kubernetes/admin.conf \$HOME/.kube/config"
 		cp /etc/kubernetes/admin.conf \$HOME/.kube/config
+		cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
+		echo " ChCommand \$(id -u):\$(id -g) \$HOME/.kube/config"
 		chown \$(id -u):\$(id -g) \$HOME/.kube/config
+		chown \$(id $ADMIN_USER -u):\$(id $ADMIN_USER -g) $USER_HOME/.kube/config
 		echo "Exiting."
 		exit
 		EOF
@@ -401,11 +384,11 @@ do
 	#Try to SSH into each node
 	ssh "$USERNAME"@$node <<- EOF
 	echo "Trying to add Worker node:$node to cluster."
-	#kubeadm reset -f
-	#rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-	#systemctl daemon-reload
-	#iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-	#sleep 120
+	kubeadm reset -f
+	rm -Rf/etc/cni/net.d /root/.kube ~/.kube
+	systemctl daemon-reload
+	iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+	sleep 10
 	bash -c "$WORKER_JOIN_COMMAND"
 	echo "Exiting."
 	exit
@@ -414,7 +397,7 @@ do
 done
 echo "All workers added."
 
-sleep 180
+sleep 30
 #Check all nodes have joined the cluster. Only needed for Master.
 kubectl get nodes
 
