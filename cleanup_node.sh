@@ -97,6 +97,7 @@ groupdel docker
 #Enable and Start firewalld.
 #systemctl enable firewalld
 #systemctl start firewalld
+sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
 echo "firewalld enabled and started."
 
 #Enable Swap manually
