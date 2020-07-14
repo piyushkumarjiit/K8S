@@ -36,6 +36,8 @@ export USERNAME="root"
 
 EXTERNAL_LB_ENABLED="false"
 
+kubectl delete --all pods
+
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do

@@ -258,10 +258,10 @@ then
 		if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
 		then
 			#Call init with endpoint parameters needed for Load Balanced Config
-			sudo kubeadm init --config kubeadm-config.yaml | tee kubeadm_init_output.txt
+			kubeadm init --config kubeadm-config.yaml | tee kubeadm_init_output.txt
 		else
 			#Call init with endpoint and certificate parameters needed for Load Balanced Config
-			sudo kubeadm init --config kubeadm-config.yaml --upload-certs | tee kubeadm_init_output.txt
+			kubeadm init --config kubeadm-config.yaml --upload-certs | tee kubeadm_init_output.txt
 		fi
 
 	else
@@ -273,11 +273,11 @@ then
 		if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
 		then
 			#Call init with endpoint parameters needed for Load Balanced Config
-			sudo kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" | tee kubeadm_init_output.txt
+			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" | tee kubeadm_init_output.txt
 			#Save the output from the previous command as you need it to add other nodes to cluster
 		else
 			#Call init with endpoint and certificate parameters needed for Load Balanced Config
-			sudo kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
+			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
 			#Save the output from the previous command as you need it to add other nodes to cluster
 		fi
 	fi
@@ -301,12 +301,11 @@ then
 	#Create Kube config Folder.
 	mkdir -p $USER_HOME/.kube
 	mkdir -p $HOME/.kube
-	sudo cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
-	sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
-	echo "ChCommand: chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config"
-	sudo chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config
-	sudo chown $(id -u):$(id -g) $HOME/.kube/config
-	echo "Kube config copied to Home."
+	cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
+	cp /etc/kubernetes/admin.conf $HOME/.kube/config
+	chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config
+	chown $(id -u):$(id -g) $HOME/.kube/config
+	"Kube config copied to Home."
 
 	kubectl get nodes # should show master as Not Ready as networking is missing
 	kubectl get pods --all-namespaces -o wide

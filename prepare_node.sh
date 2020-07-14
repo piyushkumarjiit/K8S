@@ -106,7 +106,7 @@ then
 	systemctl stop firewalld
 	systemctl disable firewalld
 	#IP Tables need to be flushed. Would not be able to add nodes without this step.
-	sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+	iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
 	echo "Disabled firewalld. Please enable with direct rules."
 else
 	echo "Firewalld seems to be disabled. Continuing."
