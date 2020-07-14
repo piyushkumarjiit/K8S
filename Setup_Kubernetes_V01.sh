@@ -15,13 +15,20 @@ export API_PORT="6443"
 export CURRENT_NODE_NAME="$(hostname)"
 #IP of the node from where we run the script
 export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
-
+#Do we want to setup Load Balancer
+export EXTERNAL_LB_ENABLED="true"
 #All Nodes running Load Balancer
-export LB_NODES_IP=("192.168.2.205" "192.168.2.111")
-export LB_NODES_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
+export LB_NODE_IPS=("192.168.2.205" "192.168.2.111")
+export LB_NODE_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
+#Do you want to set up new Primary Master nodes in this run. Allowed true/false
+export SETUP_PRIMARY_MASTER="true"
+#Do you want to add Master nodes in this run. Allowed true/false
+export ADD_MASTER_NODES="true"
 #All Master nodes
 export MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186")
 export MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost")
+#Do you want to add Worker nodes in this install. Allowed true/false
+export ADD_WORKER_NODES="true"
 #All Worker Nodes
 export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.137" "192.168.2.227")
 export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
@@ -29,20 +36,70 @@ export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" 
 export KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
 export KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
 #All nodes we are trying to use
-export ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODES_IP[*]})
-export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODES_NAMES[*]})
+export ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODE_IPS[*]})
+export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODE_NAMES[*]})
+#Should we use ClusterConfiguration YAML to set up master node or us kubeadm reset to set up cluster. Allowed values "YAML"/"kubeadm_reset"
+export SETUP_CLUSTER_VIA="kubeadm_reset"
+#Do we want to manuaaly copy the certificates
+MANUALLY_COPY_CERTIFICATES="false"
 
 #Username that we use to connect to remote machine via SSH
-export USERNAME="root"
-#Username that we woudl use for normal kubectl/kubeadm commands post install
-export ADMIN_USER="ichigo"
-export USER_HOME="/home/$ADMIN_USER"
+USERNAME="root"
+#Username that we would use for normal kubectl/kubeadm commands post install
+ADMIN_USER="ichigo"
+USER_HOME="/home/$ADMIN_USER"
 
-#Do we want to setup Load Balancer
-export EXTERNAL_LB_ENABLED="true"
-#K8S network driver
-networking_type="calico"
-#Check connectivity of all nodes
+#Set below variables when running the script to add specific nodes to existing K8S cluster
+MASTER_JOIN_COMMAND=""
+WORKER_JOIN_COMMAND=""
+
+echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
+
+#K8S network type. Allowed values calico/flannel
+networking_type="flannel"
+
+if [[ $SETUP_PRIMARY_MASTER != "true" ]]
+then
+	if [[ ($ADD_MASTER_NODES == "true") ]]
+	then
+		if [[ (($MASTER_JOIN_COMMAND == "") || (${MASTER_NODE_IPS[*]} == "")) ]]
+		then		
+			echo "Unable to add new Master node to cluster without MASTER_JOIN_COMMAND. Exiting."
+			sleep 2
+			exit 1
+		else
+			echo "Proceeding to add new Master node(s)."
+		fi
+	fi
+
+	if [[ $ADD_WORKER_NODES == "true" ]]
+	then
+		if [[ ${WORKER_NODE_NAMES[*]} == "" ]] 
+		then
+			echo "Unable to add new Worker node to cluster without WORKER_NODE_NAMES. Exiting."
+			sleep 2
+			exit 1
+		elif [[ $WORKER_JOIN_COMMAND == "" ]]
+		then
+			echo "WORKER_JOIN_COMMAND is undefined. Trying to generate token."
+			#Try to generate a new token
+			#kubeadm token create --print-join-command
+			WORKER_JOIN_COMMAND=$(kubeadm token create --print-join-command)
+			if [[ $WORKER_JOIN_COMMAND == "" ]]
+			then
+				echo "Token generation failed. Unable to add new Worker node to cluster without WORKER_JOIN_COMMAND. Exiting."
+				sleep 2
+				exit 1
+			fi
+		else
+			echo "Proceeding to add new Worker node(s)."
+		fi
+	fi
+fi
+
+#read -n 1 -p "Press any key to continue:"
+
+#Check connectivity to all nodes
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do
@@ -74,8 +131,8 @@ do
 	((index++))
 done
 
-echo -n "$NODES_IN_CLUSTER" | sudo tee -a /etc/hosts
 
+#Setup key based SSH connection to all nodes
 ssh-keygen -t rsa
 
 for node in ${ALL_NODE_IPS[*]}
@@ -89,18 +146,18 @@ echo "Added keys for all nodes."
 eval $(ssh-agent)
 ssh-add ~/.ssh/id_rsa #Assuming id_rsa is the name of the private key file
 
-#Call helper script to setup LB (Keepalived + HAProxy)
+#Setup Load Balancer (Keepalived + HAProxy)
 if [[ $EXTERNAL_LB_ENABLED == "true" ]]
 then
 	PRIORITY=200
 	UNICAST_PEER_IP=""
-	#Iterate over all Addresses mentioned in LB_NODES_IP array
-	for node in ${LB_NODES_IP[*]}
+	#Iterate over all Addresses mentioned in LB_NODE_IPS array
+	for node in ${LB_NODE_IPS[*]}
 	do
 		#Priority passed to LB subscript in decreasing order. Could be overridden if needed.
 		PRIORITY="$(($PRIORITY - 1))"
-		#Iterate over all Addresses mentioned in LB_NODES_IP array and set UNICAST_PEER_IP which is set in keepalived.conf
-		for UNICAST_PEER_IP in ${LB_NODES_IP[*]}
+		#Iterate over all Addresses mentioned in LB_NODE_IPS array and set UNICAST_PEER_IP which is set in keepalived.conf
+		for UNICAST_PEER_IP in ${LB_NODE_IPS[*]}
 		do
 			if [[ "$UNICAST_PEER_IP" == "$node" ]]
 			then
@@ -111,7 +168,7 @@ then
 			fi
 		done
 		#echo "FINAL_UNICAST_PEER_IP: $FINAL_UNICAST_PEER_IP"
-		#Create 1 string by concatenating all Master nodes. Use % as separator to make it easy in util to separate
+		#Create 1 string by concatenating all Master nodes. Use % as separator to make it easy in subscript to separate
 		MASTER_PEER_IP=$(echo ${MASTER_NODE_IPS[*]} | sed 's# #%#g')
 
 	    #scp ~/setup_loadbalancer.sh "${USER}"@$host:
@@ -138,7 +195,7 @@ else
 	echo "Skipping load balancer setup."
 fi
 
-#Call Helper script to setup common elements
+#Call Helper script to setup K8S common elements
 for node in ${KUBE_CLUSTER_NODE_NAMES[*]}
 do
 	if [[ " ${MASTER_NODE_NAMES[*]} " == *" $node "* ]]
@@ -154,8 +211,8 @@ do
     cd ~
     export NODE_TYPE=$NODE_TYPE
     export USERNAME="$ADMIN_USER"
-    export TEMP_NODE_NAMES="${KUBE_CLUSTER_NODE_NAMES[*]}"
-    export TEMP_NODE_IPS="${KUBE_CLUSTER_NODE_IPS[*]}"
+    export TEMP_NODE_NAMES="${ALL_NODE_NAMES[*]}"
+    export TEMP_NODE_IPS="${ALL_NODE_IPS[*]}"
     export CALLING_NODE_NAME=$CURRENT_NODE_NAME
     wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
     chmod 755 prepare_node.sh
@@ -166,188 +223,277 @@ do
 	EOF
 	echo "Prep script completed on $node"
 done
+echo "All K8S nodes prepared."
 
-echo "All nodes prepared."
-LB_CONNECTED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
-LB_REFUSED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
+#ClusterConfig YAML Template
+# cat > kubeadm-config.yaml <<-EOF
+# apiVersion: kubeadm.k8s.io/v1beta2
+# kind: ClusterConfiguration
+# kubernetesVersion: v1.18.0
+# apiServerCertSANs:
+# - "192.168.2.6"
+# controlPlaneEndpoint: "192.168.2.6:6443"
+# etcd:
+#   local:
+#     extraArgs:
+#       listen-client-urls: "https://127.0.0.1:2379,https://192.168.2.13:2379"
+#       advertise-client-urls: "https://192.168.2.13:2379"
+#       listen-peer-urls: "https://192.168.2.13:2380"
+#       initial-advertise-peer-urls: "https://192.168.2.13:2380"
+#       initial-cluster: "KubeMaster2CentOS8.bifrost=https://192.168.2.13:2380"
+#     serverCertSANs:
+#       - 192.168.2.13
+#     peerCertSANs:
+#       - 192.168.2.13
+# networking:
+#     # For flannel use 10.244.0.0/16, calico uses 192.168.0.0/16
+#     podSubnet: "10.244.0.0/16"
+# EOF
 
-#Run below as sudo on Primary Master node
-echo "******* Setting up Primary master node ********"
+cat > kubeadm-config.yaml <<-'EOF'
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+kubernetesVersion: v1.18.0
+controlPlaneEndpoint: 192.168.2.6:6443
+networking:
+    podSubnet: 10.244.0.0/16
+EOF
 
-#Reset the cluster
-sudo kubeadm reset -f
-sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-sudo systemctl daemon-reload
-sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-sleep 10
-echo "Reset complete."
-#Save the old config
-kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
-echo "LB Details: "$KUBE_VIP_1_IP $API_PORT
-echo "Status of LB flags, Connected is $LB_CONNECTED and Refused is $LB_REFUSED "
-#Call init with endpoint and certificate parameters needed for Load Balanced Config
-echo "Initializing control plane with: kubeadm init --control-plane-endpoint $KUBE_VIP_1_IP:$API_PORT "
-sudo kubeadm init --control-plane-endpoint $KUBE_VIP_1_IP:$API_PORT --upload-certs | tee kubeadm_init_output.txt
-echo "Done initializing control plane."
-#Save the output from the previous command as you need it to add other nodes to cluster
-#Extract command used to initialize other Master nodes
-MASTER_JOIN_COMMAND=$(tail -n12 kubeadm_init_output.txt | head -n3 )
-echo $MASTER_JOIN_COMMAND > add_master.txt
-#Extract command used to initialize Worker nodes
-WORKER_JOIN_COMMAND=$(tail -n2 kubeadm_init_output.txt)
-echo $WORKER_JOIN_COMMAND > add_worker.txt
-#Set permissions for prying eyes.
-chown $(id -u):$(id -g) kubeadm_init_output.txt
-chown $(id -u):$(id -g) add_master.txt
-chown $(id -u):$(id -g) add_worker.txt
+#kubeadm config migrate --old-config old.yaml --new-config new.yaml
 
-#If needed, regenerate join command from master
-#sudo kubeadm token create --print-join-command
-
-#Create Kube config Folder.
-mkdir -p $USER_HOME/.kube
-mkdir -p $HOME/.kube
-sudo cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
-sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
-echo "ChCommand: chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config"
-sudo chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
-echo "Kube config copied to Home."
-
-kubectl get nodes # should show master as Not Ready as networking is missing
-#Set up networking for Masternode. Networking probably is not needed after the Primary node
-echo "Setting up network."
-if [[ $networking_type == "calico" ]]
+#Set up the Primary Master node in the cluster.
+if [[ $SETUP_PRIMARY_MASTER == "true" ]]
 then
-	#New YAML from K8s.io docs
-	kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
-	echo "Calico set up."
-else
-	export kubever=$(kubectl version | base64 | tr -d '\n')
-	kubectl apply -f https://cloud.weave.works/k8s/net?k8s-version=$kubever
-	echo "Weave set up."
-fi
+	echo "Setting up primary node in cluster."
+	LB_CONNECTED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
+	LB_REFUSED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
+	echo "LB Details: "$KUBE_VIP_1_IP $API_PORT
+	echo "Status of LB flags, Connected is $LB_CONNECTED and Refused is $LB_REFUSED "
 
-#Takes some time for nodes to be ready
-CONTINUE_WAITING=$(kubectl get nodes | grep Ready > /dev/null 2>&1; echo $?)
-echo -n "Primary master node not ready. Waiting ."
-while [[ $CONTINUE_WAITING != 0 ]]
-do
-	sleep 20
-	echo -n "."
- 	CONTINUE_WAITING=$(kubectl get nodes | grep Ready > /dev/null 2>&1; echo $?)
-done
-echo ""
-echo "Primary master node ready."
-kubectl get nodes
-
-#Certificate Distribution to other Master nodes
-echo "Trying to copy certificates to other nodes."
-
-#If certificates are deleted, regenerate them using below command
-#kubeadm init phase upload-certs --upload-certs
-LOOP_COUNT=0
-for TARGET_NODE_NAME in ${MASTER_NODE_NAMES[*]}
-do
-	if [[ "$TARGET_NODE_NAME" != "$CURRENT_NODE_NAME" ]]
+	#Run below as sudo on Primary Master node
+	echo "******* Setting up Primary master node ********"
+	if [[ $SETUP_CLUSTER_VIA == "YAML" ]]
 	then
-		((LOOP_COUNT++))
-		echo "Connected to $TARGET_NODE_NAME"
-		#Once Primary Node is setup, run below command to copy certificates to other nodes
-	    scp /etc/kubernetes/pki/ca.crt "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
-	    scp /etc/kubernetes/pki/ca.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
-	    scp /etc/kubernetes/pki/sa.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
-	    scp /etc/kubernetes/pki/sa.pub "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
-	    scp /etc/kubernetes/pki/front-proxy-ca.crt "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
-	    scp /etc/kubernetes/pki/front-proxy-ca.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
-	    scp /etc/kubernetes/pki/etcd/ca.crt "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR/etcd-ca.crt
-	    # Quote below line if you are using external etcd
-	    scp /etc/kubernetes/pki/etcd/ca.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR/etcd-ca.key
+		echo "Setting up Via YAML."
+		#Save the old config
+		kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
+		kubeadm config print join-defaults > join.yaml
+		kubeadm config images pull --config kubeadm-config.yaml
+		sudo kubeadm init --config kubeadm-config.yaml --upload-certs | tee kubeadm_init_output.txt		
 	else
-		echo "Certificate already present."
+		echo "Setting up Via kubeadm reset."
+		#Reset the cluster
+		# sudo kubeadm reset -f
+		# sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
+		# sudo systemctl daemon-reload
+		# sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+		# sleep 10
+		# echo "Reset complete."
+		#Save the old config
+		kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
+		#Call init with endpoint and certificate parameters needed for Load Balanced Config
+		echo "Initializing control plane with: kubeadm init --control-plane-endpoint $KUBE_VIP_1_IP:$API_PORT "
+		sudo kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
 	fi
-done
-if [[ LOOP_COUNT -gt 0 ]]
-then 
-	echo "Certificates copy step complete."
-else
-	echo "Certificate copy step failed."
-fi
 
-echo "Adding other Master nodes."
-for node in ${MASTER_NODE_NAMES[*]}
-do
-	if [[ "$node" == "$CURRENT_NODE_NAME" ]]
+	echo "Done initializing control plane."
+	#Save the output from the previous command as you need it to add other nodes to cluster
+	#Extract command used to initialize other Master nodes
+	MASTER_JOIN_COMMAND=$(tail -n12 kubeadm_init_output.txt | head -n3 )
+	echo $MASTER_JOIN_COMMAND > add_master.txt
+	#Extract command used to initialize Worker nodes
+	WORKER_JOIN_COMMAND=$(tail -n2 kubeadm_init_output.txt)
+	echo $WORKER_JOIN_COMMAND > add_worker.txt
+	#Set permissions for prying eyes.
+	chown $(id -u):$(id -g) kubeadm_init_output.txt
+	chown $(id -u):$(id -g) add_master.txt
+	chown $(id -u):$(id -g) add_worker.txt
+
+	#If needed, regenerate join command from master
+	#sudo kubeadm token create --print-join-command
+
+	#Create Kube config Folder.
+	mkdir -p $USER_HOME/.kube
+	mkdir -p $HOME/.kube
+	sudo cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
+	sudo cp /etc/kubernetes/admin.conf $HOME/.kube/config
+	echo "ChCommand: chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config"
+	sudo chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config
+	sudo chown $(id -u):$(id -g) $HOME/.kube/config
+	echo "Kube config copied to Home."
+
+	kubectl get nodes # should show master as Not Ready as networking is missing
+	kubectl get pods --all-namespaces -o wide
+	#Set up networking for Masternode. Networking probably is not needed after the Primary node
+	echo "Setting up network."
+	if [[ $networking_type == "calico" ]]
 	then
-		echo "Source node already processed and added to cluster."
+		#New YAML from K8s.io docs
+		kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
+		echo "Calico set up."
 	else
-		#Add other Master nodes
-		echo "Trying to add $node"
-		#SSH into other Master nodes
-		ssh "$USERNAME"@$node <<- EOF
-		cd ~
-		export USERNAME=$USERNAME
-		echo "Username set as: "$USERNAME
+		export kubever=$(kubectl version | base64 | tr -d '\n')
+		kubectl apply -f https://cloud.weave.works/k8s/net?k8s-version=$kubever
+		echo "Weave set up."
+	fi
 
-		#Reset the cluster. Only way I could get this to work seemlessly
-		kubeadm reset -f
-		rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-		systemctl daemon-reload		
-		iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-		sleep 10
+	#Takes some time for nodes to be ready
+	CONTINUE_WAITING=$(kubectl get nodes | grep -w Ready > /dev/null 2>&1; echo $?)
+	echo -n "Primary master node not ready. Waiting ."
+	while [[ $CONTINUE_WAITING != 0 ]]
+	do
+		sleep 20
+		echo -n "."
+	 	CONTINUE_WAITING=$(kubectl get nodes | grep -w Ready > /dev/null 2>&1; echo $?)
+	done
+	echo ""
+	echo "Primary master node ready."
+	kubectl get nodes
 
-		#Before running kubadm join on non primary nodes, move certificates in respective locations
-		echo "Trying to move certificates to their respective locations on $node"
-		#Fetch the certificate_mover.sh from github
-		wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/certificate_mover.sh"
-		chmod 755 certificate_mover.sh
-		bash -c "./certificate_mover.sh"
-		bash -c "rm -f certificate_mover.sh"
-		echo "Trying to add Master node to cluster."
-		bash -c "$MASTER_JOIN_COMMAND"
+	#Certificate Distribution to other Master nodes
+	echo "Trying to copy certificates to other nodes."
+
+	if [[ $SETUP_CLUSTER_VIA == "YAML"  && MANUALLY_COPY_CERTIFICATES == "true" ]]
+	then
+		#If certificates are deleted, regenerate them using below command
+		#kubeadm init phase upload-certs --upload-certs
+		LOOP_COUNT=0
+		for TARGET_NODE_NAME in ${MASTER_NODE_NAMES[*]}
+		do
+			if [[ "$TARGET_NODE_NAME" != "$CURRENT_NODE_NAME" ]]
+			then
+				((LOOP_COUNT++))
+				echo "Connected to $TARGET_NODE_NAME"
+				#Once Primary Node is setup, run below command to copy certificates to other nodes
+			    scp /etc/kubernetes/pki/ca.crt "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
+			    scp /etc/kubernetes/pki/ca.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
+			    scp /etc/kubernetes/pki/sa.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
+			    scp /etc/kubernetes/pki/sa.pub "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
+			    scp /etc/kubernetes/pki/front-proxy-ca.crt "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
+			    scp /etc/kubernetes/pki/front-proxy-ca.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR
+			    scp /etc/kubernetes/pki/etcd/ca.crt "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR/etcd-ca.crt
+			    # Quote below line if you are using external etcd
+			    scp /etc/kubernetes/pki/etcd/ca.key "$USERNAME"@$TARGET_NODE_NAME:$TARGET_DIR/etcd-ca.key
+			else
+				echo "Certificate already present."
+			fi
+		done
+		if [[ LOOP_COUNT -gt 0 ]]
+		then 
+			echo "Certificates copy step complete."
+		else
+			echo "Certificate copy step failed."
+		fi
+	else
+		echo "Certificate copy not needed when using kubeadm reset."
+	fi
+fi
 	
-		echo "Trying to copy '$HOME/admin.conf' over"
-		mkdir -p \$HOME/.kube
-		mkdir -p $USER_HOME/.kube
-		echo "Command: /etc/kubernetes/admin.conf \$HOME/.kube/config"
-		cp /etc/kubernetes/admin.conf \$HOME/.kube/config
-		cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
-		echo " ChCommand \$(id -u):\$(id -g) \$HOME/.kube/config"
-		chown \$(id -u):\$(id -g) \$HOME/.kube/config
-		chown \$(id $ADMIN_USER -u):\$(id $ADMIN_USER -g) $USER_HOME/.kube/config
-		echo "Exiting."
-		exit
-		EOF
-		echo "Master node: $node added."
-	fi
-done
-echo "All Masters added."
+if [[ $ADD_MASTER_NODES == "true" ]]
+then
+	echo "Adding other Master nodes."
+	for node in ${MASTER_NODE_NAMES[*]}
+	do
+		if [[ "$node" == "$CURRENT_NODE_NAME" ]]
+		then
+			echo "Source node already processed and added to cluster."
+
+		elif [[ -n "$MASTER_JOIN_COMMAND" ]]
+		then
+
+			#Add other Master nodes
+			echo "Trying to add $node"
+			#SSH into other Master nodes
+			ssh "$USERNAME"@$node <<- EOF
+			cd ~
+			export USERNAME=$USERNAME
+			echo "Username set as: "$USERNAME
+			
+			if [[ $SETUP_CLUSTER_VIA == "YAML" ]]
+			then
+				#Before running kubadm join on non primary nodes, move certificates in respective locations
+				echo "Trying to move certificates to their respective locations on $node"
+				#Fetch the certificate_mover.sh from github
+				wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/certificate_mover.sh"
+				chmod 755 certificate_mover.sh
+				bash -c "./certificate_mover.sh"
+				bash -c "rm -f certificate_mover.sh"
+			else
+				echo "Certificate copy is not required when using YAML path to set up cluster. Proceeding with kubeadm reset"
+				#Reset the cluster. Only way I could get this to work seemlessly
+				# kubeadm reset -f
+				# rm -Rf/etc/cni/net.d /root/.kube ~/.kube
+				# systemctl daemon-reload		
+				# iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+				# sleep 10
+			fi
+			
+			echo "Trying to add Master node to cluster."
+			bash -c "$MASTER_JOIN_COMMAND"
+		
+			echo "Trying to copy '$HOME/admin.conf' over"
+			mkdir -p \$HOME/.kube
+			mkdir -p $USER_HOME/.kube
+			echo "Command: /etc/kubernetes/admin.conf \$HOME/.kube/config"
+			cp /etc/kubernetes/admin.conf \$HOME/.kube/config
+			cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
+			echo " ChCommand \$(id -u):\$(id -g) \$HOME/.kube/config"
+			chown \$(id -u):\$(id -g) \$HOME/.kube/config
+			chown \$(id $ADMIN_USER -u):\$(id $ADMIN_USER -g) $USER_HOME/.kube/config
+			echo "Exiting."
+			exit
+			EOF
+			echo "Master node: $node added."
+		else
+			echo "MASTER_JOIN_COMMAND is undefined. Exiting."
+			sleep 2
+			exit 1
+		fi
+	done
+	echo "All Masters added."
+else
+	echo "Not adding Master node."
+fi
 
 #For security reasons cluster does not run pods on control-plane node. To override this use below command
 #kubectl taint nodes --all node-role.kubernetes.io/master-
 
-#Add Worker nodes to cluster
-echo "Setting up worker nodes"
-for node in ${WORKER_NODE_NAMES[*]}
-do
-	echo "Trying to add $node"
-	#Try to SSH into each node
-	ssh "$USERNAME"@$node <<- EOF
-	echo "Trying to add Worker node:$node to cluster."
-	kubeadm reset -f
-	rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-	systemctl daemon-reload
-	iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-	sleep 10
-	bash -c "$WORKER_JOIN_COMMAND"
-	echo "Exiting."
-	exit
-	EOF
-	echo "Back from Worker: "$node
-done
-echo "All workers added."
+if [[ $ADD_WORKER_NODES == "true" ]]
+then
+	if [[ -n "$WORKER_JOIN_COMMAND" ]]
+	then		
+		#Add Worker nodes to cluster
+		echo "Setting up worker nodes"
+		for node in ${WORKER_NODE_NAMES[*]}
+		do
+			echo "Trying to add $node"
+			#Try to SSH into each node
+			ssh "$USERNAME"@$node <<- EOF
+			echo "Trying to add Worker node:$node to cluster."
+			# kubeadm reset -f
+			# rm -Rf/etc/cni/net.d /root/.kube ~/.kube
+			# systemctl daemon-reload
+			# iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+			# sleep 10
+			bash -c "$WORKER_JOIN_COMMAND"
+			echo "Exiting."
+			exit
+			EOF
+			echo "Back from Worker: "$node
+		done
+		echo "All workers added."
+		sleep 10
+	else
+		echo "WORKER_JOIN_COMMAND is undefined. Exiting."
+		sleep 2
+		exit 1
+	fi
+else
+	echo "Skipping adding workers."
+fi
 
-sleep 30
+
+
 #Check all nodes have joined the cluster. Only needed for Master.
 kubectl get nodes
 
