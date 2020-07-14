@@ -85,7 +85,7 @@ echo "Files created by setup script deleted."
 #umount /var/lib/docker/containers
 
 DELETE_FAILED=$(rm -Rf /usr/lib/systemd/system/kubelet.service.d > /dev/null 2>&1; echo $?)
-echo "Delete Falg: "$DELETE_FAILED
+echo "Delete Flag: "$DELETE_FAILED
 #Remove folders
 rm -Rf /etc/cni /var/lib/etcd /etc/kubernetes /usr/lib/systemd/system/kubelet.service.d
 rm -Rf /root/.kube ~/.kube
