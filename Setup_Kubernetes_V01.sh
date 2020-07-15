@@ -141,7 +141,6 @@ do
 	((index++))
 done
 
-
 #Setup key based SSH connection to all nodes
 ssh-keygen -t rsa
 
@@ -340,11 +339,10 @@ then
 	echo "Primary master node ready."
 	kubectl get nodes
 
-	#Certificate Distribution to other Master nodes
-	echo "Trying to copy certificates to other nodes."
-
 	if [[ $MANUALLY_COPY_CERTIFICATES == "true" ]]
 	then
+		#Certificate Distribution to other Master nodes
+		echo "Trying to copy certificates to other nodes."
 		#If certificates are deleted, regenerate them using below command
 		#kubeadm init phase upload-certs --upload-certs
 		LOOP_COUNT=0
@@ -422,7 +420,7 @@ then
 			chown \$(id -u):\$(id -g) \$HOME/.kube/config
 			chown \$(id $ADMIN_USER -u):\$(id $ADMIN_USER -g) $USER_HOME/.kube/config
 			
-			echo "Exiting."
+			echo "Master node added. Exiting."
 			exit
 			EOF
 			echo "Master node: $node added."
@@ -453,7 +451,7 @@ then
 			ssh "$USERNAME"@$node <<- EOF
 			echo "Trying to add Worker node:$node to cluster."
 			bash -c "$WORKER_JOIN_COMMAND"
-			echo "Exiting."
+			echo "Worker node added. Exiting."
 			exit
 			EOF
 			echo "Back from Worker: "$node
