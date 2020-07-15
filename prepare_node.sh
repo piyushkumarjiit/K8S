@@ -15,13 +15,19 @@ fi
 echo "Value of passed ALL_NODE_NAMES ${ALL_NODE_NAMES[*]}"
 echo "Value of passed ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
+#Workaround for lack of DNS. Local node can ping itself but unable to SSH
+HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
+if [[ $HOST_PRESENT != 0 ]]
+then
+	echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
+fi
 #Check connectivity to all nodes
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do
 	NODE_ACCESSIBLE=$(ping -q -c 1 -W 1 $node > /dev/null 2>&1; echo $?)
 	NODE_ALREADY_PRESENT=$(cat /etc/hosts | grep -w $node > /dev/null 2>&1; echo $?)
-	if [[ $NODE_ACCESSIBLE != 0 ]]
+	if [[ ($NODE_ACCESSIBLE != 0) && ($NODE_ALREADY_PRESENT != 0) ]]
 	then
 		echo "Node: $node inaccessible. Need to update hosts file."
 		if [[ $index == 0 ]]

@@ -60,13 +60,6 @@ networking_type="calico"
 # 	echo "$KUBE_VIP_1_IP"	"$KUBE_VIP_1_HOSTNAME" | tee -a /etc/hosts
 # fi	
 
-#Workaround for lack of DNS. Local node can ping itself but unable to SSH
-HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
-if [[ $HOST_PRESENT != 0 ]]
-then
-	echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
-fi
-
 #echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
 
 if [[ $SETUP_PRIMARY_MASTER != "true" ]]
@@ -110,6 +103,12 @@ fi
 
 #read -n 1 -p "Press any key to continue:"
 
+#Workaround for lack of DNS. Local node can ping itself but unable to SSH
+HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
+if [[ $HOST_PRESENT != 0 ]]
+then
+	echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
+fi
 #Check connectivity to all nodes
 index=0
 for node in ${ALL_NODE_NAMES[*]}
@@ -470,7 +469,7 @@ else
 	echo "Skipping adding workers."
 fi
 
-sleep 10
+sleep 20
 
 #Check all nodes have joined the cluster. Only needed for Master.
 kubectl get nodes

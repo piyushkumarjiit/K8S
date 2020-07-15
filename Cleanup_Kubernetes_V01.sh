@@ -1,8 +1,8 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
-#./Setup_Kubernetes_V01.sh |& tee -a cleanup.log
 #./Cleanup_Kubernetes_V01.sh | tee cleanup.log
+#./Cleanup_Kubernetes_V01.sh |& tee -a cleanup.log
 
 echo "------------ Cleanup script started --------------"
 
@@ -33,8 +33,8 @@ export ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODES_IP[*]
 export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODES_NAMES[*]})
 #Username that we use to connect to remote machine via SSH
 export USERNAME="root"
-#Flag to identify if LB nodes also should be cleaned
-export EXTERNAL_LB_ENABLED="true"
+#Flag to identify if LB nodes should also be cleaned
+export EXTERNAL_LB_ENABLED="false"
 #Workaround for lack of DNS. Local node can ping itself but unable to SSH
 echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
 
@@ -43,12 +43,18 @@ echo "Deleting all pods."
 kubectl delete --all pods
 
 #Check connectivity to all nodes
+HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
+if [[ $HOST_PRESENT != 0 ]]
+then
+	echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
+fi
+#Check connectivity to all nodes
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do
 	NODE_ACCESSIBLE=$(ping -q -c 1 -W 1 $node > /dev/null 2>&1; echo $?)
 	NODE_ALREADY_PRESENT=$(cat /etc/hosts | grep -w $node > /dev/null 2>&1; echo $?)
-	if [[ $NODE_ACCESSIBLE != 0 ]]
+	if [[ ($NODE_ACCESSIBLE != 0) && ($NODE_ALREADY_PRESENT != 0) ]]
 	then
 		echo "Node: $node inaccessible. Need to update hosts file."
 		if [[ $index == 0 ]]
