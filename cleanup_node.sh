@@ -45,7 +45,7 @@ then
 	systemctl stop docker
 	systemctl disable docker
 	echo "Removing Docker and CRI-O ."
-	yum -y -q remove docker-ce docker-ce-cli containerd.io
+	yum -y -q remove docker-ce
 	echo "Docker removed."
 	yum -y -q cri-o
 	echo "cri-o removed."
