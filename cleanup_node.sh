@@ -9,6 +9,7 @@ CURRENT_NODE_NAME="$(hostname)"
 # kubectl/kubeadm might be installed but with missing config would returns 1
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
+KUBELET_AVAILABLE=$(systemctl status kubelet > /dev/null 2>&1; echo $?)
 
 if [[ $KUBEADM_AVAILABLE == 0 || $KUBEADM_AVAILABLE == 1 ]]
 then
@@ -23,8 +24,17 @@ then
 	kubectl drain $CURRENT_NODE_IP --delete-local-data --force --ignore-daemonsets
 	kubectl delete node $CURRENT_NODE_IP
 	echo "Kubectl delete node called."
-	yum -y -q remove kubelet kubectl
-	echo "kubelet kubectl removed."
+	yum -y -q remove kubectl
+	echo "kubectl removed."
+fi
+
+if [[ $KUBELET_AVAILABLE == 0 ]]
+then
+	echo "Kubelet reset called." 
+	systemctl stop kubelet
+	systemctl disable kubelet
+	yum -y -q remove kubelet
+	echo "kubelet removed."
 fi
 
 DOCKER_AVAILABLE=$(docker --version > /dev/null 2>&1; echo $?)
@@ -32,6 +42,8 @@ if [[ $DOCKER_AVAILABLE == 0 ]]
 then
 	echo "Pruning Docker"
 	docker system prune -af
+	systemctl stop docker
+	systemctl disable docker
 	echo "Removing Docker and CRI-O ."
 	yum -y -q remove docker-ce docker-ce-cli containerd.io
 	echo "Docker removed."
@@ -43,6 +55,8 @@ KEEPALIVED_AVAILABLE=$(systemctl status keepalived.service > /dev/null 2>&1; ech
 if [[ $KEEPALIVED_AVAILABLE == 0 ]]
 then
 	echo "Removing keepalived."
+	systemctl stop keepalived.service
+	systemctl disable keepalived.service
 	yum -y -q keepalived
 	echo "keepalived removed."
 fi
@@ -51,6 +65,8 @@ HAPROXY_AVAILABLE=$(systemctl status haproxy.service > /dev/null 2>&1; echo $?)
 if [[ $HAPROXY_AVAILABLE == 0 ]]
 then
 	echo "Removing haproxy."
+	systemctl stop haproxy.service
+	systemctl disable haproxy.service
 	yum -y -q haproxy
 	echo "haproxy removed."
 fi
@@ -91,6 +107,7 @@ groupdel docker
 sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
 echo "firewalld enabled and started."
 
+
 #Enable Swap manually
 #sed -ir 's/.*-swap/#&/' /etc/fstab
 echo "Swap enabled for restart."
@@ -110,17 +127,15 @@ else
 fi
 
 #Reset the IP Tables
-iptables -F ; iptables -X ; iptables -t nat -F ; iptables -t nat -X; iptables -t mangle -F ; iptables -t mangle -X
-echo "IPTables reset completed."
+#iptables -F ; iptables -X ; iptables -t nat -F ; iptables -t nat -X; iptables -t mangle -F ; iptables -t mangle -X
+#echo "IPTables reset completed."
 sysctl -q --system
-
-echo "Cleanup script completed."
+systemctl daemon-reload
 
 if [[ $CURRENT_NODE_NAME != $CALLING_NODE_NAME ]]
 then
 	echo "Cleanup done. Restarting the node to reset stuck handles."
 	shutdown -r
 else
-	echo "Script completed."
 	echo "----------- $(hostname) cleanup completed ------------"
 fi
