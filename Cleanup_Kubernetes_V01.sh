@@ -34,10 +34,11 @@ export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_N
 #Username that we use to connect to remote machine via SSH
 export USERNAME="root"
 
-EXTERNAL_LB_ENABLED="false"
+EXTERNAL_LB_ENABLED="true"
 
 kubectl delete --all pods
 
+#Check connectivity to all nodes
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do
@@ -45,7 +46,7 @@ do
 	NODE_ALREADY_PRESENT=$(cat /etc/hosts | grep -w $node > /dev/null 2>&1; echo $?)
 	if [[ $NODE_ACCESSIBLE != 0 ]]
 	then
-		echo "Node: $node inaccessible. Need to update hosts file."		
+		echo "Node: $node inaccessible. Need to update hosts file."
 		if [[ $index == 0 ]]
 		then
 			cat /etc/hosts > hosts.txt
@@ -114,4 +115,4 @@ done
 echo "------------ All Nodes cleaned --------------"
 
 echo "Restarting the node. Connect again."
-shutdown -r
+#shutdown -r
