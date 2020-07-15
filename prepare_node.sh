@@ -161,21 +161,11 @@ yum -y -q update
 echo "Install yum-utils"
 yum -y -q install yum-utils
 echo "Installed yum-utils"
-#yum install -y container-selinux
-#echo "installed container-selinux"
-#Disable the module that causes conflict
-#yum module -y disable container-tools
-#echo "Disabled container-tools"
 
 #Install CRI-O
 echo "Install CRI-O"
 yum -y -q install cri-o
 echo "Installed CRI-O"
-
-#Install TC
-#echo "Installing iproute-tc"
-#dnf -y -q install iproute-tc
-#echo "Installed iproute-tc"
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
@@ -185,8 +175,6 @@ then
 	echo "Docker not available. Trying to install Docker."
 	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 	dnf -y -q install docker-ce
-	#curl -fsSL https://get.docker.com -o get-docker.sh
-	#sh get-docker.sh
 	usermod -aG docker $USER
 	usermod -aG docker "$USERNAME"
 	RESTART_NEEDED=0
@@ -194,17 +182,12 @@ then
 	systemctl enable docker
 	#Start Docker
 	systemctl start docker
-	#Remove temp file.
-	#rm get-docker.sh
 	#Check again
 	DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 	if [[ $DOCKER_INSTALLED == 0 ]]
 	then
 		echo "Docker seems to be working."
-		#echo "But you might need to disconnect and reconnect for usermod changes to reflect."
-		#echo "Reconnect and rerun the script. Exiting."
-		#sleep 10
-		#exit 1
+		echo "But you might need to disconnect and reconnect for usermod changes to reflect."
 	else
 		echo "Unable to install Docker. Trying the nobest option as last resort."
 		sleep 2
@@ -274,35 +257,6 @@ fi
 systemctl daemon-reload
 systemctl enable kubelet 
 systemctl start kubelet
-
-# #Set CGroup drivers and Service privilege
-# if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
-# then
-# 	echo "Updating /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf"
-# 	cat <<-EOF >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-# 	'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs 
-# 	--runtime-cgroups=/systemd/system.slice 
-# 	--kubelet-cgroups=/systemd/system.slice"'
-# 	EOF
-
-# 	cat <<-EOF >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-# 	'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests 
-# 	--allow-privileged=true 
-# 	--fail-swap-on=false"'
-# 	EOF
-# 	echo "File updated."
-# else
-# 	echo "File /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf does not exist."
-# fi
-
-#Reset the cluster
-#sudo kubeadm reset -f
-#sudo rm -Rf/etc/cni/net.d /root/.kube ~/.kube
-#sudo systemctl daemon-reload
-#sleep 10
-
-#sleep 10
-echo "Reset complete."
 
 if [[ $RESTART_NEEDED == 0 ]]
 then
