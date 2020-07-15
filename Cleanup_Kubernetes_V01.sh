@@ -1,8 +1,9 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
-#./Cleanup_Kubernetes_V01.sh > setup.log 2>&1
-#./Cleanup_Kubernetes_V01.sh | tee setup.log
+#./Setup_Kubernetes_V01.sh |& tee -a cleanup.log
+#./Cleanup_Kubernetes_V01.sh | tee cleanup.log
+
 echo "------------ Cleanup script started --------------"
 
 #LB Details
