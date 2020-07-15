@@ -1,9 +1,7 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
-#./Setup_Kubernetes_V01.sh > setup.log 2>&1
 #./Setup_Kubernetes_V01.sh | tee setup.log
-#./Setup_Kubernetes_V01.sh > >(tee setup.log) 2> >(tee setup.log >&2)
 #./Setup_Kubernetes_V01.sh |& tee -a setup.log
 
 #LB Details
@@ -52,11 +50,24 @@ USER_HOME="/home/$ADMIN_USER"
 #Set below variables when running the script to add specific nodes to existing K8S cluster
 MASTER_JOIN_COMMAND=""
 WORKER_JOIN_COMMAND=""
-
-echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
-
 #K8S network type. Allowed values calico/flannel
 networking_type="calico"
+
+# #When Load Balancer set up is not ready, ping would fail. So we make sure we add VIP only once.
+# VIP_PRESENT=$(cat /etc/hosts | grep $KUBE_VIP_1_HOSTNAME > /dev/null 2>&1; echo $? )
+# if [[ $VIP_PRESENT != 0 ]]
+# then
+# 	echo "$KUBE_VIP_1_IP"	"$KUBE_VIP_1_HOSTNAME" | tee -a /etc/hosts
+# fi	
+
+#Workaround for lack of DNS. Local node can ping itself but unable to SSH
+HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
+if [[ $HOST_PRESENT != 0 ]]
+then
+	echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
+fi
+
+#echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
 
 if [[ $SETUP_PRIMARY_MASTER != "true" ]]
 then
@@ -105,7 +116,7 @@ for node in ${ALL_NODE_NAMES[*]}
 do
 	NODE_ACCESSIBLE=$(ping -q -c 1 -W 1 $node > /dev/null 2>&1; echo $?)
 	NODE_ALREADY_PRESENT=$(cat /etc/hosts | grep -w $node > /dev/null 2>&1; echo $?)
-	if [[ $NODE_ACCESSIBLE != 0 ]]
+	if [[ ($NODE_ACCESSIBLE != 0) && ($NODE_ALREADY_PRESENT != 0) ]]
 	then
 		echo "Node: $node inaccessible. Need to update hosts file."
 		if [[ $index == 0 ]]
@@ -131,6 +142,7 @@ do
 	((index++))
 done
 
+
 #Setup key based SSH connection to all nodes
 ssh-keygen -t rsa
 
@@ -140,7 +152,6 @@ do
 	ssh-copy-id -i ~/.ssh/id_rsa.pub "$USERNAME"@$node
 done
 echo "Added keys for all nodes."
-
 #From K8s Docs
 eval $(ssh-agent)
 ssh-add ~/.ssh/id_rsa #Assuming id_rsa is the name of the private key file
@@ -166,10 +177,10 @@ then
 				#echo "Value added to UNICAST_SRC_IP"
 			fi
 		done
-		#echo "FINAL_UNICAST_PEER_IP: $FINAL_UNICAST_PEER_IP"
+
 		#Create 1 string by concatenating all Master nodes. Use % as separator to make it easy in subscript to separate
 		MASTER_PEER_IP=$(echo ${MASTER_NODE_IPS[*]} | sed 's# #%#g')
-
+		#We can upload the file to target nodes or download from github.
 	    #scp ~/setup_loadbalancer.sh "${USER}"@$host:
 	    echo "SSH to target LB Node."
 	    ssh "${USERNAME}"@$node <<- EOF
@@ -184,10 +195,9 @@ then
 	    ./setup_loadbalancer.sh
 	    #./setup_loadbalancer.sh $PRIORITY $INTERFACE $AUTH_PASS $API_PORT $node
 	    rm setup_loadbalancer.sh
-	    echo "Script (setup_loadbalancer) execution complete. Ending SSH session."
 	    exit
 		EOF
-		echo "LB Config executed on $node"
+		echo "Load balancer config completed on $node"
 	done
 	echo "Load balancer setup complete."
 else
@@ -217,7 +227,6 @@ do
     chmod 755 prepare_node.sh
 	./prepare_node.sh
 	rm ./prepare_node.sh
-	echo "Script (prepare_node) execution complete. Ending SSH session."
 	exit
 	EOF
 	echo "Prep script completed on $node"
@@ -240,20 +249,20 @@ echo "All K8S nodes prepared."
 #Set up the Primary Master node in the cluster.
 if [[ $SETUP_PRIMARY_MASTER == "true" ]]
 then
-	echo "Setting up primary node in cluster."
+	echo "******* Setting up Primary master node ********"
 	LB_CONNECTED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
 	LB_REFUSED=$(nc -vz $KUBE_VIP_1_IP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
 	echo "LB Details: "$KUBE_VIP_1_IP $API_PORT
 	echo "Status of LB flags, Connected is $LB_CONNECTED and Refused is $LB_REFUSED "
 
 	#Run below as sudo on Primary Master node
-	echo "******* Setting up Primary master node ********"
+	echo "Setting up primary node in cluster."
 	if [[ $SETUP_CLUSTER_VIA == "yaml" ]]
 	then
 		echo "Setting up Via YAML."
 		#Save the old config
-		kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
-		kubeadm config print join-defaults > join.yaml
+		#kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
+		#kubeadm config print join-defaults > join.yaml
 		kubeadm config images pull --config kubeadm-config.yaml
 		if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
 		then
@@ -267,18 +276,18 @@ then
 	else
 		echo "Setting up Via endpoint."
 		#Save the old config
-		kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
+		#kubeadm config print init-defaults --component-configs KubeletConfiguration > config.yaml
 		#Call init with endpoint and certificate parameters needed for Load Balanced Config
 		echo "Initializing control plane with: kubeadm init --control-plane-endpoint $KUBE_VIP_1_IP:$API_PORT "
 		if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
 		then
 			#Call init with endpoint parameters needed for Load Balanced Config
 			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" | tee kubeadm_init_output.txt
-			#Save the output from the previous command as you need it to add other nodes to cluster
+			#Save the output from the previous command as you would need it to add other nodes to cluster
 		else
 			#Call init with endpoint and certificate parameters needed for Load Balanced Config
 			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
-			#Save the output from the previous command as you need it to add other nodes to cluster
+			#Save the output from the previous command as you would need it to add other nodes to cluster
 		fi
 	fi
 
@@ -295,9 +304,6 @@ then
 	chown $(id -u):$(id -g) add_master.txt
 	chown $(id -u):$(id -g) add_worker.txt
 
-	#If needed, regenerate join command from master
-	#sudo kubeadm token create --print-join-command
-
 	#Create Kube config Folder.
 	mkdir -p $USER_HOME/.kube
 	mkdir -p $HOME/.kube
@@ -308,7 +314,7 @@ then
 	"Kube config copied to Home."
 
 	kubectl get nodes # should show master as Not Ready as networking is missing
-	kubectl get pods --all-namespaces -o wide
+	
 	#Set up networking for Masternode. Networking probably is not needed after the Primary node
 	echo "Setting up network."
 	if [[ $networking_type == "calico" ]]
@@ -321,7 +327,7 @@ then
 		kubectl apply -f https://cloud.weave.works/k8s/net?k8s-version=$kubever
 		echo "Weave set up."
 	fi
-
+	kubectl get pods --all-namespaces -o wide
 	#Takes some time for nodes to be ready
 	CONTINUE_WAITING=$(kubectl get nodes | grep -w Ready > /dev/null 2>&1; echo $?)
 	echo -n "Primary master node not ready. Waiting ."
@@ -338,7 +344,7 @@ then
 	#Certificate Distribution to other Master nodes
 	echo "Trying to copy certificates to other nodes."
 
-	if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
+	if [[ $MANUALLY_COPY_CERTIFICATES == "true" ]]
 	then
 		#If certificates are deleted, regenerate them using below command
 		#kubeadm init phase upload-certs --upload-certs
@@ -363,7 +369,7 @@ then
 				echo "Certificates already present in Primary node."
 			fi
 		done
-		if [[ LOOP_COUNT -gt 0 ]]
+		if [[ $LOOP_COUNT -gt 0 ]]
 		then 
 			echo "Certificates copy step complete."
 		else
@@ -463,6 +469,8 @@ then
 else
 	echo "Skipping adding workers."
 fi
+
+sleep 10
 
 #Check all nodes have joined the cluster. Only needed for Master.
 kubectl get nodes

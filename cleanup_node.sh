@@ -116,6 +116,7 @@ if [[ -r hosts.txt && $CURRENT_NODE_NAME != $CALLING_NODE_NAME ]]
 then
 	cat hosts.txt > /etc/hosts
 	echo "Hosts file overwritten."
+	rm -f hosts.txt
 else
 	echo "Backup file does not exists."
 fi

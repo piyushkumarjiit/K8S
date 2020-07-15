@@ -249,18 +249,18 @@ else
 	echo "Docker restarted."
 fi
 
-echo "Installing kubelet kubeadm and kubectl."
+echo "Installing kubelet, kubeadm and kubectl (optional)."
 if [[  $NODE_TYPE == "Worker" ]]
 then
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum -y -q install kubelet kubeadm --disableexcludes=kubernetes
 	systemctl enable --now kubelet
-	echo "Installed kubelet kubeadm on Worker node."
+	echo "Installed kubelet and kubeadm on Worker node."
 else
 	#On all nodes kubeadm and kubelet should be installed. kubectl is optional.
 	yum -y -q install kubelet kubeadm kubectl --disableexcludes=kubernetes
 	systemctl enable --now kubelet
-	echo "Installed kubelet kubeadm kubectl on Master node."
+	echo "Installed kubelet, kubeadm and kubectl on Master node."
 fi
 
 #Restart kublet

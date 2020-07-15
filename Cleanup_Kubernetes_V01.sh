@@ -31,11 +31,13 @@ export KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
 #All nodes we are trying to use
 export ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODES_IP[*]})
 export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODES_NAMES[*]})
-
 #Username that we use to connect to remote machine via SSH
 export USERNAME="root"
+#Flag to identify if LB nodes also should be cleaned
+export EXTERNAL_LB_ENABLED="true"
+#Workaround for lack of DNS. Local node can ping itself but unable to SSH
+echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
 
-EXTERNAL_LB_ENABLED="true"
 
 echo "Deleting all pods."
 kubectl delete --all pods
@@ -113,6 +115,16 @@ then
 	echo "Load balancer cleanup complete."
 else
 	echo "Skipping load balancer cleanup."
+fi
+
+#Restore the /etc/hosts file
+if [[ -r hosts.txt ]]
+then
+	cat hosts.txt > /etc/hosts
+	echo "Hosts file overwritten."
+	rm -f hosts.txt
+else
+	echo "Backup file does not exists."
 fi
 
 echo "------------ All Nodes cleaned --------------"
