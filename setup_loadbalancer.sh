@@ -265,8 +265,10 @@ if [[ ($LB_CONNECTED == 0 ) || ($LB_REFUSED == 0) ]]
 then 
 	echo "Route seems to be available."
 	echo "----------- Load Balancing set up complete in $(hostname) ------------"
+	sleep 2
 else
 	echo "No route found. Please check firewall config."
 	nc -vz $KUBE_VIP $API_PORT
 	echo "----------- Load Balancing set up Failed in $(hostname) ------------"
+	sleep 2
 fi
