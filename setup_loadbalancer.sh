@@ -39,7 +39,7 @@ fi
 
 if [[ "$UNICAST_PEER_IP" == "" ]]
 then
-	echo "List of keeplaived peers (UNICAST_PEER_IP) not passed. Unable to proceed."
+	echo "List of keepalived peers (UNICAST_PEER_IP) not passed. Unable to proceed."
 	exit 1
 fi	
 
@@ -117,7 +117,7 @@ LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $
 echo "Results of Con: $LB_CONNECTED and Ref: $LB_REFUSED"
 if [[ $LB_CONNECTED == 0 || $LB_REFUSED == 0 ]]
 then
-	echo "Load balancer seems to be running on the sepcified VIP. Unable to proceed. Exiting."
+	echo "Load balancer seems to be running on the specified VIP. Unable to proceed. Exiting."
 	exit 1
 fi
 
@@ -278,7 +278,8 @@ then
 	mv $HOME/keepalived.conf /etc/keepalived/keepalived.conf
 
 	#Start keepalived service
-	systemctl enable keepalived.service && systemctl start keepalived.service
+	systemctl enable keepalived.service
+	systemctl start keepalived.service
 
 	#Update HAProxy config (haproxy.cfg)
 	echo "Replacing the default haproxy.cfg with our updated version."
@@ -291,7 +292,8 @@ then
 	#sudo systemctl stop keepalived
 	
 	#Start HAProxy service
-	systemctl start haproxy.service  && systemctl enable haproxy.service
+	systemctl enable haproxy.service
+	systemctl start haproxy.service
 
 	#Run below command on Primary keepalived node to switch VIP back to Primary node.
 	#sudo systemctl start keepalived
