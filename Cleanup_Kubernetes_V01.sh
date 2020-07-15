@@ -36,6 +36,7 @@ export USERNAME="root"
 
 EXTERNAL_LB_ENABLED="true"
 
+echo "Deleting all pods."
 kubectl delete --all pods
 
 #Check connectivity to all nodes
@@ -70,7 +71,25 @@ do
 	((index++))
 done
 
-#Call helper script to setup LB (Keepalived + HAProxy)
+#Call Helper script to cleanup K8S nodes
+for node in ${KUBE_CLUSTER_NODE_NAMES[*]}
+do
+	ssh "${USERNAME}"@$node <<- EOF
+    export CALLING_NODE_NAME=$CURRENT_NODE_NAME
+    cd ~
+    wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/cleanup_node.sh"
+    chmod 755 cleanup_node.sh
+	./cleanup_node.sh
+	sleep 1
+	rm -f ./cleanup_node.sh
+	echo "Exiting."
+	exit
+	EOF
+	echo "K8S cleanup script completed on $node"
+done
+echo "K8S cleanup script completed."
+
+#Call helper script to cleanup Load Balancer (Keepalived + HAProxy)
 if [[ $EXTERNAL_LB_ENABLED == "true" ]]
 then
 	#Iterate over all Addresses mentioned in LB_NODES_IP array
@@ -94,23 +113,6 @@ then
 else
 	echo "Skipping load balancer cleanup."
 fi
-
-#Call Helper script to cleanup nodes
-for node in ${KUBE_CLUSTER_NODE_NAMES[*]}
-do
-	ssh "${USERNAME}"@$node <<- EOF
-    export CALLING_NODE_NAME=$CURRENT_NODE_NAME
-    cd ~
-    wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/cleanup_node.sh"
-    chmod 755 cleanup_node.sh
-	./cleanup_node.sh
-	sleep 1
-	rm -f ./cleanup_node.sh
-	echo "Exiting."
-	exit
-	EOF
-	echo "Cleanup script completed on $node"
-done
 
 echo "------------ All Nodes cleaned --------------"
 
