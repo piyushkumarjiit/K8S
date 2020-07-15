@@ -6,7 +6,7 @@ echo "Cleanup script initiated from node: $CALLING_NODE_NAME."
 #Current Node IP
 CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 CURRENT_NODE_NAME="$(hostname)"
-# kubectl/kubeadm might be installed but with missing config would returns 1
+# kubectl/kubeadm might be installed but with missing config would return 1
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
 KUBELET_AVAILABLE=$(systemctl status kubelet > /dev/null 2>&1; echo $?)
@@ -88,31 +88,25 @@ rm -f ~/prepare*.*
 rm -f ~/cleanup_node*.*
 echo "Files created by setup script deleted."
 
-#echo "Unmounting /aufs"
-#umount /var/lib/docker/aufs
-#umount /var/lib/docker/containers
-
-DELETE_FAILED=$(rm -Rf /usr/lib/systemd/system/kubelet.service.d > /dev/null 2>&1; echo $?)
-echo "Delete Flag: "$DELETE_FAILED
-#Remove folders
+#Remove Directories
 rm -Rf /etc/cni /var/lib/etcd /etc/kubernetes /usr/lib/systemd/system/kubelet.service.d
 rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
 echo "Docker and Kubernetes config directories deleted."
 groupdel docker
 
-#Enable and Start firewalld.
+#Enable and Start firewalld. Uncomment for real scenarios
 #systemctl enable firewalld
 #systemctl start firewalld
 sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
 echo "firewalld enabled and started."
 
 
-#Enable Swap manually
+#Enable Swap manually. Uncomment for real scenarios
 #sed -ir 's/.*-swap/#&/' /etc/fstab
 echo "Swap enabled for restart."
 
-#Enable SELinux
+#Enable SELinux. Uncomment for real scenarios
 #setenforce 1
 #sed -i 's/^SELINUX=permissive$/SELINUX=enforcing/' /etc/selinux/config
 echo "SELINUX enabled for restart."
