@@ -55,17 +55,8 @@ then
 	echo "haproxy removed."
 fi
 
-#Remove packages installed by yum
-#yum -y -q remove kubelet kubeadm kubectl
-
-#yum -y -q haproxy keepalived
-#yum -y -q remove container-selinux
-
 echo "Yum remove step completed."
 yum -y -q autoremove
-
-#sudo apt-get purge kubeadm kubectl kubelet kubernetes-cni kube*   
-#sudo apt-get autoremove  
 
 #Delete Repos we added
 rm -f /etc/yum.repos.d/docker-ce.repo
