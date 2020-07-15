@@ -112,7 +112,7 @@ then
 	#firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
 	#firewall-cmd --reload
 	
-	#Stop and disable firewalld
+	#Stop and disable firewalld. Quick fix when you dont want to set up firewall fules.
 	systemctl stop firewalld
 	systemctl disable firewalld
 	#IP Tables need to be flushed. Would not be able to add nodes without this step.
@@ -143,7 +143,7 @@ echo "Kubernetes repo added."
 fi
 
 echo "Add COPR and CRI-O repos."
-#Add EPEL Repo
+#Add EPEL Repo. Not needed thus commented out.
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
