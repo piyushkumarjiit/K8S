@@ -15,6 +15,7 @@ fi
 echo "Value of passed ALL_NODE_NAMES ${ALL_NODE_NAMES[*]}"
 echo "Value of passed ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
+#Check connectivity to all nodes
 index=0
 for node in ${ALL_NODE_NAMES[*]}
 do
@@ -22,15 +23,24 @@ do
 	NODE_ALREADY_PRESENT=$(cat /etc/hosts | grep -w $node > /dev/null 2>&1; echo $?)
 	if [[ $NODE_ACCESSIBLE != 0 ]]
 	then
-		echo "Node: $node inaccessible. Need to update hosts file."		
+		echo "Node: $node inaccessible. Need to update hosts file."
 		if [[ $index == 0 ]]
 		then
 			cat /etc/hosts > hosts.txt
 			echo "Backed up /etc/hosts file."
 		fi
-		#Add Master IP Addresses and Hostnames in hosts file
-		echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
-		echo "Hosts file updated."
+		NODE_NAMES_LENGTH=${#ALL_NODE_NAMES[*]}
+		NODE_IPS_LENGTH=${#ALL_NODE_NAMES[*]}
+		if [[ $NODE_NAMES_LENGTH == $NODE_IPS_LENGTH ]]
+		then			
+			#Add Master IP Addresses and Hostnames in hosts file
+			echo "${ALL_NODE_IPS[$index]}"	"$node" | tee -a /etc/hosts
+			echo "Hosts file updated."
+		else
+			echo "Number of Host Names do not match with Host IPs provided. Unable to update /etc/hosts. Exiting."
+			sleep 2
+			exit 1
+		fi
 	else
 		echo "Node $node is accessible."
 	fi
