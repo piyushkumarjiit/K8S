@@ -63,17 +63,21 @@ else
 	echo "Using passed UNICAST_SRC_IP: "$UNICAST_SRC_IP
 fi
 
-#Check the current status of Load balance config
-echo "Try: nc -vz $KUBE_VIP $API_PORT"
-LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
-LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
-echo "Results of Con: $LB_CONNECTED and Ref: $LB_REFUSED"
-if [[ $LB_CONNECTED == 0 || $LB_REFUSED == 0 ]]
-then
-	echo "Load balancer seems to be running on the specified VIP. Unable to proceed. Exiting."
-	exit 1
+KEEPALIVED_AVAILABLE=$(systemctl status keepalived.service > /dev/null 2>&1; echo $?)
+HAPROXY_AVAILABLE=$(systemctl status haproxy.service > /dev/null 2>&1; echo $?)
+if [[ ($KEEPALIVED_AVAILABLE == 0) && ($HAPROXY_AVAILABLE == 0) ]]
+then	
+	#Check the current status of Load balance config
+	echo "Try: nc -vz $KUBE_VIP $API_PORT"
+	LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
+	LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
+	echo "Results of Con: $LB_CONNECTED and Ref: $LB_REFUSED"
+	if [[ $LB_CONNECTED == 0 || $LB_REFUSED == 0 ]]
+	then
+		echo "Load balancer seems to be running on the specified VIP. Unable to proceed. Exiting."
+		exit 1
+	fi
 fi
-
 echo "Proceeding with LB config."
 #Other Load Balancer nodes. Used in keepalived conf. Passed by main script and seprated by "%"
 TEMP_PEER_IPS=$(echo $UNICAST_PEER_IP | sed 's#%#\n#g')
