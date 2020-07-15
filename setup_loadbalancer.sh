@@ -1,32 +1,11 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
-#Cluster related variables
-# KUBE_VIP_1_HOSTNAME="VIP"
-# KUBE_VIP_1_IP="192.168.2.6"
-# KUBE_LBNODE_1_HOSTNAME="KubeLBNode1"
-# KUBE_LBNODE_1_IP="192.168.2.205"
-# KUBE_LBNODE_2_HOSTNAME="KubeLBNode2"
-# KUBE_LBNODE_2_IP="192.168.2.111"
-# KUBE_MASTER_1_HOSTNAME="KubeMasterCentOS8"
-# KUBE_MASTER_1_IP="192.168.2.220"
-# KUBE_MASTER_2_HOSTNAME="KubeMaster2CentOS8"
-# KUBE_MASTER_2_IP="192.168.2.13"
-# KUBE_MASTER_3_HOSTNAME="KubeMaster3CentOS8"
-# KUBE_MASTER_3_IP="192.168.2.186"
-
-
-# KUBE_VIP_1_IP="$KUBE_VIP_1_IP"
-# KUBE_MASTER_1_IP="$KUBE_MASTER_1_IP"
-# KUBE_MASTER_2_IP="$KUBE_MASTER_2_IP"
-# KUBE_MASTER_3_IP="$KUBE_MASTER_3_IP"
-
-#LB config related variables
+#LB config related default values for variables
 PRIORITY=200
 API_PORT=6443
 INTERFACE=ens192
 AUTH_PASS=K33p@Gu3ss1ng
-#UNICAST_PEER_IP=$KUBE_LBNODE_2_IP
 ROUTER_ID="RouterID1"
 
 echo "----------- Setting up Load Balancing in $(hostname) ------------"
@@ -84,32 +63,6 @@ else
 	echo "Using passed UNICAST_SRC_IP: "$UNICAST_SRC_IP
 fi
 
-# USERNAME="$(whoami)"
-# #Set the home directory in target server for scp
-# if [[ "$USERNAME" == "root" ]]
-# then
-# 	TARGET_DIR="/root"
-# else
-# 	TARGET_DIR="/home/$USERNAME"
-# fi
-
-#Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
-# NODES_ADDED=$(ping -c 1 $CALLING_NODE  > /dev/null 2>&1; echo $?)
-# if [[ $NODES_ADDED != 0  &&  $NODES_IN_CLUSTER != "" ]]
-# then
-# 		echo "Ping failed. Updating hosts file."
-# 		#Take backup of old hosts file. In case we need to restore/cleanup
-# 		cat /etc/hosts > hosts.txt
-# 		echo -n "$NODES_IN_CLUSTER" | tee -a /etc/hosts
-# 		echo "Hosts file updated."
-# elif [[ $NODES_IN_CLUSTER != "" ]]
-# then
-# 	echo "NODES_IN_CLUSTER not set. Exiting."
-# 	exit 1
-# else
-# 	echo "Hosts file already updated for Primary node by main script."
-# fi
-
 #Check the current status of Load balance config
 echo "Try: nc -vz $KUBE_VIP $API_PORT"
 LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
@@ -135,7 +88,7 @@ for SERVER in ${TEMP_MASTER_IPS[*]}
 do
 	if [[ "$FINAL_SERVER_STRING" == "" ]]
 	then
-						       #server node1 ###n0d31_1p_@ddr###:###AP1_P0RT### check port ###AP1_P0RT### inter 5000 fall 5
+		#server node1 ###n0d31_1p_@ddr###:###AP1_P0RT### check port ###AP1_P0RT### inter 5000 fall 5
 		FINAL_SERVER_STRING=$(echo "server SERVER$node $SERVER:$API_PORT $LB_PARAMS")
 		FINAL_SERVER_STRING+=$'\n'
 		echo "First Value added to FINAL_SERVER_STRING"
@@ -217,8 +170,6 @@ then
 	#Update the placeholders with value for primary
 	sed -i "s*###vip_@ddr3ss###*$KUBE_VIP*g" haproxy.cfg
 	# sed -i "s*###n0d31_1p_@ddr###*$KUBE_MASTER_1_IP*g" haproxy.cfg
-	# sed -i "s*###n0d32_1p_@ddr###*$KUBE_MASTER_2_IP*g" haproxy.cfg
-	# sed -i "s*###n0d33_1p_@ddr###*$KUBE_MASTER_3_IP*g" haproxy.cfg
 	sed -i "s*###AP1_P0RT###*$API_PORT*g" haproxy.cfg
 	#Multiple nodes with newline thus had to use awk. Sed does not handle newline properly
 	awk -i inplace -v srch="###S3rv3r###" -v repl="$FINAL_SERVER_STRING" '{ sub(srch,repl,$0); print $0 }' haproxy.cfg
@@ -286,7 +237,7 @@ then
 	echo "Expected path: $(pwd)/haproxy.cfg"
 	mv $HOME/haproxy.cfg /etc/haproxy/haproxy.cfg
 	
-	#Only for Non Primary node.
+	#Only for Non Primary node when remote binding is not enabled/available
 	#Run below command on Primary keepalived node to switch VIP to Secondary node. 
 	#This ensures that VIP is available for HAProxy to bind to.
 	#sudo systemctl stop keepalived
@@ -301,9 +252,8 @@ then
 fi
 sleep 20
 nc -zv $KUBE_VIP $API_PORT
-#Run Netcat and save the result in text file
-#nc -vz "$KUBE_VIP $API_PORT" > file.txt 2>&1
-#Check the 
+
+#Check LB status
 LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
 LB_REFUSED=$(nc -vz $KUBE_VIP $API_PORT |& grep refused > /dev/null 2>&1; echo $?)
 
@@ -316,5 +266,3 @@ else
 	nc -vz $KUBE_VIP $API_PORT
 	echo "----------- Load Balancing set up Failed in $(hostname) ------------"
 fi
-
-#echo "Script (setting_loadbalancer) completed."
