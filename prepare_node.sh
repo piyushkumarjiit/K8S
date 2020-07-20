@@ -2,8 +2,13 @@
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
 echo "----------- Preparing $(hostname) ------------"
-CURRENT_NODE="$(hostname -I | cut -d" " -f 1)"
+#Hostname of the node from where we run the script
+export CURRENT_NODE_NAME="$(hostname)"
+#IP of the node from where we run the script
+export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
+#All node names passed by calling script that we are trying to setup
 export ALL_NODE_NAMES=($TEMP_NODE_NAMES)
+#All node IP addresses passed by calling script that we are trying to setup
 export ALL_NODE_IPS=($TEMP_NODE_IPS)
 
 if [[ ${ALL_NODE_NAMES[*]} == "" || ${ALL_NODE_IPS[*]} == "" ]]
