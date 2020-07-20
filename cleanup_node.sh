@@ -122,8 +122,8 @@ else
 fi
 
 #Reset the IP Tables
-#iptables -F ; iptables -X ; iptables -t nat -F ; iptables -t nat -X; iptables -t mangle -F ; iptables -t mangle -X
-#echo "IPTables reset completed."
+iptables -F ; iptables -X ; iptables -t nat -F ; iptables -t nat -X; iptables -t mangle -F ; iptables -t mangle -X
+echo "IPTables reset completed."
 sysctl -q --system
 systemctl daemon-reload
 
