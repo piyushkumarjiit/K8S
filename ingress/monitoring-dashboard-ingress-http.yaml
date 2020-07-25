@@ -1,10 +1,3 @@
-#
-# This example is for Kubernetes running an ngnix-ingress
-# and an ACME (e.g. Let's Encrypt) certificate service
-#
-# The nginx-ingress annotations support the dashboard
-# running using HTTPS with a self-signed certificate
-#
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -12,7 +5,7 @@ metadata:
   namespace: monitoring
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    cert-manager.io/issuer: "selfsigned-issuer" # does not make a difference unless you ahve internet reachable service.
+    cert-manager.io/issuer: "selfsigned-issuer" # does not make a difference unless you ahve internet reachable service/FQDN.
     kubernetes.io/tls-acme: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
     nginx.ingress.kubernetes.io/server-snippet: |
@@ -20,24 +13,24 @@ metadata:
 spec:
   tls:
   - hosts:
-    - grafana.bifrost.com
-    secretName: grafana.bifrost.com #Only 1 host TLS config per file. More than 1 gives error.
+    - grafana.example.com
+    secretName: grafana.example.com #Only 1 host TLS config per file. More than 1 gives error.
   rules:
-  - host: grafana.bifrost.com
+  - host: grafana.example.com
     http:
       paths:
       - path: /
         backend:
           serviceName: grafana
           servicePort: 3000
-  - host: prometheus.bifrost.com
+  - host: prometheus.example.com
     http:
       paths:
       - path: /
         backend:
           serviceName: prometheus-k8s
           servicePort: 9090
-  - host: alertmanager.bifrost.com
+  - host: alertmanager.example.com
     http:
       paths:
       - path: /
