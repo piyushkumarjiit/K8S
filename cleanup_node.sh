@@ -94,7 +94,8 @@ rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
 rm -Rf /var/lib/rook
 echo "Docker and Kubernetes config directories deleted."
-groupdel docker
+#groupdel docker
+echo "Docker group removed."
 
 #Enable and Start firewalld. Uncomment for real scenarios
 #systemctl enable firewalld
