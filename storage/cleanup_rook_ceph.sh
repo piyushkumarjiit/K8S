@@ -5,6 +5,15 @@
 #2. hosts file or DNS based ssh access to all nodes
 echo "----------- Cleaning Rook + Ceph  ------------"
 
+# YAML/ Git variables
+CEPH_COMMON_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
+CEPH_OPERATOR_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
+CEPH_CLUSTER_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
+CEPH_LB_DASHBOARD_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
+CEPH_FILSYSTEM_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
+ROOK_STORAGE_CLASS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class.yaml
+CEPH_TOOLBOX_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
+
 #All Worker Nodes
 export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.137" "192.168.2.227")
 export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
@@ -20,7 +29,8 @@ then
 else
 	echo "Downloading rook_storage_class.yaml"
 	#Fetch the StorageClass YAML
-	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/rook_storage_class.yaml
+	#wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/rook_storage_class.yaml
+	wget -q $ROOK_STORAGE_CLASS_YAML
 fi
 
 if [[ -f filesystem.yaml ]]
@@ -29,7 +39,18 @@ then
 else
 	echo "Downloading filesystem.yaml"
 	# Fetch the filesystem YAML
-	wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
+	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
+	wget -q $CEPH_FILSYSTEM_YAML
+fi
+
+if [[ -f dashboard-loadbalancer.yaml ]]
+then
+	echo "dashboard-loadbalancer.yaml already present. Proceeding."
+else
+	echo "Downloading cluster.yaml"
+	# Download Cephs cluster YAML
+	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
+	wget -q $CEPH_LB_DASHBOARD_YAML
 fi
 
 if [[ -f cluster.yaml ]]
@@ -38,7 +59,8 @@ then
 else
 	echo "Downloading cluster.yaml"
 	# Download Cephs cluster YAML
-	wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
+	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
+	wget -q $CEPH_CLUSTER_YAML
 fi
 if [[ -f operator.yaml ]]
 then
@@ -46,7 +68,8 @@ then
 else
 	echo "Downloading Operator.yaml"
 	# Get Operator YAML
-	wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
+	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
+	wget -q $CEPH_OPERATOR_YAML
 fi
 if [[ -f common.yaml ]]
 then
@@ -54,7 +77,8 @@ then
 else
 	echo "Downloading Common.yaml"
 	# Get Common YAML
-	wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
+	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
+	wget -q $CEPH_COMMON_YAML
 fi
 if [[ -f toolbox.yaml ]]
 then
@@ -73,6 +97,9 @@ echo "StorageClass config deleted."
 # Delete Filesystem using YAML 
 kubectl delete -f filesystem.yaml
 echo "Ceph Filesystem config deleted."
+# Delete dashboard config using YAML 
+kubectl delete -f dashboard-loadbalancer.yaml
+echo "Ceph dashboard-loadbalancer config deleted."
 # Delete Cluster using YAML 
 kubectl delete -f cluster.yaml
 echo "Ceph cluster config deleted."

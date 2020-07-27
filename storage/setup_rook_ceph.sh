@@ -4,7 +4,16 @@
 #1. kubectl access
 #2. hosts file or DNS based ssh access to all nodes
 #3. key based ssh enabled for all nodes
-echo "----------- Preparing GlusterFS Node: $(hostname) ------------"
+echo "----------- Preparing Storage Node: $(hostname) ------------"
+
+# YAML/ Git variables
+CEPH_COMMON_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
+CEPH_OPERATOR_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
+CEPH_CLUSTER_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
+CEPH_LB_DASHBOARD_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
+CEPH_FILSYSTEM_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
+ROOK_STORAGE_CLASS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class.yaml
+CEPH_TOOLBOX_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 #Hostname of the node from where we run the script
 export CURRENT_NODE_NAME="$(hostname)"
 #IP of the node from where we run the script
@@ -70,37 +79,44 @@ do
 done
 
 # Get Common YAML
-wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
+#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
+wget -q $CEPH_COMMON_YAML
 # Get Operator YAML
-wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
+#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
+wget -q $CEPH_OPERATOR_YAML
 # Deploy Rook
 kubectl create -f common.yaml
 kubectl create -f operator.yaml
 # Download Cephs cluster YAML
-wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
+#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
+wget -q $CEPH_CLUSTER_YAML
 # Create Cluster
 kubectl create -f cluster.yaml
 
-wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
+#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
+wget -q $CEPH_LB_DASHBOARD_YAML
 #Update the file to make the name same as the one running in cluster and then apply
 sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" dashboard-loadbalancer.yaml
 kubectl apply -f dashboard-loadbalancer.yaml
 
 # Fetch the filesystem YAML
-wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
+#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
+wget -q $CEPH_FILSYSTEM_YAML
 kubectl apply -f filesystem.yaml
 echo "Ceph Filesystem type storage created."
 rm -f filesystem.yaml
 
 #Fetch the StorageClass YAML
-wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/rook_storage_class.yaml
+#wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/rook_storage_class.yaml
+wget -q $ROOK_STORAGE_CLASS_YAML
 kubectl apply -f rook_storage_class.yaml
 echo "StorageClass config applied."
 rm -f rook_storage_class.yaml
 
 if [[ $INSTALL_CEPH_TOOLS == "true" ]]
 then
-	wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
+	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
+	wget -q $CEPH_TOOLBOX_YAML
 	kubectl apply -f toolbox.yaml
 	echo "Created Ceph toolbox instance."
 	rm -f toolbox.yaml
