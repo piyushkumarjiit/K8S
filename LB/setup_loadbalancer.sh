@@ -1,6 +1,10 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
+#YAML/GIt variables
+KEEP_ALIVED_CONF_TEMPLATE="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf"
+HA_PROXY_CONF_TEMPLATE="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
+
 #LB config related default values for variables
 PRIORITY=200
 API_PORT=6443
@@ -144,7 +148,8 @@ if [[ ! -r $HOME/keepalived.conf ]]
 then
 	echo "Downloading the template files from github."
 	#Get the keepalived_template.conf and create a copy
-	wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf"
+	#wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf"
+	wget -q $KEEP_ALIVED_CONF_TEMPLATE
 	cp keepalived_template.conf keepalived.conf
 	rm keepalived_template.conf
 	echo "Updating the keepalived.conf."
@@ -167,7 +172,8 @@ if [[ ! -r $HOME/haproxy.cfg ]]
 then
 	echo "Downloading the template files from github."
 	#Get the haproxy_template.cfg and create a copy
-	wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
+	#wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
+	wget -q $HA_PROXY_CONF_TEMPLATE
 	cp haproxy_template.cfg haproxy.cfg
 	rm haproxy_template.cfg
 	echo "Updating the haproxy.cfg."
