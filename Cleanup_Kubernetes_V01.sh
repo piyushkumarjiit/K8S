@@ -37,6 +37,88 @@ export USERNAME="root"
 export EXTERNAL_LB_ENABLED="false"
 #Workaround for lack of DNS. Local node can ping itself but unable to SSH
 echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
+#Nginx Ingress setup flag. Allowed values true/false
+SETUP_NGINX_INGRESS="true"
+# Flag to setup Metal LB. Allowed values true/false
+SETUP_METAL_LB="true" 
+#YAML/Git variables
+METAL_LB_NAMESPACE=https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
+METAL_LB_MANIFESTS=https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml
+NGINX_LB_DEPLOY_YAML=https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud/deploy.yaml
+NGINX_DEPLOY_YAML=https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/baremetal/deploy.yaml
+CERT_MGR_DEPLOY=https://github.com/jetstack/cert-manager/releases/download/v0.16.0/cert-manager.yaml
+SELF_SIGNED_CERT_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ingress/cert_self_signed.yaml
+
+
+# To install cert-manager
+if [[ $SETUP_CERT_MANAGER == "true" ]]
+	then
+		if [[ -f cert_self_signed.yaml ]]
+		then
+			kubectl delete -f cert_self_signed.yaml
+			echo "Self Signed issuer deleted."
+			rm -f cert_self_signed.yaml
+		else
+			echo "Downloading cert_self_signed.yaml"
+			wget -q $SELF_SIGNED_CERT_TEMPLATE
+			kubectl delete -f cert_self_signed.yaml
+			echo "Self Signed issuer deleted."
+			rm -f cert_self_signed.yaml
+		fi
+		if [[ -f cert-manager.yaml ]]
+		then
+			echo "Deleting Cert Manager"
+			#kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.16.0/cert-manager.yaml
+			kubectl apply -f $CERT_MGR_DEPLOY
+			echo "Cert Manager deleted."
+			rm -f cert-manager.yaml
+		else
+			echo "Downloading cert-manager.yaml"
+			kubectl apply -f $CERT_MGR_DEPLOY
+			echo "Cert Manager deleted."
+			rm -f cert-manager.yaml
+		fi
+else
+	echo "Cert Manager not identified for removal."
+fi
+
+if [[ $SETUP_NGINX_INGRESS == "true" ]]
+then
+	if [[ -f ingress_deploy.yaml ]]
+	then
+		echo "Removing Nginx Ingress"
+		#wget -q -O ingress_deploy.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/baremetal/deploy.yaml
+		kubectl delete -f ingress_deploy.yaml
+		echo "Nginx ingress removed."
+		rm -f ingress_deploy.yaml
+	else
+		echo "Downloading ingress_deploy.yaml"
+		if [[ $SETUP_METAL_LB == "true" ]]
+		then
+			echo "Downloading Nginx Ingress YAML that works with MetalLB"
+			#wget -q -O ingress_deploy.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud/deploy.yaml
+			wget -q -O ingress_deploy.yaml $NGINX_LB_DEPLOY_YAML
+		else
+			echo "Downloading Nginx Ingress YAML that works without Loadbalancer."
+			wget -q -O ingress_deploy.yaml $NGINX_DEPLOY_YAML
+		fi
+		kubectl delete -f ingress_deploy.yaml
+		echo "Nginx ingress removed."
+		rm -f ingress_deploy.yaml
+	fi
+else
+	echo "Nginx Ingress not identified for removal."
+fi
+
+if [[ $SETUP_METAL_LB == "true" ]]
+then
+		echo "Deleting MetalLB config via manifests."
+		kubectl delete -f $METAL_LB_MANIFESTS
+		echo "Deleting MetalLB namespace."
+		kubectl delete -f $METAL_LB_NAMESPACE
+else
+	echo "MetalLB not marked for removal."
+fi
 
 
 echo "Deleting all pods."
