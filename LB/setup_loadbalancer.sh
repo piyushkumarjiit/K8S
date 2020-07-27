@@ -2,8 +2,8 @@
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
 #YAML/GIt variables
-KEEP_ALIVED_CONF_TEMPLATE="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf"
-HA_PROXY_CONF_TEMPLATE="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
+KEEP_ALIVED_CONF_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/keepalived_template.conf
+HA_PROXY_CONF_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg
 
 #LB config related default values for variables
 PRIORITY=200
