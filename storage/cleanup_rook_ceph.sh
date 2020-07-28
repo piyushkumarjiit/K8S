@@ -4,7 +4,7 @@
 #1. key based ssh enabled for all nodes
 #2. hosts file or DNS based ssh access to all nodes
 
-sudo ./setup_rook_ceph.sh |& tee -a setup_storage.log
+#sudo ./setup_rook_ceph.sh |& tee -a setup_storage.log
 
 echo "----------- Cleaning Rook + Ceph  ------------"
 
@@ -72,7 +72,7 @@ else
 	echo "Downloading rook-operator.yaml"
 	# Get Operator YAML
 	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
-	wget -q $CEPH_OPERATOR_YAML
+	wget -q $CEPH_OPERATOR_YAML -O rook-operator.yaml
 fi
 if [[ -f rook-common.yaml ]]
 then
@@ -173,6 +173,6 @@ do
 	echo "Back from Worker: "$node
 done
 
-rm -f rook-storage_class.yaml rook-filesystem.yaml rook-cluster.yaml rook-operator.yaml rook-common.yaml ceph-toolbox.yaml
+rm -f rook-storage_class.yaml rook-filesystem.yaml rook-cluster.yaml rook-operator.yaml rook-common.yaml rook-dashboard.yaml ceph-toolbox.yaml
 
 echo "Rook removed. Drives used by Ceph zapped."
