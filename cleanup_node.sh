@@ -47,7 +47,7 @@ then
 	echo "Removing Docker and CRI-O ."
 	yum -y -q remove docker-ce
 	echo "Docker removed."
-	yum -y -q cri-o
+	yum -y -q remove cri-o
 	echo "cri-o removed."
 fi
 
@@ -57,7 +57,7 @@ then
 	echo "Removing keepalived."
 	systemctl stop keepalived.service
 	systemctl disable keepalived.service
-	yum -y -q keepalived
+	yum -y -q remove keepalived
 	echo "keepalived removed."
 fi
 
@@ -67,12 +67,14 @@ then
 	echo "Removing haproxy."
 	systemctl stop haproxy.service
 	systemctl disable haproxy.service
-	yum -y -q haproxy
+	yum -y -q remove haproxy
 	echo "haproxy removed."
 fi
 
-echo "Yum remove step completed."
+yum -y -q remove kube*
 yum -y -q autoremove
+echo "Yum remove step completed."
+
 
 CEPH_DRIVE_PRESENT=$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo $? )
 if [[ $CEPH_DRIVE_PRESENT == 0 ]]
