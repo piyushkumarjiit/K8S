@@ -115,7 +115,8 @@ fi
 if [[ -f /var/lib/cni ]]
 then
 	echo "Removing /var/lib/cni"
-	rm -rf /var/lib/cni
+	rm -Rf /var/lib/cni
+	rm -Rf /etc/coredns/Corefile
 else
 	echo "Directory /var/lib/cni not found."
 fi
