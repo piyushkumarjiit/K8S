@@ -74,6 +74,44 @@ fi
 echo "Yum remove step completed."
 yum -y -q autoremove
 
+CEPH_DRIVE_PRESENT=$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo $? )
+if [[ $CEPH_DRIVE_PRESENT == 0 ]]
+then
+	echo "Cleaning Rook and Ceph related config and zapping drive."
+	CEPH_DRIVE=('/dev/sdb')
+	#DISK='/dev/sdb'
+	for DISK in ${CEPH_DRIVE[*]}
+	do
+		# Zap the disk to a fresh, usable state (zap-all is important, b/c MBR has to be clean)
+		# You will have to run this step for all disks.
+		sgdisk --zap-all $DISK
+		dd if=/dev/zero of="$DISK" bs=1M count=100 oflag=direct,dsync
+		# These steps only have to be run once on each node
+		# If rook sets up osds using ceph-volume, teardown leaves some devices mapped that lock the disks.
+		DMREMOVE_STATUS=$(ls /dev/mapper/ceph-* | xargs -I% -- dmsetup remove % > /dev/null 2>&1; echo $? )
+		if [[ $DMREMOVE_STATUS -gt 0 ]]
+		then
+			rm -f /dev/mapper/ceph-*
+			echo "Manually deleted /dev/mapper/ceph "
+		else
+			echo "DMREMOVE_STATUS completed successfully."
+		fi
+		# ceph-volume setup can leave ceph-<UUID> directories in /dev (unnecessary clutter)
+		rm -rf /dev/ceph-*
+		rm -Rf /var/lib/rook
+	done
+else
+	echo "No processing needed for Rook/Ceph."
+fi
+
+if [[ -f /var/lib/rook ]]
+then
+	echo "Removing /var/lib/rook"
+	rm -Rf /var/lib/rook
+else
+	echo "Directory /var/lib/rook not found."
+fi
+
 #Delete Repos we added
 rm -f /etc/yum.repos.d/docker-ce.repo
 rm -f /etc/yum.repos.d/kubernetes.repo
@@ -92,15 +130,15 @@ echo "Files created by setup script deleted."
 rm -Rf /etc/cni /var/lib/etcd /etc/kubernetes /usr/lib/systemd/system/kubelet.service.d
 rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
-rm -Rf /var/lib/rook
+
 echo "Docker and Kubernetes config directories deleted."
 #groupdel docker
-echo "Docker group removed."
+echo "Docker group deleted."
 
 #Enable and Start firewalld. Uncomment for real scenarios
 #systemctl enable firewalld
 #systemctl start firewalld
-sudo iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+iptables -F ; iptables -t nat -F ; iptables -t mangle -F ; iptables -X ;  iptables -t nat -X;  iptables -t mangle -X
 echo "firewalld enabled and started."
 
 
