@@ -89,6 +89,7 @@ sudo rm -f /usr/local/bin/gojsontoyaml
 cd ~
 # Delete directories for Go and my-kube-prometheus
 rm -Rf my-kube-prometheus go
+rm -f monitoring-build.sh monitoring-example.jsonnet
 
 echo "Script did not remove Go and Git. If required, please remove manually. Cleanup complete."
 sleep 2

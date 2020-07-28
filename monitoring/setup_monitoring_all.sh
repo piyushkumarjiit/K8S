@@ -16,7 +16,7 @@ export GRAFANA_PVC_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/ma
 STORAGE_CLASS=""
 # Size of Prometheus PVC. Allowed value format "1Gi", "2Gi", "5Gi" etc
 STORAGE_SIZE="2Gi"
-# Domain name to eb sued by Ingress. Using this grafana URL would become: grafana.<domain.com>
+# Domain name to be used by Ingress. Using this grafana URL would become: grafana.<domain.com>
 INGRESS_DOMAIN_NAME=bifrost.com
 # Run mode. Allowed values Deploy/DryRun
 RUN_MODE=""
@@ -66,6 +66,7 @@ then
 	go get github.com/google/go-jsonnet/cmd/jsonnet
 	chmod 755 ~/go/bin/jsonnet
 	sudo cp ~/go/bin/jsonnet /usr/local/bin/jsonnet
+	sudo cp ~/go/bin/jsonnet /usr/bin/jsonnet
 	echo "jsonnet installed."
 	jsonnet -version
 fi
@@ -77,6 +78,7 @@ then
 	go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
 	chmod 755 ~/go/bin/jb
 	sudo cp ~/go/bin/jb /usr/local/bin/jb
+	sudo cp ~/go/bin/jb /usr/bin/jb
 	echo "Jsonnet builder installed."
 	jb -h
 fi
@@ -89,6 +91,7 @@ then
 	go get github.com/brancz/gojsontoyaml
 	chmod 755 ~/go/bin/gojsontoyaml
 	sudo cp ~/go/bin/gojsontoyaml /usr/local/bin/gojsontoyaml
+	sudo cp ~/go/bin/gojsontoyaml /usr/bin/gojsontoyaml
 	echo "GoJsonToYaml installed."
 fi
 
@@ -103,13 +106,13 @@ jb install github.com/coreos/kube-prometheus/jsonnet/kube-prometheus@release-0.5
 # Update jb
 jb update
 # Fetch build.sh from github repo
-wget -q $KP_BUILD_SH
-chmod +x build.sh
+wget -q $KP_BUILD_SH -O monitoring-build.sh
+chmod +x monitoring-build.sh
 # Fetch Prometheus PVC example from github repo
-wget -q $PROMETHEUS_PVC_JSONNET -O example.jsonnet
-# Update the Storage class in example.jsonnet
-sed -i "s/pvc.mixin.spec.withStorageClassName('ssd'),/pvc.mixin.spec.withStorageClassName('$STORAGE_CLASS'),/" example.jsonnet
-sed -i "s/pvc.mixin.spec.resources.withRequests({ storage: '100Gi' }/pvc.mixin.spec.resources.withRequests({ storage: '$STORAGE_SIZE' }/" example.jsonnet
+wget -q $PROMETHEUS_PVC_JSONNET -O monitoring-example.jsonnet
+# Update the Storage class in monitoring-example.jsonnet
+sed -i "s/pvc.mixin.spec.withStorageClassName('ssd'),/pvc.mixin.spec.withStorageClassName('$STORAGE_CLASS'),/" monitoring-example.jsonnet
+sed -i "s/pvc.mixin.spec.resources.withRequests({ storage: '100Gi' }/pvc.mixin.spec.resources.withRequests({ storage: '$STORAGE_SIZE' }/" monitoring-example.jsonnet
 
 # Update Jsonnet to include extra namespaces in the cluster. Probably not needed.
 # Fetch namespace jsonnet
@@ -118,8 +121,8 @@ sed -i "s/pvc.mixin.spec.resources.withRequests({ storage: '100Gi' }/pvc.mixin.s
 # Update Ingress for Prometheus, Grafana and Alertmanager. Easier to do through YAML
 #wget -q $MONITORING_INGRESS_JSONNET
 
-# Execute build.sh
-./build.sh example.jsonnet
+# Execute monitoring-build.sh
+./monitoring-build.sh monitoring-example.jsonnet
 
 # Actual deployment in cluster
 if [[ $RUN_MODE == "Deploy" ]]
@@ -150,7 +153,7 @@ then
 	kubectl apply -f monitoring-dashboard-ingress-http.yaml
 	sleep 2
 	rm -f monitoring-dashboard-ingress-http.yaml
-	rm -f build.sh example.jsonnet
+	rm -f monitoring-build.sh monitoring-example.jsonnet
 	cd ~
 	rm -Rf go	
 
@@ -160,4 +163,10 @@ else
 	echo "Dry Run complete."
 fi
 
+#Delete binaries copied in /usr/bin
+rm -f /usr/bin/jsonnet
+rm -f /usr/bin/jb
+rm -f /usr/bin/gojsontoyaml
+
+echo "All done."
 
