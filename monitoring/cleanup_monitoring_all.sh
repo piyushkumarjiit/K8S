@@ -27,7 +27,7 @@ then
 else
 	echo "Fetching monitoring ingress yaml from git hub."
 	# Fetch the Ingress YAML from github repo
-	wget -q $MONITORING_INGRESS_YAML
+	wget -q $MONITORING_INGRESS_YAML -O monitoring-dashboard-ingress-http.yaml
 	# Update the template with your domain name
 	sed -i "s/example.com/$INGRESS_DOMAIN_NAME/g" monitoring-dashboard-ingress-http.yaml
 fi
@@ -57,11 +57,11 @@ then
 else
 	echo "Fetching Grafana PVC yaml from github."
 	# Fetch Grafana PVC YAML from github repo
-	wget -q $GRAFANA_PVC_YAML
+	wget -q $GRAFANA_PVC_YAML -O monitoring-grafana_pvc.yaml
 	# Delete PVC for Grafana
-	kubectl delete -f grafana_pvc.yaml
+	kubectl delete -f monitoring-grafana_pvc.yaml
 fi
-
+rm -f monitoring-grafana_pvc.yaml
 # Delete namespaces and CRDs using YAML
 kubectl delete -f manifests/setup
 sleep 2
