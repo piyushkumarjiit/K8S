@@ -66,6 +66,8 @@ then
 	go get github.com/google/go-jsonnet/cmd/jsonnet
 	chmod 755 ~/go/bin/jsonnet
 	sudo cp ~/go/bin/jsonnet /usr/local/bin/jsonnet
+	echo "jsonnet installed."
+	jsonnet -version
 fi
 # Install Jsonnet Bundler
 JB_INSTALLED=$(jb -h >/dev/null 2>&1; echo $?)
@@ -75,6 +77,8 @@ then
 	go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
 	chmod 755 ~/go/bin/jb
 	sudo cp ~/go/bin/jb /usr/local/bin/jb
+	echo "Jsonnet builder installed."
+	jb -h
 
 fi
 
@@ -86,10 +90,12 @@ then
 	go get github.com/brancz/gojsontoyaml
 	chmod 755 ~/go/bin/gojsontoyaml
 	sudo cp ~/go/bin/gojsontoyaml /usr/local/bin/gojsontoyaml
+	echo "GoJsonToYaml installed."
 fi
 
 # Go HOME
 cd ~
+rm -Rf ~/my-kube-prometheus
 # CD to my-kube-prometheus
 mkdir -p my-kube-prometheus; cd my-kube-prometheus
 jb init  # Creates the initial/empty "jsonnetfile.json"
@@ -145,8 +151,9 @@ then
 	kubectl apply -f monitoring-dashboard-ingress-http.yaml
 	sleep 2
 	rm -f monitoring-dashboard-ingress-http.yaml
+	rm -f build.sh example.jsonnet
 	cd ~
-	rm -Rf go
+	rm -Rf go	
 
 	echo "You can try logging in to Grafana (grafana.$INGRESS_DOMAIN_NAME), Prometheus (prometheus.$INGRESS_DOMAIN_NAME) and Alertmanager (alertmanager.$INGRESS_DOMAIN_NAME)."
 	# Default Grafana login admin/admin
