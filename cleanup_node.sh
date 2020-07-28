@@ -137,9 +137,11 @@ echo "Files created by setup script deleted."
 
 #Remove Directories
 rm -Rf /etc/cni /var/lib/etcd /etc/kubernetes /usr/lib/systemd/system/kubelet.service.d
+rm -Rf /opt/cni
 rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
-rm -Rf /opt/cni
+rm -Rf /opt/containerd
+
 
 echo "Docker and Kubernetes config directories deleted."
 #groupdel docker
