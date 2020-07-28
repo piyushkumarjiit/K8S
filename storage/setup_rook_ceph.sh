@@ -4,6 +4,10 @@
 #1. kubectl access
 #2. hosts file or DNS based ssh access to all nodes
 #3. key based ssh enabled for all nodes
+
+#sudo ./cleanup_rook_ceph.sh | tee clean_storage.log
+#sudo ./cleanup_rook_ceph.sh |& tee clean_storage.log
+
 echo "----------- Preparing Storage Node: $(hostname) ------------"
 
 # YAML/ Git variables
@@ -25,7 +29,8 @@ export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" 
 USERNAME="root"
 # Flag for setting up Ceph tool container in K8S. Allowed values true/false
 INSTALL_CEPH_TOOLS="true"
-
+# Do we want Ceph dashboard to be accessible via Load Blancer/Metal LB or use via Ingress.Allowed values true/false
+SETUP_FOR_LOADBALANCER="true" 
 #Make sure your K8S cluster is not using Pod security. If it is then you need to set 1 PodSecurityPolicy that allows privileged Pod execution
 
 #To identify the empty storage drive run below command. The one with empty FSTYPE is one we can use
@@ -93,11 +98,16 @@ wget -q $CEPH_CLUSTER_YAML
 # Create Cluster
 kubectl create -f cluster.yaml
 
-#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
-wget -q $CEPH_LB_DASHBOARD_YAML
-#Update the file to make the name same as the one running in cluster and then apply
-sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" dashboard-loadbalancer.yaml
-kubectl apply -f dashboard-loadbalancer.yaml
+if [[ $SETUP_FOR_LOADBALANCER == "true" ]]
+then
+	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
+	wget -q $CEPH_LB_DASHBOARD_YAML
+	#Update the file to make the name same as the one running in cluster and then apply
+	sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" dashboard-loadbalancer.yaml
+	kubectl apply -f dashboard-loadbalancer.yaml
+else
+	echo "Ceph dashboard would use Ingress."
+fi
 
 # Fetch the filesystem YAML
 #wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
@@ -129,7 +139,7 @@ fi
 sleep 120
 #Find the IP address allocated by your Load balancer using below command
 ROOK_DASHBOARD_IP=$(kubectl  get service -A | grep rook-ceph-mgr-dashboard | awk -F " " '{print $5}')
-if [[ $ROOK_DASHBOARD_IP != "" ]]
+if [[ $ROOK_DASHBOARD_IP != '<pending>' ]]
 then
 	echo "LB assigned external IP."
 	echo 'Connect to Cephs Dashboard on https://'$ROOK_DASHBOARD_IP':8443'
@@ -143,8 +153,9 @@ fi
 # kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 
 # To avoid csi-cephfs missing error
-kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash -c 'ceph fs subvolumegroup create myfs csi'
-
+#kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash -c 'ceph fs subvolumegroup create myfs csi'
+kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') -- bash -c 'ceph fs subvolumegroup create myfs csi'
+echo "CEPH FS Volume group created."
 rm -f dashboard-loadbalancer.yaml cluster.yaml operator.yaml common.yaml
 
 echo "Rook + Ceph setup completed."
