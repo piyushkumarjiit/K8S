@@ -198,4 +198,4 @@ fi
 
 
 
-echo "Rook removed. Drives used by Ceph zapped."
+echo "----------- Rook removed. Drives used by Ceph zapped -----------"
