@@ -22,15 +22,11 @@ export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.137" "192.168.2.227")
 export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
 #Username that we use to connect to remote machine via SSH
 USERNAME="root"
+# Name of the device used by Ceph
+CEPH_DRIVE="sdb"
 
+# Check if Kubectl si available or not
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
-if [[ $KUBECTL_AVAILABLE == 0  ]]
-then
-	# Make sure it is not set as default storage
-	kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
-else
-	echo ""
-fi
 
 if [[ -f rook-storage_class.yaml ]]
 then
@@ -103,6 +99,8 @@ fi
 
 if [[ $KUBECTL_AVAILABLE == 0  ]]
 then
+	# Make sure it is not set as default storage
+	kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 	# Delete rook_storage_class using YAML 
 	kubectl delete -f rook-storage_class.yaml
 	echo "Rook StorageClass config deleted."
@@ -144,10 +142,11 @@ fi
 rm -f rook-storage_class.yaml rook-filesystem.yaml rook-cluster.yaml 
 rm -f rook-operator.yaml rook-common.yaml rook-dashboard.yaml ceph-toolbox.yaml
 
+
 #Count the number of lines returned as more than 1 would mean filesystem is assigned.
-FS_ROW_COUNT=$(lsblk -f | grep sdb.* | awk -F " " '{print $2}' | wc -l)
+FS_ROW_COUNT=$(lsblk -f | grep $CEPH_DRIVE.* | awk -F " " '{print $2}' | wc -l)
 # Find the filesystem on drive specified
-FS_TYPE=$(lsblk -f | grep sdb.* | awk -F " " '{print $2}')
+FS_TYPE=$(lsblk -f | grep $CEPH_DRIVE.* | awk -F " " '{print $2}')
 if [[ $FS_ROW_COUNT == 0 && $FS_TYPE != "" ]]
 then
 
@@ -156,7 +155,7 @@ then
 	for node in ${WORKER_NODE_NAMES[*]}
 	do
 		echo "Trying to connect to $node"
-		#CEPH_DRIVE=('/dev/sdb')
+		
 		#Try to SSH into each node
 		ssh "$USERNAME"@$node <<- 'EOF'
 		echo "Trying to clean Ceph drive on node:$node."
