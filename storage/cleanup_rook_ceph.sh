@@ -3,6 +3,9 @@
 #ROOK + Ceph Cleanup script. Need to eb executed from a host where we have:
 #1. key based ssh enabled for all nodes
 #2. hosts file or DNS based ssh access to all nodes
+
+sudo ./setup_rook_ceph.sh |& tee -a setup_storage.log
+
 echo "----------- Cleaning Rook + Ceph  ------------"
 
 # YAML/ Git variables
@@ -23,86 +26,87 @@ USERNAME="root"
 # Make sure it is not set as default storage
 kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
 
-if [[ -f rook_storage_class.yaml ]]
+if [[ -f rook-storage_class.yaml ]]
 then
-	echo "rook_storage_class.yaml already present. Proceeding."
+	echo "rook-storage_class.yaml already present. Proceeding."
 else
-	echo "Downloading rook_storage_class.yaml"
+	echo "Downloading rook-storage_class.yaml"
 	#Fetch the StorageClass YAML
 	#wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/rook_storage_class.yaml
-	wget -q $ROOK_STORAGE_CLASS_YAML
+	wget -q $ROOK_STORAGE_CLASS_YAML -O rook-storage_class.yaml
 fi
 
-if [[ -f filesystem.yaml ]]
+if [[ -f rook-filesystem.yaml ]]
 then
-	echo "filesystem.yaml already present. Proceeding."
+	echo "rook-filesystem.yaml already present. Proceeding."
 else
-	echo "Downloading filesystem.yaml"
+	echo "Downloading rook-filesystem.yaml"
 	# Fetch the filesystem YAML
 	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
-	wget -q $CEPH_FILSYSTEM_YAML
+	wget -q $CEPH_FILSYSTEM_YAML -O rook-filesystem.yaml
 fi
 
-if [[ -f dashboard-loadbalancer.yaml ]]
+if [[ -f rook-dashboard.yaml ]]
 then
-	echo "dashboard-loadbalancer.yaml already present. Proceeding."
+	echo "rook-dashboard.yaml already present. Proceeding."
 else
-	echo "Downloading cluster.yaml"
+	echo "Downloading rook-dashboard.yaml"
 	# Download Cephs cluster YAML
 	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
-	wget -q $CEPH_LB_DASHBOARD_YAML
+	wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
 fi
 
-if [[ -f cluster.yaml ]]
+if [[ -f rook-cluster.yaml ]]
 then
-	echo "Cluster.yaml already present. Proceeding."
+	echo "rook-cluster.yaml already present. Proceeding."
 else
-	echo "Downloading cluster.yaml"
+	echo "Downloading rook-cluster.yaml"
 	# Download Cephs cluster YAML
 	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
-	wget -q $CEPH_CLUSTER_YAML
+	wget -q $CEPH_CLUSTER_YAML -O rook-cluster.yaml
 fi
-if [[ -f operator.yaml ]]
+if [[ -f rook-operator.yaml ]]
 then
-	echo "Operator.yaml already present. Proceeding."
+	echo "rook-operator.yaml already present. Proceeding."
 else
-	echo "Downloading Operator.yaml"
+	echo "Downloading rook-operator.yaml"
 	# Get Operator YAML
 	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
 	wget -q $CEPH_OPERATOR_YAML
 fi
-if [[ -f common.yaml ]]
+if [[ -f rook-common.yaml ]]
 then
-	echo "Common.yaml already present. Proceeding."
+	echo "rook-common.yaml already present. Proceeding."
 else
-	echo "Downloading Common.yaml"
+	echo "Downloading rook-common.yaml"
 	# Get Common YAML
 	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
-	wget -q $CEPH_COMMON_YAML
+	wget -q $CEPH_COMMON_YAML -O rook-common.yaml
 fi
-if [[ -f toolbox.yaml ]]
+if [[ -f ceph-toolbox.yaml ]]
 then
-	echo "Ceph toolbox.yaml already present. Proceeding."
+	echo "ceph-toolbox.yaml already present. Proceeding."
 	#Connect to Ceph toolbox with below command
 	#kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
 else
-	echo "Skiiping Ceph toolbox setup."
-	wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
+	echo "Downloading ceph-toolbox.yaml."
+	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
+	wget -q $CEPH_TOOLBOX_YAML -O ceph-toolbox.yaml
 
 fi
 
 # Delete rook_storage_class using YAML 
-kubectl delete -f rook_storage_class.yaml
-echo "StorageClass config deleted."
+kubectl delete -f rook-storage_class.yaml
+echo "Rook StorageClass config deleted."
 # Delete Filesystem using YAML 
-kubectl delete -f filesystem.yaml
-echo "Ceph Filesystem config deleted."
+kubectl delete -f rook-filesystem.yaml
+echo "Rook Filesystem config deleted."
 # Delete dashboard config using YAML 
-kubectl delete -f dashboard-loadbalancer.yaml
-echo "Ceph dashboard-loadbalancer config deleted."
+kubectl delete -f rook-dashboard.yaml
+echo "Rook dashboard config deleted."
 # Delete Cluster using YAML 
-kubectl delete -f cluster.yaml
-echo "Ceph cluster config deleted."
+kubectl delete -f rook-cluster.yaml
+echo "Rook cluster config deleted."
 # Delete Ceph cluster as per Rook documentation
 #kubectl -n rook-ceph delete cephcluster rook-ceph
 #Wait for Ceph cluster to be deleted.
@@ -116,14 +120,14 @@ done
 echo "proceeding with rest of the cleanup."
 
 # Delete Operator
-kubectl delete -f operator.yaml
-echo "Ceph operator config deleted."
+kubectl delete -f rook-operator.yaml
+echo "Rook operator config deleted."
 # Delete Common
-kubectl delete -f common.yaml
-echo "Ceph common config deleted."
+kubectl delete -f rook-common.yaml
+echo "Rook common config deleted."
 
 # Delete Ceph toolbox
-kubectl delete -f toolbox.yaml
+kubectl delete -f ceph-toolbox.yaml
 echo "Ceph toolbox instance deleted."
 
 #Connect to each node and zap Ceph Drives
@@ -169,6 +173,6 @@ do
 	echo "Back from Worker: "$node
 done
 
-rm -f rook_storage_class.yaml filesystem.yaml cluster.yaml operator.yaml common.yaml toolbox.yaml
+rm -f rook-storage_class.yaml rook-filesystem.yaml rook-cluster.yaml rook-operator.yaml rook-common.yaml ceph-toolbox.yaml
 
 echo "Rook removed. Drives used by Ceph zapped."
