@@ -112,6 +112,14 @@ else
 	echo "Directory /var/lib/rook not found."
 fi
 
+if [[ -f /var/lib/cni ]]
+then
+	echo "Removing /var/lib/cni"
+	rm -rf /var/lib/cni
+else
+	echo "Directory /var/lib/cni not found."
+fi
+
 #Delete Repos we added
 rm -f /etc/yum.repos.d/docker-ce.repo
 rm -f /etc/yum.repos.d/kubernetes.repo
