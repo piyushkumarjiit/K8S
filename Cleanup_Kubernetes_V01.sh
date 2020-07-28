@@ -1,8 +1,8 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
-#./Cleanup_Kubernetes_V01.sh | tee cleanup.log
-#./Cleanup_Kubernetes_V01.sh |& tee -a cleanup.log
+#sudo ./Cleanup_Kubernetes_V01.sh | tee cleanup.log
+#sudo ./Cleanup_Kubernetes_V01.sh |& tee -a cleanup.log
 
 echo "------------ Cleanup script started --------------"
 
@@ -34,9 +34,13 @@ export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_N
 #Username that we use to connect to remote machine via SSH
 export USERNAME="root"
 #Flag to identify if LB nodes should also be cleaned
-export EXTERNAL_LB_ENABLED="false"
+export EXTERNAL_LB_ENABLED="true"
 #Workaround for lack of DNS. Local node can ping itself but unable to SSH
 echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
+# Do we want to setup Rook + Ceph. Allowed values true/false
+SETUP_ROOK_INSTALLED="true"
+# Do we want to setup Monitoring for Cluster (Prometheus + AlertManager+Grafana). Allowed values true/false
+SETUP_CLUSTER_MONITORING="true"
 #Nginx Ingress setup flag. Allowed values true/false
 SETUP_NGINX_INGRESS="true"
 # Flag to setup Metal LB. Allowed values true/false
@@ -50,8 +54,33 @@ CERT_MGR_DEPLOY=https://github.com/jetstack/cert-manager/releases/download/v0.16
 SELF_SIGNED_CERT_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ingress/cert_self_signed.yaml
 
 
-# To install cert-manager
-if [[ $SETUP_CERT_MANAGER == "true" ]]
+
+if [[ $SETUP_CLUSTER_MONITORING == "true" ]]
+then
+	echo "Starting Ceph+Rook cleanup."
+	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/cleanup_monitoring_all.sh
+	chmod +x cleanup_monitoring_all.sh
+	./cleanup_monitoring_all.sh
+	echo "Monitoring cleanup complete."
+	rm -f cleanup_monitoring_all.sh
+else
+	echo "Skipping monitoring cleanup."
+fi
+
+if [[ $SETUP_ROOK_INSTALLED == "true" ]]
+then
+	echo "Starting Ceph+Rook cleanup."
+	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/cleanup_rook_ceph.sh
+	chmod +x cleanup_rook_ceph.sh
+	./cleanup_rook_ceph.sh
+	echo "Storage cleanup complete."
+	rm -f cleanup_rook_ceph.sh
+else
+	echo "Skipping Ceph+Rook cleanup."
+fi
+KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
+# To cleanup cert-manager
+if [[ $SETUP_CERT_MANAGER == "true" && $KUBECTL_AVAILABLE == 0 ]]
 	then
 		if [[ -f cert_self_signed.yaml ]]
 		then
@@ -59,7 +88,7 @@ if [[ $SETUP_CERT_MANAGER == "true" ]]
 			echo "Self Signed issuer deleted."
 			rm -f cert_self_signed.yaml
 		else
-			echo "Downloading cert_self_signed.yaml"
+			echo "Deleting cert_self_signed.yaml"
 			wget -q $SELF_SIGNED_CERT_TEMPLATE
 			kubectl delete -f cert_self_signed.yaml
 			echo "Self Signed issuer deleted."
@@ -69,12 +98,12 @@ if [[ $SETUP_CERT_MANAGER == "true" ]]
 		then
 			echo "Deleting Cert Manager"
 			#kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.16.0/cert-manager.yaml
-			kubectl apply -f $CERT_MGR_DEPLOY
+			kubectl delete -f $CERT_MGR_DEPLOY
 			echo "Cert Manager deleted."
 			rm -f cert-manager.yaml
 		else
-			echo "Downloading cert-manager.yaml"
-			kubectl apply -f $CERT_MGR_DEPLOY
+			echo "Deleting cert-manager.yaml"
+			kubectl delete -f $CERT_MGR_DEPLOY
 			echo "Cert Manager deleted."
 			rm -f cert-manager.yaml
 		fi
@@ -82,7 +111,7 @@ else
 	echo "Cert Manager not identified for removal."
 fi
 
-if [[ $SETUP_NGINX_INGRESS == "true" ]]
+if [[ $SETUP_NGINX_INGRESS == "true" && $KUBECTL_AVAILABLE == 0 ]]
 then
 	if [[ -f ingress_deploy.yaml ]]
 	then
@@ -93,13 +122,16 @@ then
 		rm -f ingress_deploy.yaml
 	else
 		echo "Downloading ingress_deploy.yaml"
-		if [[ $SETUP_METAL_LB == "true" ]]
+		if [[ $SETUP_METAL_LB == "true" && $CLOUD_PROVIDED_LB == "false" ]]
 		then
 			echo "Downloading Nginx Ingress YAML that works with MetalLB"
 			#wget -q -O ingress_deploy.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud/deploy.yaml
 			wget -q -O ingress_deploy.yaml $NGINX_LB_DEPLOY_YAML
+		elif [[ $SETUP_METAL_LB == "false" && $CLOUD_PROVIDED_LB == "true" ]]
+		then
+			echo "Skipping cleaning up Nginx Ingress for external cloud."
 		else
-			echo "Downloading Nginx Ingress YAML that works without Loadbalancer."
+			echo "Cleaning Nginx Ingress YAML that works without Loadbalancer."
 			wget -q -O ingress_deploy.yaml $NGINX_DEPLOY_YAML
 		fi
 		kubectl delete -f ingress_deploy.yaml
@@ -110,7 +142,7 @@ else
 	echo "Nginx Ingress not identified for removal."
 fi
 
-if [[ $SETUP_METAL_LB == "true" ]]
+if [[ $SETUP_METAL_LB == "true" && $KUBECTL_AVAILABLE == 0 ]]
 then
 		echo "Deleting MetalLB config via manifests."
 		kubectl delete -f $METAL_LB_MANIFESTS
@@ -120,9 +152,13 @@ else
 	echo "MetalLB not marked for removal."
 fi
 
-
-echo "Deleting all pods."
-kubectl delete --all pods
+if [[ $KUBECTL_AVAILABLE == 0 ]]
+then
+	echo "Deleting all pods."
+	kubectl delete --all pods
+else
+	echo "Kubectl not present."
+fi
 
 #Check connectivity to all nodes
 HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
