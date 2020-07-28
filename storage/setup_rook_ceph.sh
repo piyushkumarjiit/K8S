@@ -5,8 +5,8 @@
 #2. hosts file or DNS based ssh access to all nodes
 #3. key based ssh enabled for all nodes
 
-#sudo ./cleanup_rook_ceph.sh | tee clean_storage.log
-#sudo ./cleanup_rook_ceph.sh |& tee clean_storage.log
+#sudo ./setup_rook_ceph.sh | tee setup_storage.log
+#sudo ./setup_rook_ceph.sh |& tee setup_storage.log
 
 echo "----------- Preparing Storage Node: $(hostname) ------------"
 
@@ -31,6 +31,8 @@ USERNAME="root"
 INSTALL_CEPH_TOOLS="true"
 # Do we want Ceph dashboard to be accessible via Load Balancer/Metal LB or use via Ingress.Allowed values true/false
 SETUP_FOR_LOADBALANCER="false"
+# Flag for setting up Ceph as default storage in cluster. Allowed values true/false
+SET_AS_DEFAULT_STORAGE="false"
 #Make sure your K8S cluster is not using Pod security. If it is then you need to set 1 PodSecurityPolicy that allows privileged Pod execution
 
 #To identify the empty storage drive run below command. The one with empty FSTYPE is one we can use
@@ -148,9 +150,16 @@ else
 	echo "LB failed to assign external IP."
 fi
 
-# Set this as default storage
-# kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-# kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+if [[ $SET_AS_DEFAULT_STORAGE == "true" ]]
+then
+	echo "Setting as default storage in cluster."
+	# Set this as default storage
+	kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+	# Unset this as default storage
+	# kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+else
+	echo "Skipping setting as default storage in cluster."
+fi
 
 # To avoid csi-cephfs missing error
 #kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash -c 'ceph fs subvolumegroup create myfs csi'
@@ -158,4 +167,4 @@ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-t
 echo "CEPH FS Volume group created."
 rm -f dashboard-loadbalancer.yaml cluster.yaml operator.yaml common.yaml
 
-echo "Rook + Ceph setup completed."
+echo "Storage (Rook + Ceph) setup completed."
