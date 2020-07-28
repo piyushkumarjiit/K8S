@@ -186,7 +186,23 @@ then
 	echo "haproxy.cfg updated."
 else
 	echo "Found haproxy.cfg in current direcotry. Going to use it 'as is'."
-fi 
+fi
+
+IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
+if [[ $IP4_FORWARDING_STATUS != 0 ]]
+then	
+	# Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
+	echo "Adding IPv4 forwarding rule."
+	bash -c 'cat <<-EOF >>  /etc/sysctl.conf
+	net.ipv4.ip_forward=1
+	net.bridge.bridge-nf-call-iptables=1
+	EOF'
+	sysctl -p -q
+	echo "IPV4 forwarding set."
+else
+	echo "IPV4 FORWARDING flag already set. No change needed."
+fi
+
 
 #Identify if it is Ubuntu or Centos/RHEL
 distro=$(cat /etc/*-release | awk '/ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
@@ -261,7 +277,7 @@ then
 	echo "Both the services should be up. Lets check."
 fi
 sleep 20
-nc -zv $KUBE_VIP $API_PORT
+#nc -zv $KUBE_VIP $API_PORT
 
 #Check LB status
 LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
