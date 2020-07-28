@@ -8,7 +8,7 @@
 #sudo ./setup_rook_ceph.sh | tee setup_storage.log
 #sudo ./setup_rook_ceph.sh |& tee setup_storage.log
 
-echo "----------- Preparing Storage Node: $(hostname) ------------"
+echo "----------- Setting up Storage (Rook + Ceph) ------------"
 
 # YAML/ Git variables
 CEPH_COMMON_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
@@ -151,7 +151,7 @@ then
 	#Connect to Ceph toolbox with below command
 	#kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
 else
-	echo "Skiiping Ceph toolbox setup."
+	echo "Skipping Ceph toolbox setup."
 fi
 
 sleep 120
@@ -184,4 +184,4 @@ kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-t
 echo "CEPH FS Volume group created."
 rm -f rook-dashboard.yaml rook-cluster.yaml rook-operator.yaml rook-common.yaml
 
-echo "Storage (Rook + Ceph) setup completed."
+echo "------------ Storage (Rook + Ceph) setup completed ------------"
