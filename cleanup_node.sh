@@ -136,11 +136,11 @@ rm -f ~/cleanup_node*.*
 echo "Files created by setup script deleted."
 
 #Remove Directories
-rm -Rf /etc/cni /var/lib/etcd /etc/kubernetes /usr/lib/systemd/system/kubelet.service.d
-rm -Rf /opt/cni
+rm -Rf /etc/cni /var/lib/etcd /etc/kubernetes /var/lib/kubelet /usr/lib/systemd/system/kubelet.service.d
+rm -Rf /opt/cni /var/lib/cni /var/lib/calico /var/lib/weave
 rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
-rm -Rf /opt/containerd
+rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-engine  /var/lib/dockershim
 
 
 echo "Docker and Kubernetes config directories deleted."
