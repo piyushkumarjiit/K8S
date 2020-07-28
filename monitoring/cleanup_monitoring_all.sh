@@ -5,7 +5,7 @@
 #2. sudo level access
 #3. internet access to fetch files
 #4. FQDN that was used by ingress
-
+echo "----------- Cleaning Prometheus + Grafana + Alertmanager  ------------"
 #YAML and Git variables
 KUBE_PROMETHEUS_REPO=https://github.com/coreos/kube-prometheus.git
 #export MONITORING_INGRESS_JSONNET=https://raw.githubusercontent.com/coreos/kube-prometheus/b55c2825f7fa4491c6018bd256ef5d7e0b62404c/examples/ingress.jsonnet
@@ -22,6 +22,7 @@ INGRESS_DOMAIN_NAME=bifrost.com
 #github.com/coreos/kube-prometheus/jsonnet/kube-prometheus@release-0.4
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 
+cd ~
 if [[ -f monitoring-dashboard-ingress-http.yaml ]]
 then
 	echo "Monitoring ingress yaml present."
@@ -61,6 +62,7 @@ then
 			# Delete namespaces and CRDs using YAML
 			kubectl delete -f manifests/setup
 			sleep 2
+			rm -f monitoring-build.sh monitoring-example.jsonnet
 	else
 		echo "Old YAML files are deleted. Run setup in dry run mode to regenrate. Exiting."
 		sleep 2
@@ -93,11 +95,11 @@ sudo rm -f /usr/local/bin/gojsontoyaml
 cd ~
 # Delete directories for Go and my-kube-prometheus
 rm -Rf my-kube-prometheus go
-rm -f monitoring-build.sh monitoring-example.jsonnet
 rm -f monitoring-dashboard-ingress-http.yaml monitoring-grafana_pvc.yaml
 
 echo "Script did not remove Go and Git. If required, please remove manually. Cleanup complete."
 sleep 2
+echo "----------- Cleanup complete  ------------"
 # Default Grafana login admin/admin
 
 
