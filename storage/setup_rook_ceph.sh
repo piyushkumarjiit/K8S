@@ -29,8 +29,8 @@ export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" 
 USERNAME="root"
 # Flag for setting up Ceph tool container in K8S. Allowed values true/false
 INSTALL_CEPH_TOOLS="true"
-# Do we want Ceph dashboard to be accessible via Load Blancer/Metal LB or use via Ingress.Allowed values true/false
-SETUP_FOR_LOADBALANCER="true" 
+# Do we want Ceph dashboard to be accessible via Load Balancer/Metal LB or use via Ingress.Allowed values true/false
+SETUP_FOR_LOADBALANCER="false"
 #Make sure your K8S cluster is not using Pod security. If it is then you need to set 1 PodSecurityPolicy that allows privileged Pod execution
 
 #To identify the empty storage drive run below command. The one with empty FSTYPE is one we can use
