@@ -20,6 +20,7 @@ STORAGE_SIZE="2Gi"
 # Domain name to eb sued by Ingress. Using this grafana URL would become: grafana.<domain.com>
 INGRESS_DOMAIN_NAME=bifrost.com
 #github.com/coreos/kube-prometheus/jsonnet/kube-prometheus@release-0.4
+KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 
 if [[ -f monitoring-dashboard-ingress-http.yaml ]]
 then
@@ -31,25 +32,15 @@ else
 	# Update the template with your domain name
 	sed -i "s/example.com/$INGRESS_DOMAIN_NAME/g" monitoring-dashboard-ingress-http.yaml
 fi
-
-# Delete the ingress config YAML
-kubectl delete -f monitoring-dashboard-ingress-http.yaml
-sleep 2
-rm -f monitoring-dashboard-ingress-http.yaml
-sleep 2
-cd ~
-if [[ -d my-kube-prometheus ]]
+if [[ $KUBECTL_AVAILABLE == 0  ]]
 then
-	# Got to my-kube-prometheus directory
-	cd my-kube-prometheus
-	# Delete monitoring configs using YAML
-	kubectl delete -f manifests/
+	# Delete the ingress config YAML
+	kubectl delete -f monitoring-dashboard-ingress-http.yaml
 	sleep 2
 else
-	echo "Old YAML files are deleted. Run setup in dry run mode to regenrate. Exiting."
-	sleep 2
-	exit.
+	echo "Kubectl unavailable. Unable to delete config using monitoring-dashboard-ingress-http.yaml"
 fi
+rm -f monitoring-dashboard-ingress-http.yaml
 
 if [[ -f grafana_pvc.yaml ]]
 then
@@ -58,28 +49,57 @@ else
 	echo "Fetching Grafana PVC yaml from github."
 	# Fetch Grafana PVC YAML from github repo
 	wget -q $GRAFANA_PVC_YAML -O monitoring-grafana_pvc.yaml
+fi
+if [[ $KUBECTL_AVAILABLE == 0  ]]
+then
 	# Delete PVC for Grafana
 	kubectl delete -f monitoring-grafana_pvc.yaml
+else
+	echo "Kubectl unavailable. Unable to delete config using monitoring-grafana_pvc.yaml"
 fi
 rm -f monitoring-grafana_pvc.yaml
-# Delete namespaces and CRDs using YAML
-kubectl delete -f manifests/setup
-sleep 2
+#Go to HOME
+cd ~
+if [[ -d my-kube-prometheus ]]
+then
+	# Got to my-kube-prometheus directory
+	cd my-kube-prometheus
+	if [[ $KUBECTL_AVAILABLE == 0  ]]
+	then
+		# Delete monitoring configs using YAML
+		kubectl delete -f manifests/
+		sleep 2
+		# Delete namespaces and CRDs using YAML
+		kubectl delete -f manifests/setup
+		sleep 2
+	else
+		echo "Kubectl unavailable. Unable to delete config using manifests/ yaml"
+	fi
+else
+	echo "Old YAML files are deleted. Run setup in dry run mode to regenrate. Exiting."
+	sleep 2
+	exit.
+fi
 
-# Fetch count of PVC used by monitoring
-TOTAL_PVC=$(kubectl get pvc -n monitoring -o json | grep -w '"name":' | wc -l)
-echo "Total PVC in use: "$TOTAL_PVC
-# Loop to get all their names
-count=0
-while [ $count -lt $TOTAL_PVC ]
-do
-	PVC_NAME=$(kubectl get pvc -n monitoring -o json | grep -w '"name":' | xargs | cat | awk -F "," '{print $count}')
-	kubectl delete -n monitoring pvc $PVC_NAME
-	echo "Deleted PVC: $PVC_NAME"
-	((count++))
-done
-echo "All PVCs deleted."
-sleep 2
+if [[ $KUBECTL_AVAILABLE == 0  ]]
+then
+	# Fetch count of PVC used by monitoring
+	TOTAL_PVC=$(kubectl get pvc -n monitoring -o json | grep -w '"name":' | wc -l)
+	echo "Total PVC in use: "$TOTAL_PVC
+	# Loop to get all their names
+	count=0
+	while [ $count -lt $TOTAL_PVC ]
+	do
+		PVC_NAME=$(kubectl get pvc -n monitoring -o json | grep -w '"name":' | xargs | cat | awk -F "," '{print $count}')
+		kubectl delete -n monitoring pvc $PVC_NAME
+		echo "Deleted PVC: $PVC_NAME"
+		((count++))
+	done
+	echo "All PVCs deleted."
+	sleep 2
+else
+	echo "Kubectl unavailable. Unable to delete PVC."
+fi
 
 # Delete binaries for jb, jsonnet and gojsontoyaml
 sudo rm -f /usr/local/bin/jb
