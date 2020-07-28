@@ -79,7 +79,6 @@ then
 	sudo cp ~/go/bin/jb /usr/local/bin/jb
 	echo "Jsonnet builder installed."
 	jb -h
-
 fi
 
 # Install gojsonttoyaml. Used to generate files later
