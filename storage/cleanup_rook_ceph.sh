@@ -23,8 +23,14 @@ export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" 
 #Username that we use to connect to remote machine via SSH
 USERNAME="root"
 
-# Make sure it is not set as default storage
-kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
+if [[ $KUBECTL_AVAILABLE == 0  ]]
+then
+	# Make sure it is not set as default storage
+	kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+else
+	echo ""
+fi
 
 if [[ -f rook-storage_class.yaml ]]
 then
@@ -95,84 +101,102 @@ else
 
 fi
 
-# Delete rook_storage_class using YAML 
-kubectl delete -f rook-storage_class.yaml
-echo "Rook StorageClass config deleted."
-# Delete Filesystem using YAML 
-kubectl delete -f rook-filesystem.yaml
-echo "Rook Filesystem config deleted."
-# Delete dashboard config using YAML 
-kubectl delete -f rook-dashboard.yaml
-echo "Rook dashboard config deleted."
-# Delete Cluster using YAML 
-kubectl delete -f rook-cluster.yaml
-echo "Rook cluster config deleted."
-# Delete Ceph cluster as per Rook documentation
-#kubectl -n rook-ceph delete cephcluster rook-ceph
-#Wait for Ceph cluster to be deleted.
-ROOK_CLUSTER_DELETED=$(kubectl -n rook-ceph get cephcluster)
-while [[ $ROOK_CLUSTER_DELETED == 0 ]]
-do
-	echo "Wait for cluster to be deleted."
-	sleep 30
+if [[ $KUBECTL_AVAILABLE == 0  ]]
+then
+	# Delete rook_storage_class using YAML 
+	kubectl delete -f rook-storage_class.yaml
+	echo "Rook StorageClass config deleted."
+	# Delete Filesystem using YAML 
+	kubectl delete -f rook-filesystem.yaml
+	echo "Rook Filesystem config deleted."
+	# Delete dashboard config using YAML 
+	kubectl delete -f rook-dashboard.yaml
+	echo "Rook dashboard config deleted."
+	# Delete Cluster using YAML 
+	kubectl delete -f rook-cluster.yaml
+	echo "Rook cluster config deleted."
+	# Delete Ceph cluster as per Rook documentation
+	#kubectl -n rook-ceph delete cephcluster rook-ceph
+	#Wait for Ceph cluster to be deleted.
 	ROOK_CLUSTER_DELETED=$(kubectl -n rook-ceph get cephcluster)
-done
-echo "proceeding with rest of the cleanup."
+	while [[ $ROOK_CLUSTER_DELETED == 0 ]]
+	do
+		echo "Wait for cluster to be deleted."
+		sleep 30
+		ROOK_CLUSTER_DELETED=$(kubectl -n rook-ceph get cephcluster)
+	done
+	echo "proceeding with rest of the cleanup."
 
-# Delete Operator
-kubectl delete -f rook-operator.yaml
-echo "Rook operator config deleted."
-# Delete Common
-kubectl delete -f rook-common.yaml
-echo "Rook common config deleted."
+	# Delete Operator
+	kubectl delete -f rook-operator.yaml
+	echo "Rook operator config deleted."
+	# Delete Common
+	kubectl delete -f rook-common.yaml
+	echo "Rook common config deleted."
 
-# Delete Ceph toolbox
-kubectl delete -f ceph-toolbox.yaml
-echo "Ceph toolbox instance deleted."
+	# Delete Ceph toolbox
+	kubectl delete -f ceph-toolbox.yaml
+	echo "Ceph toolbox instance deleted."
+else
+	echo "Kubectl unavailable. Unable to delete storage components."
+fi
 
-#Connect to each node and zap Ceph Drives
-echo "Cleaning Ceph drives on worker nodes"
-for node in ${WORKER_NODE_NAMES[*]}
-do
-	echo "Trying to connect to $node"
-	#CEPH_DRIVE=('/dev/sdb')
-	#Try to SSH into each node
-	ssh "$USERNAME"@$node <<- 'EOF'
-	echo "Trying to clean Ceph drive on node:$node."
-	CEPH_DRIVE=('/dev/sdb')
-	CEPH_DRIVE_PRESENT=$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo $? )
-	echo $CEPH_DRIVE_PRESENT
-	if [[ $CEPH_DRIVE_PRESENT == 0 ]]
-	then
-		echo "Cleaning Rook and Ceph related config and zapping drive."
-		for DISK in ${CEPH_DRIVE[*]}
-		do
-			echo "Begin zapping process."
-			sgdisk --zap-all $DISK
-			dd if=/dev/zero of="$DISK" bs=1M count=100 oflag=direct,dsync
-			DMREMOVE_STATUS=$(ls /dev/mapper/ceph-* | xargs -I% -- dmsetup remove % > /dev/null 2>&1; echo $? )
-			if [[ $DMREMOVE_STATUS -gt 0 ]]
-			then
-				rm -f /dev/mapper/ceph-*
-				echo "Manually deleted /dev/mapper/ceph "
-			else
-				echo "DMREMOVE_STATUS completed successfully."
-			fi
+rm -f rook-storage_class.yaml rook-filesystem.yaml rook-cluster.yaml 
+rm -f rook-operator.yaml rook-common.yaml rook-dashboard.yaml ceph-toolbox.yaml
+
+#Count the number of lines returned as more than 1 would mean filesystem is assigned.
+FS_ROW_COUNT=$(lsblk -f | grep sdb.* | awk -F " " '{print $2}' | wc -l)
+# Find the filesystem on drive specified
+FS_TYPE=$(lsblk -f | grep sdb.* | awk -F " " '{print $2}')
+if [[ $FS_ROW_COUNT == 0 && $FS_TYPE != "" ]]
+then
+
+	#Connect to each node and zap Ceph Drives
+	echo "Cleaning Ceph drives on worker nodes"
+	for node in ${WORKER_NODE_NAMES[*]}
+	do
+		echo "Trying to connect to $node"
+		#CEPH_DRIVE=('/dev/sdb')
+		#Try to SSH into each node
+		ssh "$USERNAME"@$node <<- 'EOF'
+		echo "Trying to clean Ceph drive on node:$node."
+		CEPH_DRIVE=('/dev/sdb')
+		CEPH_DRIVE_PRESENT=$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo $? )
+		echo $CEPH_DRIVE_PRESENT
+		if [[ $CEPH_DRIVE_PRESENT == 0 ]]
+		then
+			echo "Cleaning Rook and Ceph related config and zapping drive."
+			for DISK in ${CEPH_DRIVE[*]}
+			do
+				echo "Begin zapping process."
+				sgdisk --zap-all $DISK
+				dd if=/dev/zero of="$DISK" bs=1M count=100 oflag=direct,dsync
+				DMREMOVE_STATUS=$(ls /dev/mapper/ceph-* | xargs -I% -- dmsetup remove % > /dev/null 2>&1; echo $? )
+				if [[ $DMREMOVE_STATUS -gt 0 ]]
+				then
+					rm -f /dev/mapper/ceph-*
+					echo "Manually deleted /dev/mapper/ceph "
+				else
+					echo "DMREMOVE_STATUS completed successfully."
+				fi
+				rm -rf /dev/ceph-*
+				rm -Rf /var/lib/rook
+			done
+		else
 			rm -rf /dev/ceph-*
 			rm -Rf /var/lib/rook
-		done
-	else
-		rm -rf /dev/ceph-*
-		rm -Rf /var/lib/rook
-		echo "No processing needed for Rook/Ceph."
-	fi
-	echo "Worker node processed. Exiting."
-	sleep 2
-	exit
-	EOF
-	echo "Back from Worker: "$node
-done
+			echo "No processing needed for Rook/Ceph."
+		fi
+		echo "Worker node processed. Exiting."
+		sleep 2
+		exit
+		EOF
+		echo "Back from Worker: "$node
+	done
+else
+	echo "Filesystem for specified drive seems to be already flushed."
+fi
 
-rm -f rook-storage_class.yaml rook-filesystem.yaml rook-cluster.yaml rook-operator.yaml rook-common.yaml rook-dashboard.yaml ceph-toolbox.yaml
+
 
 echo "Rook removed. Drives used by Ceph zapped."
