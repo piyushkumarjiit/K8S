@@ -71,6 +71,21 @@ else
 	echo "SELinux already set as permissive. No change needed."
 fi
 
+IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
+if [[ $IP4_FORWARDING_STATUS != 0 ]]
+then	
+	# Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
+	echo "Adding IPv4 forwarding rule."
+	bash -c 'cat <<-EOF >>  /etc/sysctl.conf
+	net.ipv4.ip_forward=1
+	net.bridge.bridge-nf-call-iptables=1
+	EOF'
+	sysctl -p -q
+	echo "Done."
+else
+	echo "IPV4 FORWARDING flag already set. No change needed."
+fi
+
 #Check if IP tables contain K8s config
 if [[ -r /etc/sysctl.d/k8s.conf ]]
 then
