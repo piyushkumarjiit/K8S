@@ -12,6 +12,7 @@ echo "----------- Cleaning Rook + Ceph  ------------"
 CEPH_COMMON_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
 CEPH_OPERATOR_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
 CEPH_CLUSTER_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
+CEPH_DASHBOARD_YAML=https://raw.githubusercontent.com/rook/rook/master/cluster/examples/kubernetes/ceph/dashboard-ingress-https.yaml
 CEPH_LB_DASHBOARD_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
 CEPH_FILSYSTEM_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
 ROOK_STORAGE_CLASS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class.yaml
@@ -24,7 +25,10 @@ export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" 
 USERNAME="root"
 # Name of the device used by Ceph
 CEPH_DRIVE="sdb"
-
+# Flag for setting up Ceph tool container in K8S. Allowed values true/false
+INSTALL_CEPH_TOOLS="true"
+# Do we want Ceph dashboard to be accessible via Load Balancer/Metal LB or use via Ingress.Allowed values true/false
+SETUP_FOR_LOADBALANCER="false"
 # Check if Kubectl si available or not
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 
@@ -53,9 +57,14 @@ then
 	echo "rook-dashboard.yaml already present. Proceeding."
 else
 	echo "Downloading rook-dashboard.yaml"
-	# Download Cephs cluster YAML
-	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
-	wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
+	if [[ $SETUP_FOR_LOADBALANCER == "true" ]]
+	then
+		# Download Cephs cluster YAML
+		#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
+		wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
+	else
+		wget -q $CEPH_DASHBOARD_YAML -O rook-dashboard.yaml
+	fi
 fi
 
 if [[ -f rook-cluster.yaml ]]
