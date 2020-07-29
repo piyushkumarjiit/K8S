@@ -178,15 +178,19 @@ fi
 
 #Reset the IP Tables
 echo "Resetting the IPtables."
-iptables -F ; iptables -X ; iptables -t nat -F ; iptables -t nat -X; iptables -t mangle -F ; iptables -t mangle -X
-## start fresh
-ip6tables -Z; # zero counters
-ip6tables -F; # flush (delete) rules
-ip6tables -X; # delete all extra chains
 ## start fresh
 iptables -Z; # zero counters
 iptables -F; # flush (delete) rules
 iptables -X; # delete all extra chains
+iptables -t nat -F ; 
+iptables -t nat -X; 
+iptables -t mangle -F ; 
+iptables -t mangle -X
+## start fresh
+ip6tables -Z; # zero counters
+ip6tables -F; # flush (delete) rules
+ip6tables -X; # delete all extra chains
+
 echo "IPTables reset completed."
 sysctl -q --system
 systemctl daemon-reload
