@@ -119,7 +119,7 @@ else
 	wget -q $CEPH_DASHBOARD_YAML -O rook-dashboard.yaml
 	#kubectl get configmap kube-proxy -n kube-system -o yaml | sed -e "s/strictARP: false/strictARP: true/" | kubectl apply -f - -n kube-system
 	#kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
-	sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" rook-dashboard.yaml
+	#sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" rook-dashboard.yaml
 	sed -i "s/rook-ceph.example.com/rook\.$INGRESS_DOMAIN_NAME/g" rook-dashboard.yaml
 	kubectl apply -f rook-dashboard.yaml
 	echo " Done. rook.$INGRESS_DOMAIN_NAME dashboard would use Ingress."
@@ -130,7 +130,7 @@ fi
 # Fetch the filesystem YAML
 #wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
 wget -q $CEPH_FILSYSTEM_YAML -O rook-filesystem.yaml
-kubectl apply -f filesystem.yaml
+kubectl apply -f rook-filesystem.yaml
 echo "Ceph Filesystem type storage created."
 rm -f rook-filesystem.yaml
 

@@ -62,6 +62,7 @@ else
 		# Download Cephs cluster YAML
 		#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
 		wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
+		sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" rook-dashboard.yaml
 	else
 		wget -q $CEPH_DASHBOARD_YAML -O rook-dashboard.yaml
 	fi
