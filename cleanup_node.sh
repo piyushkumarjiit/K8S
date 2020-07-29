@@ -194,7 +194,7 @@ systemctl daemon-reload
 if [[ $CURRENT_NODE_NAME != $CALLING_NODE_NAME ]]
 then
 	echo "Cleanup done. Restarting the node to reset stuck handles."
-	#shutdown -r
+	shutdown -r
 else
 	echo "----------- $(hostname) cleanup completed ------------"
 fi
