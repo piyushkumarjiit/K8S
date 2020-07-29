@@ -248,7 +248,7 @@ then
 
 	#Install haproxy keepalived; 
 	echo "Installing haproxy and keepalived."
-	dnf -y  install haproxy keepalived
+	dnf -y -q  install haproxy keepalived
 
 	#Update keepalived.conf
 	echo "Replacing the default keepalived.conf with our updated version."
