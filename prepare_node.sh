@@ -74,7 +74,6 @@ fi
 IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
 if [[ $IP4_FORWARDING_STATUS != 0 ]]
 then	
-	# Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
 	echo "Adding IPv4 forwarding rule."
 	bash -c 'cat <<-EOF >>  /etc/sysctl.conf
 	net.ipv4.ip_forward=1
@@ -290,24 +289,24 @@ else
 fi
 
 systemctl stop kubelet
-echo "Setting IPTable rules"
-## set default IPv6 policies to let everything in
-ip6tables --policy INPUT   ACCEPT;
-ip6tables --policy OUTPUT  ACCEPT;
-ip6tables --policy FORWARD ACCEPT;
-## start fresh
-ip6tables -Z; # zero counters
-ip6tables -F; # flush (delete) rules
-ip6tables -X; # delete all extra chains
-## set default IPv4 policies to let everything in
-iptables --policy INPUT   ACCEPT;
-iptables --policy OUTPUT  ACCEPT;
-iptables --policy FORWARD ACCEPT;
-## start fresh
-iptables -Z; # zero counters
-iptables -F; # flush (delete) rules
-iptables -X; # delete all extra chains
-echo "IPTables set afresh."
+# echo "Setting IPTable rules"
+# ## set default IPv6 policies to let everything in
+# ip6tables --policy INPUT   ACCEPT;
+# ip6tables --policy OUTPUT  ACCEPT;
+# ip6tables --policy FORWARD ACCEPT;
+# ## start fresh
+# ip6tables -Z; # zero counters
+# ip6tables -F; # flush (delete) rules
+# ip6tables -X; # delete all extra chains
+# ## set default IPv4 policies to let everything in
+# iptables --policy INPUT   ACCEPT;
+# iptables --policy OUTPUT  ACCEPT;
+# iptables --policy FORWARD ACCEPT;
+# ## start fresh
+# iptables -Z; # zero counters
+# iptables -F; # flush (delete) rules
+# iptables -X; # delete all extra chains
+# echo "IPTables set afresh."
 #Restart kublet
 systemctl daemon-reload
 systemctl enable kubelet 
