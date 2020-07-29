@@ -71,7 +71,7 @@ then
 	echo "haproxy removed."
 fi
 
-yum -y -q remove kube*
+yum -y -q remove kube.*
 yum -y -q autoremove
 echo "Yum remove step completed."
 
@@ -143,7 +143,7 @@ rm -Rf /opt/cni /var/lib/cni /var/lib/calico /var/lib/weave
 rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
 rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-engine  /var/lib/dockershim
-rm -Rf /var/lib/rook
+
 
 
 echo "Docker and Kubernetes config directories deleted."
@@ -194,7 +194,7 @@ systemctl daemon-reload
 if [[ $CURRENT_NODE_NAME != $CALLING_NODE_NAME ]]
 then
 	echo "Cleanup done. Restarting the node to reset stuck handles."
-	shutdown -r
+	#shutdown -r
 else
 	echo "----------- $(hostname) cleanup completed ------------"
 fi
