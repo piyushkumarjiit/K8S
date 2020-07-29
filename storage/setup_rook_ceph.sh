@@ -178,9 +178,10 @@ else
 fi
 
 # To avoid csi-cephfs missing error
-echo "Fetch Ceph tools container name:" $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}')
+CEPH_TOOLS_POD=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}')
+echo "Fetch Ceph tools container name:" $CEPH_TOOLS_POD
 #kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash -c 'ceph fs subvolumegroup create myfs csi'
-kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') -- bash -c 'ceph fs subvolumegroup create myfs csi'
+kubectl -n rook-ceph exec -it $CEPH_TOOLS_POD -- bash -c 'ceph fs subvolumegroup create myfs csi'
 echo "CEPH FS Volume group created."
 rm -f rook-dashboard.yaml rook-cluster.yaml rook-operator.yaml rook-common.yaml
 
