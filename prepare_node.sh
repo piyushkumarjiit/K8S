@@ -149,24 +149,6 @@ fi
 
 sysctl -q --system
 
-if [[ -r /etc/yum.repos.d/kubernetes.repo ]]
-then
-	echo "Kubernetes repo already present."
-else
-	#Add kubernetes repo
-	cat <<-'EOF' > /etc/yum.repos.d/kubernetes.repo
-	[kubernetes]
-	name=Kubernetes
-	baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-$basearch
-	enabled=1
-	gpgcheck=1
-	repo_gpgcheck=1
-	gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-	exclude=kubelet kubeadm kubectl
-	EOF
-echo "Kubernetes repo added."
-fi
-
 echo "Add COPR and CRI-O repos."
 #Add EPEL Repo. Not needed thus commented out.
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
@@ -272,6 +254,24 @@ else
 	systemctl daemon-reload
 	systemctl restart docker
 	echo "Docker restarted."
+fi
+
+if [[ -r /etc/yum.repos.d/kubernetes.repo ]]
+then
+	echo "Kubernetes repo already present."
+else
+	#Add kubernetes repo
+	cat <<-'EOF' > /etc/yum.repos.d/kubernetes.repo
+	[kubernetes]
+	name=Kubernetes
+	baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-$basearch
+	enabled=1
+	gpgcheck=1
+	repo_gpgcheck=1
+	gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+	exclude=kubelet kubeadm kubectl
+	EOF
+echo "Kubernetes repo added."
 fi
 
 echo "Installing kubelet, kubeadm and kubectl (optional)."
