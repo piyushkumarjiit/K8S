@@ -143,6 +143,24 @@ then
 	#IP Tables need to be flushed. Would not be able to add nodes without this step.
 	iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
 	echo "Disabled firewalld. Please enable with direct rules."
+	echo "Setting IPTable rules"
+	## set default IPv6 policies to let everything in
+	ip6tables --policy INPUT   ACCEPT;
+	ip6tables --policy OUTPUT  ACCEPT;
+	ip6tables --policy FORWARD ACCEPT;
+	## start fresh
+	ip6tables -Z; # zero counters
+	ip6tables -F; # flush (delete) rules
+	ip6tables -X; # delete all extra chains
+	## set default IPv4 policies to let everything in
+	iptables --policy INPUT   ACCEPT;
+	iptables --policy OUTPUT  ACCEPT;
+	iptables --policy FORWARD ACCEPT;
+	## start fresh
+	iptables -Z; # zero counters
+	iptables -F; # flush (delete) rules
+	iptables -X; # delete all extra chains
+	echo "IPTables set afresh."
 else
 	echo "Firewalld seems to be disabled. Continuing."
 fi
@@ -164,7 +182,8 @@ dnf -y -q copr enable rhcontainerbot/container-selinux
 #For CentOS8
 curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
 #sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+#curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.3.repo https://provo-mirror.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.3/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.3.repo
 
 #For CentOS7
 #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
@@ -185,10 +204,12 @@ echo "Installed yum-utils"
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 if [[ $DOCKER_INSTALLED -gt 0 ]]
 then
-	
+
 	# Install Container-d
-	#https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
-	dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	#wget https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
+	#tar xvf containerd-1.3.5-linux-amd64.tar.gz
+	# dnf -y
+	dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
 	echo "Installed Container-d"
 
 	#install Containers common
