@@ -199,7 +199,6 @@ else
 	echo "Skipping setting as default storage in cluster."
 fi
 
-# To avoid csi-cephfs missing error
 CONTINUE_WAITING=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}' > /dev/null 2>&1; echo $?)
 echo -n "CEPH tools pod not ready. Waiting ."
 while [[ $CONTINUE_WAITING != 0 ]]
@@ -210,6 +209,7 @@ do
 done
 echo ""
 sleep 120
+# To avoid csi-cephfs missing error
 CSI_EXISTS=$(kubectl exec -i -n rook-ceph "$CEPH_TOOLS_POD" -- bash -c 'ceph fs subvolumegroup ls myfs | grep csi' > /dev/null 2>&1 ; echo $?)
 if [[ $CSI_EXISTS != 0 ]]
 then
