@@ -71,7 +71,8 @@ then
 	echo "haproxy removed."
 fi
 
-yum -y -q remove kube.*
+#yum -y -q remove kube.*
+yum -y -q remove kubelet kubeadm kubectl containerd.io
 yum -y -q autoremove
 echo "Yum remove step completed."
 
