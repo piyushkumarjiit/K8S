@@ -1,7 +1,7 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 # ROOK Deployment script. Need to be executed from a host where we have:
-#1. kubectl access
+#1. kubectl and internet access
 #2. hosts file or DNS based ssh access to all nodes
 #3. key based ssh enabled for all nodes
 
@@ -128,7 +128,7 @@ else
 	sed -i "s/rook-ceph.example.com/rook\.$INGRESS_DOMAIN_NAME/g" rook-dashboard.yaml
 	kubectl apply -f rook-dashboard.yaml
 	echo " Done. rook.$INGRESS_DOMAIN_NAME dashboard would use Ingress."
-	#rm -f rook-dashboard.yaml
+	rm -f rook-dashboard.yaml
 fi
 
 
@@ -161,14 +161,17 @@ else
 fi
 
 
-CONTINUE_WAITING=$(kubectl get service -n rook-ceph rook-ceph-mgr-dashboard > /dev/null 2>&1; echo $?)
+CONTINUE_WAITING=$(($(kubectl get service -n rook-ceph rook-ceph-mgr-dashboard > /dev/null 2>&1; echo $?) \
++ $(kubectl -n rook-ceph get secret rook-ceph-dashboard-password > /dev/null 2>&1; echo $?)))
 echo -n "Storage manager service not ready. Waiting ."
 while [[ $CONTINUE_WAITING != 0 ]]
 do
 	sleep 20
 	echo -n "."
- 	CONTINUE_WAITING=$(kubectl get service -n rook-ceph rook-ceph-mgr-dashboard > /dev/null 2>&1; echo $?)
+ 	CONTINUE_WAITING=$(($(kubectl get service -n rook-ceph rook-ceph-mgr-dashboard > /dev/null 2>&1; echo $?) \
++ $(kubectl -n rook-ceph get secret rook-ceph-dashboard-password > /dev/null 2>&1; echo $?)))
 done
+echo ""
 
 #Find the IP address allocated by your Load balancer using below command
 ROOK_DASHBOARD_IP=$(kubectl  get service -A | grep rook-ceph-mgr-dashboard | awk -F " " '{print $5}')
@@ -205,12 +208,19 @@ do
 	echo -n "."
  	CONTINUE_WAITING=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}' > /dev/null 2>&1; echo $?)
 done
-
-CEPH_TOOLS_POD=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}')
-echo "Fetch Ceph tools container name:" $CEPH_TOOLS_POD
-#kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash -c 'ceph fs subvolumegroup create myfs csi'
-kubectl exec -it -n rook-ceph "$CEPH_TOOLS_POD" -- bash -c 'ceph fs subvolumegroup create myfs csi'
-echo "CEPH FS Volume group created."
+echo ""
+sleep 120
+CSI_EXISTS=$(kubectl exec -i -n rook-ceph "$CEPH_TOOLS_POD" -- bash -c 'ceph fs subvolumegroup ls myfs | grep csi' > /dev/null 2>&1 ; echo $?)
+if [[ $CSI_EXISTS != 0 ]]
+then
+	CEPH_TOOLS_POD=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}')
+	echo "Fetch Ceph tools container name:" $CEPH_TOOLS_POD
+	#kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash -c 'ceph fs subvolumegroup create myfs csi'
+	kubectl exec -it -n rook-ceph "$CEPH_TOOLS_POD" -- bash -c 'ceph fs subvolumegroup create myfs csi'
+	echo "CEPH FS Volume group created."
+else
+	echo "CSI already exists."
+fi
 rm -f rook-dashboard.yaml rook-operator.yaml rook-common.yaml rook-cluster.yaml 
 
 echo "------------ Storage (Rook + Ceph) setup completed ------------"
