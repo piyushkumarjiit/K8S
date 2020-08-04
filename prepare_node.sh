@@ -140,27 +140,27 @@ then
 	#Stop and disable firewalld. Quick fix when you dont want to set up firewall fules.
 	systemctl stop firewalld
 	systemctl disable firewalld
-	#IP Tables need to be flushed. Would not be able to add nodes without this step.
-	iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-	echo "Disabled firewalld. Please enable with direct rules."
-	echo "Setting IPTable rules"
-	## set default IPv6 policies to let everything in
-	ip6tables --policy INPUT   ACCEPT;
-	ip6tables --policy OUTPUT  ACCEPT;
-	ip6tables --policy FORWARD ACCEPT;
-	## start fresh
-	ip6tables -Z; # zero counters
-	ip6tables -F; # flush (delete) rules
-	ip6tables -X; # delete all extra chains
-	## set default IPv4 policies to let everything in
-	iptables --policy INPUT   ACCEPT;
-	iptables --policy OUTPUT  ACCEPT;
-	iptables --policy FORWARD ACCEPT;
-	## start fresh
-	iptables -Z; # zero counters
-	iptables -F; # flush (delete) rules
-	iptables -X; # delete all extra chains
-	echo "IPTables set afresh."
+	# #IP Tables need to be flushed. Would not be able to add nodes without this step.
+	# iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
+	# echo "Disabled firewalld. Please enable with direct rules."
+	# echo "Setting IPTable rules"
+	# ## set default IPv6 policies to let everything in
+	# ip6tables --policy INPUT   ACCEPT;
+	# ip6tables --policy OUTPUT  ACCEPT;
+	# ip6tables --policy FORWARD ACCEPT;
+	# ## start fresh
+	# ip6tables -Z; # zero counters
+	# ip6tables -F; # flush (delete) rules
+	# ip6tables -X; # delete all extra chains
+	# ## set default IPv4 policies to let everything in
+	# iptables --policy INPUT   ACCEPT;
+	# iptables --policy OUTPUT  ACCEPT;
+	# iptables --policy FORWARD ACCEPT;
+	# ## start fresh
+	# iptables -Z; # zero counters
+	# iptables -F; # flush (delete) rules
+	# iptables -X; # delete all extra chains
+	# echo "IPTables set afresh."
 else
 	echo "Firewalld seems to be disabled. Continuing."
 fi
@@ -171,14 +171,15 @@ sysctl -q --system
 
 echo "Add COPR and CRI-O repos."
 #Add EPEL Repo. Not needed thus commented out.
+yum -y install epel-re*
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+#yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
-dnf -y -q install 'dnf-command(copr)'
+#dnf -y -q install 'dnf-command(copr)'
 
 #Below repo seems to be a dev one so use with caution
-dnf -y -q copr enable rhcontainerbot/container-selinux
+#dnf -y -q copr enable rhcontainerbot/container-selinux
 #Add CRI-O Repo.
 #For CentOS8
 #curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
@@ -187,9 +188,9 @@ dnf -y -q copr enable rhcontainerbot/container-selinux
 #curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://provo-mirror.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.3/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.3.repo
 
 #For CentOS7
-curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
+#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
 #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
 echo "Added COPR and CRI-O repos."
 
@@ -198,7 +199,7 @@ yum -y -q update
 
 #containerd.io package is related to the runc conflicting with the runc package from the container-tools
 echo "Install yum-utils"
-yum -y -q install yum-utils
+yum -y -q install yum-utils device-mapper-persistent-data lvm2
 echo "Installed yum-utils"
 
 #Check if Docker needs to be installed
@@ -210,15 +211,15 @@ then
 	#wget https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
 	#tar xvf containerd-1.3.5-linux-amd64.tar.gz
 	# dnf -y
-	dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	#dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
 	echo "Installed Container-d"
 
 	#install Containers common
 
 	#Install CRI-O
-	echo "Install CRI-O"
-	yum -y -q install cri-o
-	echo "Installed CRI-O"
+	#echo "Install CRI-O"
+	#yum -y -q install cri-o
+	#echo "Installed CRI-O"
 
 
 	#Install Docker on server
@@ -267,27 +268,27 @@ else
 fi
 
 #Setup Cgroup drivers. Either run this as root or accept the bad alignment of script :(
-if [[ -f /etc/docker/daemon.json ]]
-then
-	echo "daemon.json is already present. Keeping it as is."
-else
-	bash -c 'cat <<- EOF > /etc/docker/daemon.json
-	{
-	"exec-opts": ["native.cgroupdriver=systemd"],
-	"log-driver": "json-file",
-	"log-opts": {"max-size": "100m"},
-	"storage-driver": "overlay2",
-  	"storage-opts": [
-    "overlay2.override_kernel_check=true"
-  	]
-	}
-	EOF'
-	echo "Cgroup drivers updated."
-	# Restart Docker for changes to take effect
-	systemctl daemon-reload
-	systemctl restart docker
-	echo "Docker restarted."
-fi
+# if [[ -f /etc/docker/daemon.json ]]
+# then
+# 	echo "daemon.json is already present. Keeping it as is."
+# else
+# 	bash -c 'cat <<- EOF > /etc/docker/daemon.json
+# 	{
+# 	"exec-opts": ["native.cgroupdriver=systemd"],
+# 	"log-driver": "json-file",
+# 	"log-opts": {"max-size": "100m"},
+# 	"storage-driver": "overlay2",
+#   	"storage-opts": [
+#     "overlay2.override_kernel_check=true"
+#   	]
+# 	}
+# 	EOF'
+# 	echo "Cgroup drivers updated."
+# 	# Restart Docker for changes to take effect
+# 	systemctl daemon-reload
+# 	systemctl restart docker
+# 	echo "Docker restarted."
+# fi
 
 if [[ -r /etc/yum.repos.d/kubernetes.repo ]]
 then
