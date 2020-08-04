@@ -300,6 +300,9 @@ else
 	echo "Docker restarted."
 fi
 
+systemctl daemon-reload
+systemctl restart docker
+echo "Docker restarted."
 # if [[ -f /etc/docker/daemon.json ]]
 # then
 # 	echo "daemon.json is already present. Keeping it as is."
