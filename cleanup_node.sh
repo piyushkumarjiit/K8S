@@ -37,7 +37,7 @@ then
 	echo "kubelet removed."
 fi
 
-DOCKER_AVAILABLE=$(docker --version > /dev/null 2>&1; echo $?)
+DOCKER_AVAILABLE=$(docker -v > /dev/null 2>&1; echo $?)
 if [[ $DOCKER_AVAILABLE == 0 ]]
 then
 	echo "Pruning Docker"
@@ -45,10 +45,13 @@ then
 	systemctl stop docker
 	systemctl disable docker
 	echo "Removing Docker and CRI-O ."
-	yum -y -q remove docker-ce
+	yum -y -q remove docker-ce docker-ce-cli
 	echo "Docker removed."
 	yum -y -q remove cri-o
 	echo "cri-o removed."
+else
+	echo "Docker is not installed."
+	sleep 1
 fi
 
 KEEPALIVED_AVAILABLE=$(systemctl status keepalived.service > /dev/null 2>&1; echo $?)
@@ -59,6 +62,9 @@ then
 	systemctl disable keepalived.service
 	yum -y -q remove keepalived
 	echo "keepalived removed."
+else
+	echo "KEEPALIVED is not installed."
+	sleep 1
 fi
 
 HAPROXY_AVAILABLE=$(systemctl status haproxy.service > /dev/null 2>&1; echo $?)
@@ -69,6 +75,9 @@ then
 	systemctl disable haproxy.service
 	yum -y -q remove haproxy
 	echo "haproxy removed."
+else
+	echo "HAPROXY is not installed."
+	sleep 1
 fi
 
 #yum -y -q remove kube.*
