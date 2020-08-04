@@ -212,7 +212,7 @@ then
 	#tar xvf containerd-1.3.5-linux-amd64.tar.gz
 	# dnf -y
 	#dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
-	echo "Installed Container-d"
+	#echo "Installed Container-d"
 
 	#install Containers common
 
@@ -267,28 +267,28 @@ else
 	echo "Docker already installed."
 fi
 
-#Setup Cgroup drivers. Either run this as root or accept the bad alignment of script :(
-# if [[ -f /etc/docker/daemon.json ]]
-# then
-# 	echo "daemon.json is already present. Keeping it as is."
-# else
-# 	bash -c 'cat <<- EOF > /etc/docker/daemon.json
-# 	{
-# 	"exec-opts": ["native.cgroupdriver=systemd"],
-# 	"log-driver": "json-file",
-# 	"log-opts": {"max-size": "100m"},
-# 	"storage-driver": "overlay2",
-#   	"storage-opts": [
-#     "overlay2.override_kernel_check=true"
-#   	]
-# 	}
-# 	EOF'
-# 	echo "Cgroup drivers updated."
-# 	# Restart Docker for changes to take effect
-# 	systemctl daemon-reload
-# 	systemctl restart docker
-# 	echo "Docker restarted."
-# fi
+Setup Cgroup drivers. Either run this as root or accept the bad alignment of script :(
+if [[ -f /etc/docker/daemon.json ]]
+then
+	echo "daemon.json is already present. Keeping it as is."
+else
+	bash -c 'cat <<- EOF > /etc/docker/daemon.json
+	{
+	"exec-opts": ["native.cgroupdriver=systemd"],
+	"log-driver": "json-file",
+	"log-opts": {"max-size": "100m"},
+	"storage-driver": "overlay2",
+  	"storage-opts": [
+    "overlay2.override_kernel_check=true"
+  	]
+	}
+	EOF'
+	echo "Cgroup drivers updated."
+	# Restart Docker for changes to take effect
+	systemctl daemon-reload
+	systemctl restart docker
+	echo "Docker restarted."
+fi
 
 if [[ -r /etc/yum.repos.d/kubernetes.repo ]]
 then
