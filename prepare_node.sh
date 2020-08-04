@@ -149,40 +149,47 @@ fi
 
 sysctl -q --system
 
-echo "Add COPR and CRI-O repos."
+# Install Container-d
+#https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
+sudo dnf install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+echo "Installed Container-d"
+
+#echo "Add COPR and CRI-O repos."
 #Add EPEL Repo. Not needed thus commented out.
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
-#Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
-dnf -y -q install 'dnf-command(copr)'
+# #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
+# dnf -y -q install 'dnf-command(copr)'
 
-#Below repo seems to be a dev one so use with caution
-dnf -y -q copr enable rhcontainerbot/container-selinux
-#Add CRI-O Repo.
-#For CentOS8
-curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
-#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+# #Below repo seems to be a dev one so use with caution
+# dnf -y -q copr enable rhcontainerbot/container-selinux
+# #Add CRI-O Repo.
+# #For CentOS8
+# curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+# #sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
+# curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
-#For CentOS7
-#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
-#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+# #For CentOS7
+# #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
+# #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
+# #sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
-echo "Added COPR and CRI-O repos."
+# echo "Added COPR and CRI-O repos."
 
-#Update packages.
-yum -y -q update
+# #Update packages.
+# yum -y -q update
 
-#containerd.io package is related to the runc conflicting with the runc package from the container-tools
-echo "Install yum-utils"
-yum -y -q install yum-utils
-echo "Installed yum-utils"
+# #containerd.io package is related to the runc conflicting with the runc package from the container-tools
+# echo "Install yum-utils"
+# yum -y -q install yum-utils
+# echo "Installed yum-utils"
 
-#Install CRI-O
-echo "Install CRI-O"
-yum -y -q install cri-o
-echo "Installed CRI-O"
+# #install Containers common
+
+# #Install CRI-O
+# echo "Install CRI-O"
+# yum -y -q install cri-o
+# echo "Installed CRI-O"
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
