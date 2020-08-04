@@ -65,11 +65,31 @@ then
 	# Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
 	echo "Disabling SELINUX."
 	setenforce 0
-	sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+	#sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+	sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config
 	echo "Done."
 else
 	echo "SELinux already set as permissive. No change needed."
 fi
+
+#Disable and Stop firewalld. Unless firewalld is stopped, HAProxy would not work
+FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
+if [[ FIREWALLD_STATUS -gt 0 ]]
+then
+	# Setup your firewall settings
+	#firewall-cmd --zone=public --add-port=10250/tcp --permanent        # Port used by kubelet
+	#firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
+	#firewall-cmd --reload
+	
+	#Stop and disable firewalld. Quick fix when you dont want to set up firewall fules.
+	systemctl stop firewalld
+	systemctl disable firewalld
+else
+	echo "Firewalld seems to be disabled. Continuing."
+fi
+
+# Added below to fix the issue with IP4 forwarding
+modprobe br_netfilter
 
 IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
 if [[ $IP4_FORWARDING_STATUS != 0 ]]
@@ -77,9 +97,9 @@ then
 	echo "Adding IPv4 forwarding rule."
 	bash -c 'cat <<-EOF >>  /etc/sysctl.conf
 	net.ipv4.ip_forward=1
-	net.bridge.bridge-nf-call-iptables=1
 	EOF'
 	sysctl -p -q
+	#	net.bridge.bridge-nf-call-iptables=1 removed due to error of missing file
 	echo "Done."
 else
 	echo "IPV4 FORWARDING flag already set. No change needed."
@@ -111,6 +131,8 @@ else
 		echo "IP tables updated."
 fi
 
+sysctl --system
+
 #Check if swap is already commented out in fstab
 SWAP_FSTAB=$(cat /etc/fstab | grep '^#.*-swap' > /dev/null 2>&1; echo $?)
 if [[ $SWAP_FSTAB == 0 ]]
@@ -128,46 +150,32 @@ else
 	RESTART_NEEDED=0
 fi
 
-#Disable and Stop firewalld. Unless firewalld is stopped, HAProxy would not work
-FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
-if [[ FIREWALLD_STATUS -gt 0 ]]
-then
-	# Setup your firewall settings
-	#firewall-cmd --zone=public --add-port=10250/tcp --permanent        # Port used by kubelet
-	#firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
-	#firewall-cmd --reload
-	
-	#Stop and disable firewalld. Quick fix when you dont want to set up firewall fules.
-	systemctl stop firewalld
-	systemctl disable firewalld
-	# #IP Tables need to be flushed. Would not be able to add nodes without this step.
-	# iptables -F && sudo iptables -t nat -F && sudo iptables -t mangle -F && sudo iptables -X
-	# echo "Disabled firewalld. Please enable with direct rules."
-	# echo "Setting IPTable rules"
-	# ## set default IPv6 policies to let everything in
-	# ip6tables --policy INPUT   ACCEPT;
-	# ip6tables --policy OUTPUT  ACCEPT;
-	# ip6tables --policy FORWARD ACCEPT;
-	# ## start fresh
-	# ip6tables -Z; # zero counters
-	# ip6tables -F; # flush (delete) rules
-	# ip6tables -X; # delete all extra chains
-	# ## set default IPv4 policies to let everything in
-	# iptables --policy INPUT   ACCEPT;
-	# iptables --policy OUTPUT  ACCEPT;
-	# iptables --policy FORWARD ACCEPT;
-	# ## start fresh
-	# iptables -Z; # zero counters
-	# iptables -F; # flush (delete) rules
-	# iptables -X; # delete all extra chains
-	# echo "IPTables set afresh."
-else
-	echo "Firewalld seems to be disabled. Continuing."
-fi
+
 
 sysctl -q --system
 
+if [[ -r /etc/yum.repos.d/kubernetes.repo ]]
+then
+	echo "Kubernetes repo already present."
+else
+	#Add kubernetes repo
+	cat <<-'EOF' > /etc/yum.repos.d/kubernetes.repo
+	[kubernetes]
+	name=Kubernetes
+	baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-$basearch
+	enabled=1
+	gpgcheck=1
+	repo_gpgcheck=1
+	gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+	exclude=kubelet kubeadm kubectl
+	EOF
+echo "Kubernetes repo added."
+fi
 
+#containerd.io package is related to the runc conflicting with the runc package from the container-tools
+echo "Install yum-utils"
+yum -y -q install yum-utils device-mapper-persistent-data lvm2
+echo "Installed yum-utils"
 
 echo "Add COPR and CRI-O repos."
 #Add EPEL Repo. Not needed thus commented out.
@@ -197,10 +205,7 @@ echo "Added COPR and CRI-O repos."
 #Update packages.
 yum -y -q update
 
-#containerd.io package is related to the runc conflicting with the runc package from the container-tools
-echo "Install yum-utils"
-yum -y -q install yum-utils device-mapper-persistent-data lvm2
-echo "Installed yum-utils"
+
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
@@ -211,8 +216,8 @@ then
 	#wget https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
 	#tar xvf containerd-1.3.5-linux-amd64.tar.gz
 	# dnf -y
-	#dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
-	#echo "Installed Container-d"
+	dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	echo "Installed Container-d"
 
 	#install Containers common
 
@@ -267,47 +272,6 @@ else
 	echo "Docker already installed."
 fi
 
-Setup Cgroup drivers. Either run this as root or accept the bad alignment of script :(
-if [[ -f /etc/docker/daemon.json ]]
-then
-	echo "daemon.json is already present. Keeping it as is."
-else
-	bash -c 'cat <<- EOF > /etc/docker/daemon.json
-	{
-	"exec-opts": ["native.cgroupdriver=systemd"],
-	"log-driver": "json-file",
-	"log-opts": {"max-size": "100m"},
-	"storage-driver": "overlay2",
-  	"storage-opts": [
-    "overlay2.override_kernel_check=true"
-  	]
-	}
-	EOF'
-	echo "Cgroup drivers updated."
-	# Restart Docker for changes to take effect
-	systemctl daemon-reload
-	systemctl restart docker
-	echo "Docker restarted."
-fi
-
-if [[ -r /etc/yum.repos.d/kubernetes.repo ]]
-then
-	echo "Kubernetes repo already present."
-else
-	#Add kubernetes repo
-	cat <<-'EOF' > /etc/yum.repos.d/kubernetes.repo
-	[kubernetes]
-	name=Kubernetes
-	baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-$basearch
-	enabled=1
-	gpgcheck=1
-	repo_gpgcheck=1
-	gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-	exclude=kubelet kubeadm kubectl
-	EOF
-echo "Kubernetes repo added."
-fi
-
 echo "Installing kubelet, kubeadm and kubectl (optional)."
 if [[  $NODE_TYPE == "Worker" ]]
 then
@@ -322,29 +286,66 @@ else
 	echo "Installed kubelet, kubeadm and kubectl on Master node."
 fi
 
+#Setup Cgroup drivers. Either run this as root or accept the bad alignment of script :(
+if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
+then
+	echo "10-kubeadm.conf is already present. Keeping it as is."
+else
+	echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+	echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+	echo "Updated kubeadm.conf"
+	# Restart Docker for changes to take effect
+	systemctl daemon-reload
+	systemctl restart docker
+	echo "Docker restarted."
+fi
+
+# if [[ -f /etc/docker/daemon.json ]]
+# then
+# 	echo "daemon.json is already present. Keeping it as is."
+# else
+# 	bash -c 'cat <<- EOF > /etc/docker/daemon.json
+# 	{
+# 	"exec-opts": ["native.cgroupdriver=systemd"],
+# 	"log-driver": "json-file",
+# 	"log-opts": {"max-size": "100m"},
+# 	"storage-driver": "overlay2",
+#   	"storage-opts": [
+#     "overlay2.override_kernel_check=true"
+#   	]
+# 	}
+# 	EOF'
+# 	echo "Cgroup drivers updated."
+# 	# Restart Docker for changes to take effect
+# 	systemctl daemon-reload
+# 	systemctl restart docker
+# 	echo "Docker restarted."
+# fi
+
+
 systemctl stop kubelet
 echo "Setting IPTable rules"
-## set default IPv6 policies to let everything in
-ip6tables --policy INPUT   ACCEPT;
-ip6tables --policy OUTPUT  ACCEPT;
-ip6tables --policy FORWARD ACCEPT;
-## start fresh
-ip6tables -Z; # zero counters
-ip6tables -F; # flush (delete) rules
-ip6tables -X; # delete all extra chains
-## set default IPv4 policies to let everything in
-iptables --policy INPUT   ACCEPT;
-iptables --policy OUTPUT  ACCEPT;
-iptables --policy FORWARD ACCEPT;
-## start fresh
-iptables -Z; # zero counters
-iptables -F; # flush (delete) rules
-iptables -X; # delete all extra chains
-echo "IPTables set afresh."
-#Restart kublet
-systemctl daemon-reload
-systemctl enable kubelet 
-systemctl start kubelet
+# ## set default IPv6 policies to let everything in
+# ip6tables --policy INPUT   ACCEPT;
+# ip6tables --policy OUTPUT  ACCEPT;
+# ip6tables --policy FORWARD ACCEPT;
+# ## start fresh
+# ip6tables -Z; # zero counters
+# ip6tables -F; # flush (delete) rules
+# ip6tables -X; # delete all extra chains
+# ## set default IPv4 policies to let everything in
+# iptables --policy INPUT   ACCEPT;
+# iptables --policy OUTPUT  ACCEPT;
+# iptables --policy FORWARD ACCEPT;
+# ## start fresh
+# iptables -Z; # zero counters
+# iptables -F; # flush (delete) rules
+# iptables -X; # delete all extra chains
+# echo "IPTables set afresh."
+# #Restart kublet
+# systemctl daemon-reload
+# systemctl enable kubelet 
+# systemctl start kubelet
 
 if [[ $RESTART_NEEDED == 0 ]]
 then
