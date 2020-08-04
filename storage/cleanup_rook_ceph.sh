@@ -19,7 +19,7 @@ ROOK_STORAGE_CLASS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/ma
 CEPH_TOOLBOX_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 
 #All Worker Nodes
-export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.137" "192.168.2.227")
+export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
 export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
 #Username that we use to connect to remote machine via SSH
 USERNAME="root"

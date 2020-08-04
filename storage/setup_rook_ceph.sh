@@ -24,7 +24,7 @@ export CURRENT_NODE_NAME="$(hostname)"
 #IP of the node from where we run the script
 export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 #All Worker Nodes
-export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.137" "192.168.2.227")
+export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
 export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
 # Domain name to be used by Ingress. Using this ceph dashboard URL would become: rook.<domain.com>
 INGRESS_DOMAIN_NAME=bifrost.com
@@ -94,36 +94,41 @@ wget -q $CEPH_COMMON_YAML -O rook-common.yaml
 # Get Operator YAML
 #wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
 wget -q $CEPH_OPERATOR_YAML -O rook-operator.yaml
+
 # Deploy Rook
 kubectl create -f rook-common.yaml
+sleep 15
+
 kubectl create -f rook-operator.yaml
+sleep 15
 # Download Cephs cluster YAML
 #wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
 wget -q $CEPH_CLUSTER_YAML -O rook-cluster.yaml
 # Create Cluster
 kubectl create -f rook-cluster.yaml
-
-#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
-
+sleep 15
 
 if [[ $SETUP_FOR_LOADBALANCER == "true" ]]
 then
-	echo "Setting up rook-ceph.$INGRESS_DOMAIN_NAME to be used via a load balancer."
+	echo "Setting up rook.$INGRESS_DOMAIN_NAME to be used via a load balancer."
 	wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
 	#Update the file to make the name same as the one running in cluster and then apply
 	sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" rook-dashboard.yaml
 	kubectl apply -f rook-dashboard.yaml
-	echo " Done. rook.$INGRESS_DOMAIN_NAME dashboard would use load balancer."
+	echo "Done. rook.$INGRESS_DOMAIN_NAME dashboard would use load balancer."
 else
 	echo "Setting up rook-ceph.$INGRESS_DOMAIN_NAME to be used with ingress."
-	wget -q $CEPH_DASHBOARD_YAML -O rook-dashboard.yaml
-	#kubectl get configmap kube-proxy -n kube-system -o yaml | sed -e "s/strictARP: false/strictARP: true/" | kubectl apply -f - -n kube-system
-	#kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
+	wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
+	#Update the file to make the name same as the one running in cluster and then apply. Possibel workaround as operator is not creating service
 	#sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" rook-dashboard.yaml
+	#sed -i "s/type: LoadBalancer/type: ClusterIP/" rook-dashboard.yaml
+	#kubectl apply -f rook-dashboard.yaml
+	#rm -f rook-dashboard.yaml
+	wget -q $CEPH_DASHBOARD_YAML -O rook-dashboard.yaml
 	sed -i "s/rook-ceph.example.com/rook\.$INGRESS_DOMAIN_NAME/g" rook-dashboard.yaml
 	kubectl apply -f rook-dashboard.yaml
 	echo " Done. rook.$INGRESS_DOMAIN_NAME dashboard would use Ingress."
-	rm -f rook-dashboard.yaml
+	#rm -f rook-dashboard.yaml
 fi
 
 
@@ -131,6 +136,7 @@ fi
 #wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
 wget -q $CEPH_FILSYSTEM_YAML -O rook-filesystem.yaml
 kubectl apply -f rook-filesystem.yaml
+sleep 15
 echo "Ceph Filesystem type storage created."
 rm -f rook-filesystem.yaml
 
@@ -140,7 +146,7 @@ wget -q $ROOK_STORAGE_CLASS_YAML -O rook-storage_class.yaml
 kubectl apply -f rook-storage_class.yaml
 echo "StorageClass config applied."
 rm -f rook-storage_class.yaml
-
+sleep 15
 if [[ $INSTALL_CEPH_TOOLS == "true" ]]
 then
 	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
@@ -154,13 +160,26 @@ else
 	echo "Skipping Ceph toolbox setup."
 fi
 
-sleep 120
+
+CONTINUE_WAITING=$(kubectl get service -n rook-ceph rook-ceph-mgr-dashboard > /dev/null 2>&1; echo $?)
+echo -n "Storage manager service not ready. Waiting ."
+while [[ $CONTINUE_WAITING != 0 ]]
+do
+	sleep 20
+	echo -n "."
+ 	CONTINUE_WAITING=$(kubectl get service -n rook-ceph rook-ceph-mgr-dashboard > /dev/null 2>&1; echo $?)
+done
+
 #Find the IP address allocated by your Load balancer using below command
 ROOK_DASHBOARD_IP=$(kubectl  get service -A | grep rook-ceph-mgr-dashboard | awk -F " " '{print $5}')
 if [[ $ROOK_DASHBOARD_IP != '<pending>' && $SETUP_FOR_LOADBALANCER == "true" ]]
 then
 	echo "LB assigned external IP."
 	echo 'Connect to Cephs Dashboard on https://'$ROOK_DASHBOARD_IP':8443'
+	echo "Default login: admin and Password: $(kubectl -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode && echo)"
+elif [[ $SETUP_FOR_LOADBALANCER != "true" ]]
+then
+	echo "Ingress configured for Rook Dashboard. Use: https://rook.$INGRESS_DOMAIN_NAME"
 	echo "Default login: admin and Password: $(kubectl -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode && echo)"
 else
 	echo "No external IP assigned."
@@ -181,8 +200,8 @@ fi
 CEPH_TOOLS_POD=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}')
 echo "Fetch Ceph tools container name:" $CEPH_TOOLS_POD
 #kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash -c 'ceph fs subvolumegroup create myfs csi'
-kubectl -n rook-ceph exec -it $CEPH_TOOLS_POD -- bash -c 'ceph fs subvolumegroup create myfs csi'
+kubectl exec -it -n rook-ceph "$CEPH_TOOLS_POD" -- bash -c 'ceph fs subvolumegroup create myfs csi'
 echo "CEPH FS Volume group created."
-rm -f rook-dashboard.yaml rook-cluster.yaml rook-operator.yaml rook-common.yaml
+rm -f rook-dashboard.yaml rook-operator.yaml rook-common.yaml rook-cluster.yaml 
 
 echo "------------ Storage (Rook + Ceph) setup completed ------------"
