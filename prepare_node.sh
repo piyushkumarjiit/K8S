@@ -229,11 +229,11 @@ then
 
 	#Install Docker on server
 	echo "Docker not available. Trying to install Docker."
-	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+	#dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+	wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
+
 	dnf -y -q install docker-ce
-	usermod -aG docker $USER
-	usermod -aG docker "$USERNAME"
-	RESTART_NEEDED=0
+
 	#Enable Docker to start on start up
 	systemctl enable docker
 	#Start Docker
@@ -242,15 +242,15 @@ then
 	DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 	if [[ $DOCKER_INSTALLED == 0 ]]
 	then
+		usermod -aG docker $USER
+		usermod -aG docker "$USERNAME"
 		echo "Docker seems to be working."
 		echo "But you might need to disconnect and reconnect for usermod changes to reflect."
 	else
 		echo "Unable to install Docker. Trying the nobest option as last resort."
 		sleep 2
-		dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+		#dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 		dnf -y -q install docker-ce --nobest
-		usermod -aG docker $USER
-		usermod -aG docker "$USERNAME"
 		#Enable Docker to start on start up
 		systemctl enable docker
 		#Start Docker
@@ -263,6 +263,9 @@ then
 			sleep 2
 			exit 1
 		else
+			usermod -aG docker $USER
+			usermod -aG docker "$USERNAME"
+			RESTART_NEEDED=0
 			echo "Docker seems to be working but you may need to disconnect and reconnect for usermod changes to reflect."
 			sleep 5
 			exit 1
@@ -287,18 +290,22 @@ else
 fi
 
 #Setup Cgroup drivers. Either run this as root or accept the bad alignment of script :(
-if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
-then
-	echo "10-kubeadm.conf is already present. Keeping it as is."
-else
-	echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-	echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-	echo "Updated kubeadm.conf"
-	# Restart Docker for changes to take effect
-	systemctl daemon-reload
-	systemctl restart docker
-	echo "Docker restarted."
-fi
+echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+echo "Updated kubeadm.conf"
+
+# if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
+# then
+# 	echo "10-kubeadm.conf is already present. Keeping it as is."
+# else
+# 	echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+# 	echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+# 	echo "Updated kubeadm.conf"
+# 	# Restart Docker for changes to take effect
+# 	systemctl daemon-reload
+# 	systemctl restart docker
+# 	echo "Docker restarted."
+# fi
 
 systemctl daemon-reload
 systemctl restart docker
