@@ -143,6 +143,7 @@ rm -Rf /opt/cni /var/lib/cni /var/lib/calico /var/lib/weave
 rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
 rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-engine  /var/lib/dockershim
+rm -Rf /usr/lib/systemd/system/kubelet.service.d
 
 
 
