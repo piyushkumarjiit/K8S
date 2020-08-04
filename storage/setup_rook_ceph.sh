@@ -197,6 +197,15 @@ else
 fi
 
 # To avoid csi-cephfs missing error
+CONTINUE_WAITING=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}' > /dev/null 2>&1; echo $?)
+echo -n "CEPH tools pod not ready. Waiting ."
+while [[ $CONTINUE_WAITING != 0 ]]
+do
+	sleep 20
+	echo -n "."
+ 	CONTINUE_WAITING=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}' > /dev/null 2>&1; echo $?)
+done
+
 CEPH_TOOLS_POD=$(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}')
 echo "Fetch Ceph tools container name:" $CEPH_TOOLS_POD
 #kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash -c 'ceph fs subvolumegroup create myfs csi'
