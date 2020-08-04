@@ -5,6 +5,10 @@
 #2. sudo level access
 #3. internet access to fetch files
 #4. FQDN that was used by ingress
+
+#sudo ./cleanup_monitoring_all.sh | tee cleanup_monitoring.log
+#sudo ./cleanup_monitoring_all.sh |& tee cleanup_monitoring.log
+
 echo "----------- Cleaning Prometheus + Grafana + Alertmanager  ------------"
 #YAML and Git variables
 KUBE_PROMETHEUS_REPO=https://github.com/coreos/kube-prometheus.git
@@ -47,22 +51,35 @@ if [[ $KUBECTL_AVAILABLE == 0  ]]
 then
 	# Delete the ingress config YAML
 	kubectl delete -f monitoring-dashboard-ingress-http.yaml
+	echo "Ingress deleted using YAML."
 	sleep 2
 	# Delete PVC for Grafana
+	echo "Trying to delete Grafana PVC"
 	kubectl delete -f monitoring-grafana_pvc.yaml
+	PVC_DELETE_STUCK=$(kubectl get pvc -n monitoring grafana-pvc | grep Terminating > /dev/null 2>&1; echo $? )
+	sleep 10
+	if [[ $PVC_DELETE_STUCK == 0 ]]
+	then
+		kubectl patch pvc -n monitoring grafana-pvc -p '{"metadata":{"finalizers":null}}'
+		echo "Had to use patching to fix PVC delete."
+	else
+		echo "PVC for Grafana deleted using YAML."
+	fi
 	#Go to HOME
 	cd ~
 	if [[ -d my-kube-prometheus ]]
 	then
+		echo "Deleting using existing YAML files present in my-kube-prometheus folder."
 		# Got to my-kube-prometheus directory
 		cd my-kube-prometheus
-			# Delete monitoring configs using YAML
-			kubectl delete -f manifests/
-			sleep 2
-			# Delete namespaces and CRDs using YAML
-			kubectl delete -f manifests/setup
-			sleep 2
-			rm -f monitoring-build.sh monitoring-example.jsonnet
+		# Delete monitoring configs using YAML
+		kubectl delete -f manifests/
+		sleep 2
+		# Delete namespaces and CRDs using YAML
+		kubectl delete -f manifests/setup
+		echo "Done."
+		sleep 2
+		rm -f monitoring-build.sh monitoring-example.jsonnet
 	else
 		echo "Old YAML files are deleted. Run setup in dry run mode to regenrate. Exiting."
 		sleep 2

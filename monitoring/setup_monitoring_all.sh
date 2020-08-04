@@ -6,6 +6,10 @@
 #3. internet access to fetch files
 #4. FQDN that can be used by ingress
 
+#sudo ./setup_monitoring_all.sh | tee setup_monitoring.log
+#sudo ./setup_monitoring_all.sh |& tee setup_monitoring.log
+
+echo "----------- Setting up Prometheus + Grafana + Alertmanager  ------------"
 export KUBE_PROMETHEUS_REPO=https://github.com/coreos/kube-prometheus.git
 #export MONITORING_INGRESS_JSONNET=https://raw.githubusercontent.com/coreos/kube-prometheus/b55c2825f7fa4491c6018bd256ef5d7e0b62404c/examples/ingress.jsonnet
 export PROMETHEUS_PVC_JSONNET=https://raw.githubusercontent.com/coreos/kube-prometheus/master/examples/prometheus-pvc.jsonnet
@@ -55,7 +59,7 @@ then
 	echo "Installing go."
 	yum -y -q install go
 fi
-sudo yum -y -q install go git
+yum -y -q install go git
 echo "Go and Git installed."
 cd ~
 # Install Jsonnet
@@ -65,10 +69,15 @@ then
 	echo "Installing jsonnet."
 	go get github.com/google/go-jsonnet/cmd/jsonnet
 	chmod 755 ~/go/bin/jsonnet
-	sudo cp ~/go/bin/jsonnet /usr/local/bin/jsonnet
-	sudo cp ~/go/bin/jsonnet /usr/bin/jsonnet
-	echo "jsonnet installed."
-	jsonnet -version
+	cp ~/go/bin/jsonnet /usr/local/bin/jsonnet
+	cp ~/go/bin/jsonnet /usr/bin/jsonnet
+	JSONNET_INSTALLED=$(jsonnet -version >/dev/null 2>&1; echo $?)
+	if [[  $JSONNET_INSTALLED == 0 ]]
+	then
+		echo "Jsonnet installed."
+	else
+		echo "Jsonnet installation failed."
+	fi
 fi
 # Install Jsonnet Bundler
 JB_INSTALLED=$(jb -h >/dev/null 2>&1; echo $?)
@@ -77,10 +86,15 @@ then
 	echo "Installing jb."
 	go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
 	chmod 755 ~/go/bin/jb
-	sudo cp ~/go/bin/jb /usr/local/bin/jb
-	sudo cp ~/go/bin/jb /usr/bin/jb
-	echo "Jsonnet builder installed."
-	jb -h
+	cp ~/go/bin/jb /usr/local/bin/jb
+	cp ~/go/bin/jb /usr/bin/jb	
+	JB_INSTALLED=$(jb -h >/dev/null 2>&1; echo $?)
+	if [[  $JB_INSTALLED == 0 ]]
+	then
+		echo "Jsonnet builder installed."
+	else
+		echo "Jsonnet builder installation failed."
+	fi
 fi
 
 # Install gojsonttoyaml. Used to generate files later
@@ -90,9 +104,15 @@ then
 	echo "Installing gojsontoyaml."
 	go get github.com/brancz/gojsontoyaml
 	chmod 755 ~/go/bin/gojsontoyaml
-	sudo cp ~/go/bin/gojsontoyaml /usr/local/bin/gojsontoyaml
-	sudo cp ~/go/bin/gojsontoyaml /usr/bin/gojsontoyaml
-	echo "GoJsonToYaml installed."
+	cp ~/go/bin/gojsontoyaml /usr/local/bin/gojsontoyaml
+	cp ~/go/bin/gojsontoyaml /usr/bin/gojsontoyaml
+	JSONTOYAML_INSTALLED=$(echo '{"test":"test \\nmultiple"}' | gojsontoyaml >/dev/null 2>&1; echo $?)
+	if [[  $JSONTOYAML_INSTALLED == 0 ]]
+	then
+		echo "GoJsonToYaml installed."
+	else
+		echo "GoJsonToYaml installation failed."
+	fi
 fi
 
 # Go HOME
@@ -103,17 +123,20 @@ mkdir -p my-kube-prometheus; cd my-kube-prometheus
 jb init  # Creates the initial/empty "jsonnetfile.json"
 # Installs all the kube-prometheus jb dependency
 jb install github.com/coreos/kube-prometheus/jsonnet/kube-prometheus@release-0.5
+echo "Kube-Prometheus cloned from repo."
 # Update jb
 jb update
+echo "JB Update completed.."
 # Fetch build.sh from github repo
 wget -q $KP_BUILD_SH -O monitoring-build.sh
 chmod +x monitoring-build.sh
+echo "monitoring-build downloaded and permission updated."
 # Fetch Prometheus PVC example from github repo
 wget -q $PROMETHEUS_PVC_JSONNET -O monitoring-example.jsonnet
 # Update the Storage class in monitoring-example.jsonnet
 sed -i "s/pvc.mixin.spec.withStorageClassName('ssd'),/pvc.mixin.spec.withStorageClassName('$STORAGE_CLASS'),/" monitoring-example.jsonnet
 sed -i "s/pvc.mixin.spec.resources.withRequests({ storage: '100Gi' }/pvc.mixin.spec.resources.withRequests({ storage: '$STORAGE_SIZE' }/" monitoring-example.jsonnet
-
+echo "PROMETHEUS_PVC_JSONNET downloaded and PVC config updated."
 # Update Jsonnet to include extra namespaces in the cluster. Probably not needed.
 # Fetch namespace jsonnet
 #wget -q https://raw.githubusercontent.com/coreos/kube-prometheus/b55c2825f7fa4491c6018bd256ef5d7e0b62404c/examples/additional-namespaces.jsonnet
@@ -142,20 +165,29 @@ then
 
 	# Apply rest of the YAMLs
 	kubectl create -f manifests/
-
+	
+	echo "Setup ingress for monitoring dashboards."
 	# Fetch the Ingress YAML from github repo
 	wget -q $MONITORING_INGRESS_YAML
 	# Update the template with your domain name
 	sed -i "s/example.com/$INGRESS_DOMAIN_NAME/g" monitoring-dashboard-ingress-http.yaml
-
-
 	# Apply the ingress YAML
 	kubectl apply -f monitoring-dashboard-ingress-http.yaml
+	echo "Ingress setup."
 	sleep 2
 	rm -f monitoring-dashboard-ingress-http.yaml
 	rm -f monitoring-build.sh monitoring-example.jsonnet
 	cd ~
-	rm -Rf go	
+	#rm -Rf go	
+	CONTINUE_WAITING=$(kubectl get pods -n monitoring | grep grafana | grep Running > /dev/null 2>&1; echo $?)
+	echo -n "Monitoring pods not ready. Waiting ."
+	while [[ $CONTINUE_WAITING != 0 ]]
+	do
+		sleep 20
+		echo -n "."
+	 	CONTINUE_WAITING=$(kubectl get pods -n monitoring | grep grafana | grep Running > /dev/null 2>&1; echo $?)
+	done
+	echo ""
 
 	echo "You can try logging in to Grafana (grafana.$INGRESS_DOMAIN_NAME), Prometheus (prometheus.$INGRESS_DOMAIN_NAME) and Alertmanager (alertmanager.$INGRESS_DOMAIN_NAME)."
 	# Default Grafana login admin/admin
@@ -168,5 +200,5 @@ rm -f /usr/bin/jsonnet
 rm -f /usr/bin/jb
 rm -f /usr/bin/gojsontoyaml
 
-echo "All done."
+echo "----------- All done ----------- "
 
