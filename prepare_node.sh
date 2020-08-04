@@ -300,24 +300,24 @@ else
 fi
 
 systemctl stop kubelet
-# echo "Setting IPTable rules"
-# ## set default IPv6 policies to let everything in
-# ip6tables --policy INPUT   ACCEPT;
-# ip6tables --policy OUTPUT  ACCEPT;
-# ip6tables --policy FORWARD ACCEPT;
-# ## start fresh
-# ip6tables -Z; # zero counters
-# ip6tables -F; # flush (delete) rules
-# ip6tables -X; # delete all extra chains
-# ## set default IPv4 policies to let everything in
-# iptables --policy INPUT   ACCEPT;
-# iptables --policy OUTPUT  ACCEPT;
-# iptables --policy FORWARD ACCEPT;
-# ## start fresh
-# iptables -Z; # zero counters
-# iptables -F; # flush (delete) rules
-# iptables -X; # delete all extra chains
-# echo "IPTables set afresh."
+echo "Setting IPTable rules"
+## set default IPv6 policies to let everything in
+ip6tables --policy INPUT   ACCEPT;
+ip6tables --policy OUTPUT  ACCEPT;
+ip6tables --policy FORWARD ACCEPT;
+## start fresh
+ip6tables -Z; # zero counters
+ip6tables -F; # flush (delete) rules
+ip6tables -X; # delete all extra chains
+## set default IPv4 policies to let everything in
+iptables --policy INPUT   ACCEPT;
+iptables --policy OUTPUT  ACCEPT;
+iptables --policy FORWARD ACCEPT;
+## start fresh
+iptables -Z; # zero counters
+iptables -F; # flush (delete) rules
+iptables -X; # delete all extra chains
+echo "IPTables set afresh."
 #Restart kublet
 systemctl daemon-reload
 systemctl enable kubelet 
