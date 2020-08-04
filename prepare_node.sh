@@ -171,7 +171,8 @@ sysctl -q --system
 
 echo "Add COPR and CRI-O repos."
 #Add EPEL Repo. Not needed thus commented out.
-yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+#yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
 dnf -y -q install 'dnf-command(copr)'
