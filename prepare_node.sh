@@ -158,33 +158,33 @@ echo "Installed Container-d"
 #Add EPEL Repo. Not needed thus commented out.
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
-# #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
-# dnf -y -q install 'dnf-command(copr)'
+#Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
+dnf -y -q install 'dnf-command(copr)'
 
-# #Below repo seems to be a dev one so use with caution
-# dnf -y -q copr enable rhcontainerbot/container-selinux
-# #Add CRI-O Repo.
-# #For CentOS8
-# curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
-# #sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-# curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+#Below repo seems to be a dev one so use with caution
+dnf -y -q copr enable rhcontainerbot/container-selinux
+#Add CRI-O Repo.
+#For CentOS8
+curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
+curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
-# #For CentOS7
-# #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
-# #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-# #sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+#For CentOS7
+#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
+#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
+#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
-# echo "Added COPR and CRI-O repos."
+echo "Added COPR and CRI-O repos."
 
-# #Update packages.
-# yum -y -q update
+#Update packages.
+yum -y -q update
 
-# #containerd.io package is related to the runc conflicting with the runc package from the container-tools
-# echo "Install yum-utils"
-# yum -y -q install yum-utils
-# echo "Installed yum-utils"
+#containerd.io package is related to the runc conflicting with the runc package from the container-tools
+echo "Install yum-utils"
+yum -y -q install yum-utils
+echo "Installed yum-utils"
 
-# #install Containers common
+#install Containers common
 
 # #Install CRI-O
 # echo "Install CRI-O"
