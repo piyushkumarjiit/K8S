@@ -181,22 +181,24 @@ echo "Install yum-utils"
 yum -y -q install yum-utils
 echo "Installed yum-utils"
 
-# Install Container-d
-#https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
-dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
-echo "Installed Container-d"
-
-#install Containers common
-
-# #Install CRI-O
-# echo "Install CRI-O"
-# yum -y -q install cri-o
-# echo "Installed CRI-O"
-
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 if [[ $DOCKER_INSTALLED -gt 0 ]]
 then
+	
+	# Install Container-d
+	#https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
+	dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	echo "Installed Container-d"
+
+	#install Containers common
+
+	#Install CRI-O
+	echo "Install CRI-O"
+	yum -y -q install cri-o
+	echo "Installed CRI-O"
+
+
 	#Install Docker on server
 	echo "Docker not available. Trying to install Docker."
 	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
