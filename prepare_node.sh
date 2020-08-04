@@ -179,7 +179,7 @@ echo "Installed yum-utils"
 
 echo "Add COPR and CRI-O repos."
 #Add EPEL Repo. Not needed thus commented out.
-yum -y install epel-re*
+#yum -y install epel-re*
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
