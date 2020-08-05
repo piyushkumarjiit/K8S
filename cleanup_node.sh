@@ -92,7 +92,7 @@ CEPH_DRIVE_PRESENT=$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo 
 if [[ $CEPH_DRIVE_PRESENT == 0 ]]
 then
 	echo "Cleaning Rook and Ceph related config and zapping drive."
-	yum -y -q install sgdisk
+	yum -y -q install gdisk
 	CEPH_DRIVE=('/dev/sdb')
 	#DISK='/dev/sdb'
 	for DISK in ${CEPH_DRIVE[*]}
@@ -115,7 +115,7 @@ then
 		rm -rf /dev/ceph-*
 		rm -Rf /var/lib/rook
 	done
-	yum -y -q remove sgdisk
+	yum -y -q remove gdisk
 else
 	echo "No processing needed for Rook/Ceph."
 fi
