@@ -55,6 +55,7 @@ then
 	sleep 2
 	# Delete PVC for Grafana
 	echo "Trying to delete Grafana PVC"
+	kubectl patch pvc -n monitoring grafana-pvc -p '{"metadata":{"finalizers":null}}'
 	kubectl delete -f monitoring-grafana_pvc.yaml
 	PVC_DELETE_STUCK=$(kubectl get pvc -n monitoring grafana-pvc | grep Terminating > /dev/null 2>&1; echo $? )
 	sleep 10
