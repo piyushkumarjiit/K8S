@@ -231,16 +231,23 @@ DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
 if [[ $DOCKER_INSTALLED -gt 0 ]]
 then
 
+	# Add Docker repo as it is used by containerd and docker
+	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+
 	# Install Container-d
 	#wget https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
 	#tar xvf containerd-1.3.5-linux-amd64.tar.gz
-	# dnf -y
-	dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	#dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	yum update -y -q && yum install -y containerd.io
+	## Configure containerd
+	mkdir -p /etc/containerd
+	containerd config default > /etc/containerd/config.toml
 	echo "Installed Container-d"
+	systemctl restart containerd
 
 	#Install Docker on server
 	echo "Docker not available. Trying to install Docker."
-	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+	
 	#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
 
 	dnf -y -q install docker-ce
