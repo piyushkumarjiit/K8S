@@ -111,9 +111,9 @@ then
 	echo "Adding IPv4 forwarding rule."
 	bash -c 'cat <<-EOF >>  /etc/sysctl.conf
 	net.ipv4.ip_forward=1
+	net.bridge.bridge-nf-call-iptables=1
 	EOF'
 	sysctl -p -q
-	#	net.bridge.bridge-nf-call-iptables=1 removed due to error of missing file
 	echo "Done."
 else
 	echo "IPV4 FORWARDING flag already set. No change needed."
