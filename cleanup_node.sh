@@ -92,7 +92,7 @@ CEPH_DRIVE_PRESENT=$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo 
 if [[ $CEPH_DRIVE_PRESENT == 0 ]]
 then
 	echo "Cleaning Rook and Ceph related config and zapping drive."
-	yum install sgdisk
+	yum -y -q install sgdisk
 	CEPH_DRIVE=('/dev/sdb')
 	#DISK='/dev/sdb'
 	for DISK in ${CEPH_DRIVE[*]}
