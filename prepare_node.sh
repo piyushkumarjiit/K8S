@@ -88,8 +88,16 @@ else
 	echo "Firewalld seems to be disabled. Continuing."
 fi
 
-# Added below to fix the issue with IP4 forwarding
+# Added below to fix the issue with IP4 forwarding. These are also required for CRI-O
+modprobe overlay
 modprobe br_netfilter
+# Set up required sysctl params, these persist across reboots.
+cat > /etc/sysctl.d/99-kubernetes-cri.conf <<EOF
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+sysctl -q --system
 
 IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
 if [[ $IP4_FORWARDING_STATUS != 0 ]]
@@ -224,6 +232,8 @@ then
 	#Install CRI-O
 	#echo "Install CRI-O"
 	#yum -y -q install cri-o
+	#systemctl -q daemon-reload
+	#systemctl -q start crio
 	#echo "Installed CRI-O"
 
 
@@ -324,7 +334,9 @@ else
 	}
 	EOF'
 	echo "Cgroup drivers updated."
+	mkdir -p /etc/systemd/system/docker.service.d
 fi
+
 # Restart Docker for changes to take effect
 systemctl daemon-reload
 systemctl restart docker
