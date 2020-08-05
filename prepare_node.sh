@@ -235,7 +235,7 @@ then
 	#wget https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
 	#tar xvf containerd-1.3.5-linux-amd64.tar.gz
 	# dnf -y
-	dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
 	echo "Installed Container-d"
 
 	#Install Docker on server
