@@ -106,7 +106,16 @@ sleep 15
 wget -q $CEPH_CLUSTER_YAML -O rook-cluster.yaml
 # Create Cluster
 kubectl create -f rook-cluster.yaml
-sleep 15
+
+CONTINUE_WAITING=$(kubectl get pods -n rook-ceph | grep crashcollector | grep Running > /dev/null 2>&1; echo $?)
+echo -n "Ceph cluster not ready. Waiting ."
+while [[ $CONTINUE_WAITING != 0 ]]
+do
+	sleep 10
+	echo -n "."
+ 	CONTINUE_WAITING=$(kubectl get pods -n rook-ceph | grep crashcollector | grep Running > /dev/null 2>&1; echo $?)
+done
+echo ""
 
 if [[ $SETUP_FOR_LOADBALANCER == "true" ]]
 then
@@ -117,9 +126,9 @@ then
 	kubectl apply -f rook-dashboard.yaml
 	echo "Done. rook.$INGRESS_DOMAIN_NAME dashboard would use load balancer."
 else
-	echo "Setting up rook-ceph.$INGRESS_DOMAIN_NAME to be used with ingress."
+	echo "Setting up rook.$INGRESS_DOMAIN_NAME to be used with ingress."
 	wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
-	#Update the file to make the name same as the one running in cluster and then apply. Possibel workaround as operator is not creating service
+	#Update the file to make the name same as the one running in cluster and then apply. Possible workaround as operator is not creating service
 	#sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" rook-dashboard.yaml
 	#sed -i "s/type: LoadBalancer/type: ClusterIP/" rook-dashboard.yaml
 	#kubectl apply -f rook-dashboard.yaml
