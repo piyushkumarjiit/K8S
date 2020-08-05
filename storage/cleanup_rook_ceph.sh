@@ -120,6 +120,7 @@ then
 	# Delete dashboard config using YAML 
 	kubectl delete -f rook-dashboard.yaml
 	echo "Rook dashboard config deleted."
+
 	# Delete Cluster using YAML 
 	kubectl delete -f rook-cluster.yaml
 	echo "Rook cluster config deleted."
@@ -134,17 +135,15 @@ then
 		ROOK_CLUSTER_DELETED=$(kubectl -n rook-ceph get cephcluster)
 	done
 	echo "proceeding with rest of the cleanup."
-
+	# Delete Ceph toolbox
+	kubectl delete -f ceph-toolbox.yaml
+	echo "Ceph toolbox instance deleted."
 	# Delete Operator
 	kubectl delete -f rook-operator.yaml
 	echo "Rook operator config deleted."
 	# Delete Common
 	kubectl delete -f rook-common.yaml
 	echo "Rook common config deleted."
-
-	# Delete Ceph toolbox
-	kubectl delete -f ceph-toolbox.yaml
-	echo "Ceph toolbox instance deleted."
 else
 	echo "Kubectl unavailable. Unable to delete storage components."
 fi
