@@ -91,13 +91,19 @@ fi
 # Added below to fix the issue with IP4 forwarding. These are also required for CRI-O
 modprobe overlay
 modprobe br_netfilter
-# Set up required sysctl params, these persist across reboots.
-cat > /etc/sysctl.d/99-kubernetes-cri.conf <<EOF
-net.bridge.bridge-nf-call-iptables  = 1
-net.ipv4.ip_forward                 = 1
-net.bridge.bridge-nf-call-ip6tables = 1
-EOF
-sysctl -q --system
+if [[ -r /etc/sysctl.d/99-kubernetes-cri.conf ]]
+then
+	# Set up required sysctl params, these persist across reboots.
+	cat > /etc/sysctl.d/99-kubernetes-cri.conf <<- EOF
+	net.bridge.bridge-nf-call-iptables  = 1
+	net.ipv4.ip_forward                 = 1
+	net.bridge.bridge-nf-call-ip6tables = 1
+	EOF
+	sysctl -q --system
+	echo "99-kubernetes-cri.conf created and updated."
+else
+	echo "99-kubernetes-cri.conf exists. Using as is."
+fi
 
 IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
 if [[ $IP4_FORWARDING_STATUS != 0 ]]
@@ -139,7 +145,7 @@ else
 		echo "IP tables updated."
 fi
 
-sysctl --system
+sysctl -q --system
 
 #Check if swap is already commented out in fstab
 SWAP_FSTAB=$(cat /etc/fstab | grep '^#.*-swap' > /dev/null 2>&1; echo $?)
@@ -157,8 +163,6 @@ else
 	echo "Swap disabled."
 	RESTART_NEEDED=0
 fi
-
-
 
 sysctl -q --system
 
@@ -185,12 +189,12 @@ echo "Install yum-utils"
 yum -y -q install yum-utils device-mapper-persistent-data lvm2
 echo "Installed yum-utils"
 
-echo "Add COPR and CRI-O repos."
 #Add EPEL Repo. Not needed thus commented out.
-#yum -y install epel-re*
+#yum -y -q install epel-re*
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
+#echo "Add COPR and CRI-O repos."
 #Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
 #dnf -y -q install 'dnf-command(copr)'
 
@@ -208,12 +212,19 @@ echo "Add COPR and CRI-O repos."
 #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
 #curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
 
-echo "Added COPR and CRI-O repos."
+#install Containers common
+
+#Install CRI-O
+#echo "Install CRI-O"
+#yum -y -q install cri-o
+#systemctl -q daemon-reload
+#systemctl -q start crio
+#echo "Installed CRI-O"
+
+#echo "Added COPR and CRI-O repos."
 
 #Update packages.
 yum -y -q update
-
-
 
 #Check if Docker needs to be installed
 DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
@@ -226,16 +237,6 @@ then
 	# dnf -y
 	dnf -y install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
 	echo "Installed Container-d"
-
-	#install Containers common
-
-	#Install CRI-O
-	#echo "Install CRI-O"
-	#yum -y -q install cri-o
-	#systemctl -q daemon-reload
-	#systemctl -q start crio
-	#echo "Installed CRI-O"
-
 
 	#Install Docker on server
 	echo "Docker not available. Trying to install Docker."
@@ -304,20 +305,6 @@ fi
 #echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
 #echo "Updated kubeadm.conf"
 
-# if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
-# then
-# 	echo "10-kubeadm.conf is already present. Keeping it as is."
-# else
-# 	echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-# 	echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-# 	echo "Updated kubeadm.conf"
-# 	# Restart Docker for changes to take effect
-# 	systemctl daemon-reload
-# 	systemctl restart docker
-# 	echo "Docker restarted."
-# fi
-
-
 if [[ -f /etc/docker/daemon.json ]]
 then
 	echo "daemon.json is already present. Keeping it as is."
@@ -343,28 +330,10 @@ systemctl restart docker
 echo "Docker restarted."
 
 systemctl stop kubelet
-echo "Setting IPTable rules"
-# ## set default IPv6 policies to let everything in
-# ip6tables --policy INPUT   ACCEPT;
-# ip6tables --policy OUTPUT  ACCEPT;
-# ip6tables --policy FORWARD ACCEPT;
-# ## start fresh
-# ip6tables -Z; # zero counters
-# ip6tables -F; # flush (delete) rules
-# ip6tables -X; # delete all extra chains
-# ## set default IPv4 policies to let everything in
-# iptables --policy INPUT   ACCEPT;
-# iptables --policy OUTPUT  ACCEPT;
-# iptables --policy FORWARD ACCEPT;
-# ## start fresh
-# iptables -Z; # zero counters
-# iptables -F; # flush (delete) rules
-# iptables -X; # delete all extra chains
-# echo "IPTables set afresh."
-# #Restart kublet
-# systemctl daemon-reload
-# systemctl enable kubelet 
-# systemctl start kubelet
+#Restart kublet
+systemctl daemon-reload
+systemctl enable kubelet 
+systemctl start kubelet
 
 if [[ $RESTART_NEEDED == 0 ]]
 then
