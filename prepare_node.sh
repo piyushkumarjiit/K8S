@@ -239,8 +239,8 @@ then
 
 	#Install Docker on server
 	echo "Docker not available. Trying to install Docker."
-	#dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-	wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
+	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+	#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
 
 	dnf -y -q install docker-ce
 
