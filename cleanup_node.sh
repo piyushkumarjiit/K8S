@@ -90,6 +90,7 @@ CEPH_DRIVE_PRESENT=$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo 
 if [[ $CEPH_DRIVE_PRESENT == 0 ]]
 then
 	echo "Cleaning Rook and Ceph related config and zapping drive."
+	yum install sgdisk
 	CEPH_DRIVE=('/dev/sdb')
 	#DISK='/dev/sdb'
 	for DISK in ${CEPH_DRIVE[*]}
@@ -112,6 +113,7 @@ then
 		rm -rf /dev/ceph-*
 		rm -Rf /var/lib/rook
 	done
+	yum remove sgdisk
 else
 	echo "No processing needed for Rook/Ceph."
 fi
@@ -151,7 +153,7 @@ echo "Files created by setup script deleted."
 rm -Rf /etc/cni /var/lib/etcd /etc/kubernetes /var/lib/kubelet /usr/lib/systemd/system/kubelet.service.d
 rm -Rf /opt/cni /var/lib/cni /var/lib/calico /var/lib/weave
 rm -Rf /root/.kube ~/.kube
-rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose
+rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose /etc/systemd/system/docker.service.d
 rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-engine  /var/lib/dockershim
 rm -Rf /usr/lib/systemd/system/kubelet.service.d
 
