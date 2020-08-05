@@ -115,7 +115,7 @@ then
 		rm -rf /dev/ceph-*
 		rm -Rf /var/lib/rook
 	done
-	yum remove sgdisk
+	yum -y -q remove sgdisk
 else
 	echo "No processing needed for Rook/Ceph."
 fi
