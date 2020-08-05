@@ -83,6 +83,8 @@ fi
 #yum -y -q remove kube.*
 yum -y -q remove kubelet kubeadm kubectl containerd.io
 yum -y -q autoremove
+yum -y -q clean all
+yum -y -q history sync
 echo "Yum remove step completed."
 
 
