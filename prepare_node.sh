@@ -290,9 +290,9 @@ else
 fi
 
 #Setup Cgroup drivers. Either run this as root or accept the bad alignment of script :(
-echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-echo "Updated kubeadm.conf"
+#echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+#echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+#echo "Updated kubeadm.conf"
 
 # if [[ -f /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf ]]
 # then
@@ -307,31 +307,28 @@ echo "Updated kubeadm.conf"
 # 	echo "Docker restarted."
 # fi
 
+
+if [[ -f /etc/docker/daemon.json ]]
+then
+	echo "daemon.json is already present. Keeping it as is."
+else
+	bash -c 'cat <<- EOF > /etc/docker/daemon.json
+	{
+	"exec-opts": ["native.cgroupdriver=systemd"],
+	"log-driver": "json-file",
+	"log-opts": {"max-size": "100m"},
+	"storage-driver": "overlay2",
+  	"storage-opts": [
+    "overlay2.override_kernel_check=true"
+  	]
+	}
+	EOF'
+	echo "Cgroup drivers updated."
+fi
+# Restart Docker for changes to take effect
 systemctl daemon-reload
 systemctl restart docker
 echo "Docker restarted."
-# if [[ -f /etc/docker/daemon.json ]]
-# then
-# 	echo "daemon.json is already present. Keeping it as is."
-# else
-# 	bash -c 'cat <<- EOF > /etc/docker/daemon.json
-# 	{
-# 	"exec-opts": ["native.cgroupdriver=systemd"],
-# 	"log-driver": "json-file",
-# 	"log-opts": {"max-size": "100m"},
-# 	"storage-driver": "overlay2",
-#   	"storage-opts": [
-#     "overlay2.override_kernel_check=true"
-#   	]
-# 	}
-# 	EOF'
-# 	echo "Cgroup drivers updated."
-# 	# Restart Docker for changes to take effect
-# 	systemctl daemon-reload
-# 	systemctl restart docker
-# 	echo "Docker restarted."
-# fi
-
 
 systemctl stop kubelet
 echo "Setting IPTable rules"
