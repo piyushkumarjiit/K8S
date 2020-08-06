@@ -76,9 +76,10 @@ do
 	#Try to SSH into each node
 	ssh "$USERNAME"@$node <<- EOF
 	CEPH_DRIVE=$CEPH_DRIVE_NAME
-	echo "CEPH DRIVE: $CEPH_DRIVE"
+	echo "CEPH DRIVE: \$CEPH_DRIVE"
 	#Make sure chrony/ntp is running otherwise we would run in issue with Ceph
 	CHRONY_WORKING=\$(systemctl status chronyd | grep running > /dev/null 2>&1; echo \$?)
+	echo "Chrony Flag: \$(systemctl status chronyd | grep running)"
 	if [[ \$CHRONY_WORKING -gt 0 ]]
 	then
 		echo "chronyd not running. Lets fix that."
