@@ -221,6 +221,8 @@ then
 	VRRP_VARIABLE+=$'\n'
 	VRRP_VARIABLE+="$(echo -e "}" )"
 	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "}" )"
+	VRRP_VARIABLE+=$'\n'
 
 	echo "keepalived.conf updated."
 	#Create a backup copy of keepalived
