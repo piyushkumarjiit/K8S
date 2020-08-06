@@ -114,7 +114,7 @@ do
 	fi
 	CEPH_DRIVE_IS_PRESENT=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$1}')
 	CEPH_DRIVE_IS_EMPTY=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$2}')
-	if [[ \$CEPH_DRIVE_IS_PRESENT != 0 ]]
+	if [[ \$CEPH_DRIVE_IS_PRESENT != \$CEPH_DRIVE ]]
 	then
 		echo "Please confirm that raw/block drive is mounted as sdb. Unable to proceed."
 		sleep 2
