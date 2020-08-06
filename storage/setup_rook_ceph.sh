@@ -75,7 +75,8 @@ do
 	echo "Trying to connect to $node"
 	#Try to SSH into each node
 	ssh "$USERNAME"@$node <<- EOF
-	export CEPH_DRIVE=$CEPH_DRIVE_NAME
+	CEPH_DRIVE=$CEPH_DRIVE_NAME
+	echo "CEPH DRIVE: $CEPH_DRIVE"
 	#Make sure chrony/ntp is running otherwise we would run in issue with Ceph
 	CHRONY_WORKING=\$(systemctl status chronyd | grep running > /dev/null 2>&1; echo \$?)
 	if [[ \$CHRONY_WORKING -gt 0 ]]
@@ -111,8 +112,8 @@ do
 		echo "chronyd working already. Proceeding"
 	fi
 	CEPH_DRIVE_IS_PRESENT=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$1}')
-	CEPH_DRIVE_IS_EMPTY=(\$lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$2}')
-	if [[ \$CEPH_DRIVE_AVAILABLE != 0 ]]
+	CEPH_DRIVE_IS_EMPTY=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$2}')
+	if [[ \$CEPH_DRIVE_IS_PRESENT != 0 ]]
 	then
 		echo "Please confirm that raw/block drive is mounted as sdb. Unable to proceed."
 		sleep 2
