@@ -14,11 +14,11 @@ ROUTER_ID="RouterID1"
 STATE=MASTER
 BALANCER="roundrobin"
 #INSTANCE_COUNT=$((2 + RANDOM % 20))
-INSTANCE_COUNT=$(($(cat /etc/haproxy/haproxy.cfg | grep KubeAPIServerName | sed 's/[^0-9]*//g' | wc -l ) + 1))
+INSTANCE_COUNT=$(($(cat /etc/haproxy/haproxy.cfg | grep KubeAPIServerName | sed 's/[^0-9]*//g' | tail -n 1) + 1))
 KubeAPIServerName="KubeAPIServerName$INSTANCE_COUNT"
 KubeClusterName="KubeClusterName$INSTANCE_COUNT"
-VIRTUAL_ROUTER_ID=$(($(cat /etc/keepalived/keepalived.conf | grep virtual_router_id | awk -F " " '{print $2}') + 1))
-VRRP_INSTANCE=$(($(cat /etc/keepalived/keepalived.conf | grep vrrp_instance | awk -F " " '{print $2}') + 1))
+VIRTUAL_ROUTER_ID=$(( $(cat /etc/keepalived/keepalived.conf | grep virtual_router_id | awk -F " " '{print $2}' | tail -n 1 ) + 1 ))
+VRRP_INSTANCE=$(($(cat /etc/keepalived/keepalived.conf | grep vrrp_instance | awk -F " " '{print $2}' | tail -n 1 ) + 1))
 
 echo "----------- Setting up Load Balancing in $(hostname) ------------"
 
@@ -78,7 +78,7 @@ fi
 KEEPALIVED_AVAILABLE=$(systemctl status keepalived.service > /dev/null 2>&1; echo $?)
 HAPROXY_AVAILABLE=$(systemctl status haproxy.service > /dev/null 2>&1; echo $?)
 VIP_ALREADY_PRESENT=$(cat /etc/keepalived/keepalived.conf | grep "$KUBE_VIP" > /dev/null 2>&1; echo $?)
-if [[ ($KEEPALIVED_AVAILABLE == 0) && ($HAPROXY_AVAILABLE == 0) && (VIP_ALREADY_PRESENT == 0) ]]
+if [[ ($KEEPALIVED_AVAILABLE == 0) && ($HAPROXY_AVAILABLE == 0) && ($VIP_ALREADY_PRESENT == 0) ]]
 then
 	#Check the current status of Load balance config
 	echo "Try: nc -vz $KUBE_VIP $API_PORT"
