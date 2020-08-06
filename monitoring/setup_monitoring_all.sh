@@ -16,14 +16,25 @@ export PROMETHEUS_PVC_JSONNET=https://raw.githubusercontent.com/coreos/kube-prom
 export KP_BUILD_SH=https://raw.githubusercontent.com/coreos/kube-prometheus/master/build.sh
 export MONITORING_INGRESS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ingress/monitoring-dashboard-ingress-http.yaml
 export GRAFANA_PVC_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/grafana_pvc.yaml
-# Used in the PVC config for Prometheus. Set the value in Name column from the result of the command: kubectl get sc
-STORAGE_CLASS=""
-# Size of Prometheus PVC. Allowed value format "1Gi", "2Gi", "5Gi" etc
-STORAGE_SIZE="2Gi"
-# Domain name to be used by Ingress. Using this grafana URL would become: grafana.<domain.com>
-INGRESS_DOMAIN_NAME=bifrost.com
-# Run mode. Allowed values Deploy/DryRun
-RUN_MODE=""
+
+if [[ $STORAGE_SIZE == "" ]]
+then
+	echo "STORAGE_SIZE not set. Setting default value of 2Gi."
+	# Size of Prometheus PVC. Allowed value format "1Gi", "2Gi", "5Gi" etc
+	STORAGE_SIZE="2Gi"
+else
+	echo "STORAGE_SIZE already set. Proceeding."
+fi
+
+if [[ $INGRESS_DOMAIN_NAME == "" ]]
+then
+	echo "INGRESS_DOMAIN_NAME not set. Setting a default value."
+	# Domain name to be used by Ingress. Using this grafana URL would become: grafana.<domain.com>
+	INGRESS_DOMAIN_NAME=bifrost.com
+else
+	echo "INGRESS_DOMAIN_NAME already set. Proceeding."
+fi
+
 if [[ $STORAGE_CLASS == "" ]]
 then
 	echo "STORAGE_CLASS is not set, trying to fetch from cluster."
@@ -33,11 +44,16 @@ then
 	then
 		echo "Storageclass value set."
 	else
-		echo "Unable to set storageclass: $STORAGE_CLASS. Please set manually and rerun. exiting."
+		echo "Unable to set storageclass: $STORAGE_CLASS. Please set manually and rerun. "
+		# Used in the PVC config for Prometheus. Set the value in Name column from the result of the command: kubectl get sc
+		STORAGE_CLASS=""
 		sleep 2.
 		exit 1
 	fi
 fi
+
+# Run mode. Allowed values Deploy/DryRun
+RUN_MODE=""
 
 if [[ $RUN_MODE == "" ]]
 then
