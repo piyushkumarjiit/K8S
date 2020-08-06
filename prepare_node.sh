@@ -287,7 +287,7 @@ then
 			RESTART_NEEDED=0
 			echo "Docker seems to be working but you may need to disconnect and reconnect for usermod changes to reflect."
 			sleep 5
-			exit 1
+			#exit 1
 		fi
 	fi		
 else
