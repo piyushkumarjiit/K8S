@@ -91,7 +91,7 @@ fi
 # Added below to fix the issue with IP4 forwarding. These are also required for CRI-O
 modprobe overlay
 modprobe br_netfilter
-if [[ -r /etc/sysctl.d/99-kubernetes-cri.conf ]]
+if [[ ! -r /etc/sysctl.d/99-kubernetes-cri.conf ]]
 then
 	# Set up required sysctl params, these persist across reboots.
 	cat <<- EOF > /etc/sysctl.d/99-kubernetes-cri.conf 
