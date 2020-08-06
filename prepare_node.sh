@@ -91,8 +91,10 @@ fi
 # Added below to fix the issue with IP4 forwarding. These are also required for CRI-O
 modprobe overlay
 modprobe br_netfilter
-if [[ ! -r /etc/sysctl.d/99-kubernetes-cri.conf ]]
+if [[ -r /etc/sysctl.d/99-kubernetes-cri.conf ]]
 then
+	echo "99-kubernetes-cri.conf exists. Using as is."
+else
 	# Set up required sysctl params, these persist across reboots.
 	cat <<- EOF > /etc/sysctl.d/99-kubernetes-cri.conf 
 	net.bridge.bridge-nf-call-iptables  = 1
@@ -101,8 +103,6 @@ then
 	EOF
 	sysctl -q --system
 	echo "99-kubernetes-cri.conf created and updated."
-else
-	echo "99-kubernetes-cri.conf exists. Using as is."
 fi
 
 IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
