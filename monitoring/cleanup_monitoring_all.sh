@@ -27,11 +27,11 @@ then
 	then
 		echo "Storageclass value set."
 	else
-		echo "Unable to set storageclass: $STORAGE_CLASS. Please set manually and rerun. "
+		echo "Unable to set storageclass: $STORAGE_CLASS. Setting the default value: csi-cephfs. "
 		# Used in the PVC config for Prometheus. Set the value in Name column from the result of the command: kubectl get sc
-		STORAGE_CLASS=""
-		sleep 2.
-		exit 1
+		STORAGE_CLASS="csi-cephfs"
+		#sleep 2.
+		#exit 1
 	fi
 fi
 
