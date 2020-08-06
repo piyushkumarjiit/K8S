@@ -32,7 +32,7 @@ export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 
 if [[ ${WORKER_NODE_NAMES[*]} == "" || ${WORKER_NODE_IPS[*]} == "" ]]
 then
-	echo "WORKER_NODE_NAMES or WORKER_NODE_IPS not passed. Unable to proceed."
+	echo "WORKER_NODE_NAMES or WORKER_NODE_IPS not passed. Trying to set."
 	#All Worker Nodes
 	WORKER_NODE_IPS=("192.168.2.208" "192.168.2.95" "192.168.2.104")
 	WORKER_NODE_NAMES=("K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")

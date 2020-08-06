@@ -18,18 +18,41 @@ CEPH_FILSYSTEM_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/clus
 ROOK_STORAGE_CLASS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class.yaml
 CEPH_TOOLBOX_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 
-#All Worker Nodes
-export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
-export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
-#Username that we use to connect to remote machine via SSH
-USERNAME="root"
-# Name of the device used by Ceph
-CEPH_DRIVE="sdb"
 # Flag for setting up Ceph tool container in K8S. Allowed values true/false
 INSTALL_CEPH_TOOLS="true"
 # Do we want Ceph dashboard to be accessible via Load Balancer/Metal LB or use via Ingress.Allowed values true/false
 SETUP_FOR_LOADBALANCER="false"
-# Check if Kubectl si available or not
+
+if [[ ${WORKER_NODE_NAMES[*]} == "" || ${WORKER_NODE_IPS[*]} == "" ]]
+then
+	echo "WORKER_NODE_NAMES or WORKER_NODE_IPS not passed. Unable to proceed."
+	#All Worker Nodes
+	WORKER_NODE_IPS=("192.168.2.208" "192.168.2.95" "192.168.2.104")
+	WORKER_NODE_NAMES=("K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
+	exit 1
+else
+	echo "WORKER_NODE_NAMES already set. Proceeding."
+fi
+
+if [[ $CEPH_DRIVE_NAME == "" ]]
+then
+	echo "CEPH_DRIVE_NAME not set."
+	# Drive that is added block/raw for use by Ceph. Valid values sdb, sdc etc.
+	CEPH_DRIVE_NAME="sdb"
+else
+	echo "CEPH_DRIVE_NAME already set. Proceeding."
+fi
+
+if [[ $CEPH_DRIVE_NAME == "" ]]
+then
+	echo "USERNAME not set. Setting as root."
+	#Username that we use to connect to remote machine via SSH
+	USERNAME="root"
+else
+	echo "USERNAME already set. Proceeding."
+fi
+
+# Check if Kubectl is available or not
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 
 if [[ -f rook-storage_class.yaml ]]
