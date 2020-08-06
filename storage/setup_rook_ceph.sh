@@ -34,8 +34,8 @@ if [[ ${WORKER_NODE_NAMES[*]} == "" || ${WORKER_NODE_IPS[*]} == "" ]]
 then
 	echo "WORKER_NODE_NAMES or WORKER_NODE_IPS not passed. Unable to proceed."
 	#All Worker Nodes
-	WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
-	WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
+	WORKER_NODE_IPS=("192.168.2.208" "192.168.2.95" "192.168.2.104")
+	WORKER_NODE_NAMES=("K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
 	exit 1
 else
 	echo "WORKER_NODE_NAMES already set. Proceeding."
