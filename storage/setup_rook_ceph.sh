@@ -114,6 +114,7 @@ do
 	fi
 	CEPH_DRIVE_IS_PRESENT=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$1}')
 	CEPH_DRIVE_IS_EMPTY=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$2}')
+	echo "CEPH drive flag: \$CEPH_DRIVE_IS_PRESENT"
 	if [[ \$CEPH_DRIVE_IS_PRESENT != \$CEPH_DRIVE ]]
 	then
 		echo "Please confirm that raw/block drive is mounted as \$CEPH_DRIVE. Unable to proceed."
@@ -132,6 +133,7 @@ done
 # Get Common YAML
 #wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
 wget -q $CEPH_COMMON_YAML -O rook-common.yaml
+sleep 15
 # Get Operator YAML
 #wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
 wget -q $CEPH_OPERATOR_YAML -O rook-operator.yaml
