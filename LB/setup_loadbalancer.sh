@@ -11,6 +11,11 @@ API_PORT=6443
 INTERFACE=ens192
 AUTH_PASS=K33p@Gu3ss1ng
 ROUTER_ID="RouterID1"
+STATE=MASTER
+BALANCER="roundrobin"
+INSTANCE_COUNT=$((2 + RANDOM % 20))
+KubeAPIServerName="KubeAPIServerName$INSTANCE_COUNT"
+KubeClusterName="KubeClusterName$INSTANCE_COUNT"
 
 echo "----------- Setting up Load Balancing in $(hostname) ------------"
 
@@ -24,7 +29,7 @@ if [[ "$UNICAST_PEER_IP" == "" ]]
 then
 	echo "List of keepalived peers (UNICAST_PEER_IP) not passed. Unable to proceed."
 	exit 1
-fi	
+fi
 
 if [[ $1 == "" ]]
 then
@@ -70,7 +75,7 @@ fi
 KEEPALIVED_AVAILABLE=$(systemctl status keepalived.service > /dev/null 2>&1; echo $?)
 HAPROXY_AVAILABLE=$(systemctl status haproxy.service > /dev/null 2>&1; echo $?)
 if [[ ($KEEPALIVED_AVAILABLE == 0) && ($HAPROXY_AVAILABLE == 0) ]]
-then	
+then
 	#Check the current status of Load balance config
 	echo "Try: nc -vz $KUBE_VIP $API_PORT"
 	LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
@@ -128,7 +133,7 @@ fi
 #Check if non local bind is already allowed
 NON_LOCAL_BIND_ALLOWED=$(cat /etc/sysctl.conf | grep net.ipv4.ip_nonlocal_bind=1 > /dev/null 2>&1; echo $?)
 if [[ $NON_LOCAL_BIND_ALLOWED != 0 ]]
-then	
+then
 	#To allow HAProxy to bind to non local ports
 	echo "Updating to allow non local binding for HAProxy."
 	bash -c 'cat <<- EOF >>/etc/sysctl.conf
@@ -144,7 +149,7 @@ sysctl -q --system
 
 cd ~
 echo "Current Path:  $(pwd)"
-if [[ ! -r $HOME/keepalived.conf ]]
+if [[ ! -r $HOME/keepalived.conf && $KEEPALIVED_AVAILABLE != 0 ]]
 then
 	echo "Downloading the template files from github."
 	#Get the keepalived_template.conf and create a copy
@@ -164,11 +169,69 @@ then
 	#Multiple nodes with newline thus had to use awk. Sed does not handle newline properly
 	awk -i inplace -v srch="###un1c@st_p33r###" -v repl="$TEMP_PEER_IPS" '{ sub(srch,repl,$0); print $0 }' keepalived.conf
 	echo "keepalived.conf updated."
+elif [[ -r /etc/keepalived/keepalived.conf  ]]
+then
+	echo "Found keepalived.conf in /etc/keepalived/ direcotry. Updating it with new VIP config."
+
+	echo "Creating the section to be added to existing keepalived.conf"
+	#Get the keepalived_template.conf and create a copy
+	echo "Updating the keepalived.conf."
+
+	VRRP_VARIABLE=$(echo "vrrp_instance VI_$INSTANCE_COUNT")
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "{" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "state $STATE" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "interface $INTERFACE" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "virtual_router_id $VIRTUAL_ROUTER_ID" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "priority $PRIORITY" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "advert_int 1" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "unicast_src_ip $UNICAST_SRC_IP" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "unicast_peer" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "{" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "$TEMP_PEER_IPS" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "}" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "authentication" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "{" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "auth_type PASS" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "auth_pass $AUTH_PASS" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "}" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "virtual_ipaddress" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "{" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "$KUBE_VIP" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "}" )"
+	VRRP_VARIABLE+=$'\n'
+
+	echo "keepalived.conf updated."
+	#Create a backup copy of keepalived
+	cp /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.bak
+	echo "Created a backup of exisitng keepalived conf. Appending the new VRRP section"
+	echo -e "$VRRP_VARIABLE" >> /etc/keepalived/keepalived.conf
+	echo "keepalived.conf updated. Restart of service is required."
+
 else
 	echo "Found keepalived.conf in current direcotry. Going to use it 'as is'."
 fi
 
-if [[ ! -r $HOME/haproxy.cfg ]]
+if [[ ! -r $HOME/haproxy.cfg && $HAPROXY_AVAILABLE != 0 ]]
 then
 	echo "Downloading the template files from github."
 	#Get the haproxy_template.cfg and create a copy
@@ -184,13 +247,42 @@ then
 	#Multiple nodes with newline thus had to use awk. Sed does not handle newline properly
 	awk -i inplace -v srch="###S3rv3r###" -v repl="$FINAL_SERVER_STRING" '{ sub(srch,repl,$0); print $0 }' haproxy.cfg
 	echo "haproxy.cfg updated."
+elif [[ -r /etc/haproxy/haproxy.cfg ]]
+then
+	echo "Found haproxy.cfg in /etc/haproxy direcotry."
+
+	echo "Creating the section to be added to existing haproxy.cfg"
+	VRRP_VARIABLE=""
+	VRRP_VARIABLE=$(echo "frontend $KubeAPIServerName")
+	VRRP_VARIABLE+=$'\n\t'
+	VRRP_VARIABLE+="$(echo -e "bind $KUBE_VIP:$API_PORT" )"
+	VRRP_VARIABLE+=$'\n\t'
+	VRRP_VARIABLE+="$(echo -e "mode tcp" )"
+	VRRP_VARIABLE+=$'\n\t'
+	VRRP_VARIABLE+="$(echo -e "default_backend $KubeClusterName" )"
+	VRRP_VARIABLE+=$'\n'
+	VRRP_VARIABLE+="$(echo -e "backend $KubeClusterName" )"
+	VRRP_VARIABLE+=$'\n\t'
+	VRRP_VARIABLE+="$(echo -e "mode tcp" )"
+	VRRP_VARIABLE+=$'\n\t'
+	VRRP_VARIABLE+="$(echo -e "balance $BALANCER" )"
+	VRRP_VARIABLE+=$'\n\t'
+	VRRP_VARIABLE+="$(echo -e "$FINAL_SERVER_STRING" )"
+	VRRP_VARIABLE+=$'\n'
+
+	echo "haproxy.cfg updated."
+	#Create a backup copy of keepalived
+	cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.bak
+	echo "Created a backup of exisitng haproxy.cfg. Appending the new section"
+	echo -e "$VRRP_VARIABLE" >> /etc/haproxy/haproxy.cfg
+
 else
 	echo "Found haproxy.cfg in current direcotry. Going to use it 'as is'."
 fi
 
 IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
 if [[ $IP4_FORWARDING_STATUS != 0 ]]
-then	
+then
 	# Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
 	echo "Adding IPv4 forwarding rule."
 	bash -c 'cat <<-EOF >>  /etc/sysctl.conf
@@ -202,7 +294,6 @@ then
 else
 	echo "IPV4 FORWARDING flag already set. No change needed."
 fi
-
 
 #Identify if it is Ubuntu or Centos/RHEL
 distro=$(cat /etc/*-release | awk '/ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
@@ -222,7 +313,7 @@ then
 	#Start keepalived service
 	systemctl enable keepalived.service && systemctl start keepalived.service
 	#Update HAProxy config (haproxy.cfg)
-	mv $HOME/haproxy.cfg /etc/haproxy/haproxy.cfg	
+	mv $HOME/haproxy.cfg /etc/haproxy/haproxy.cfg
 	#Start HAProxy service
 	systemctl start haproxy.service  && systemctl enable haproxy.service
 
@@ -230,10 +321,6 @@ then
 
 elif [[ $distro == "centos" ]]
 then
-	echo "Calling yum update."
-	#Update packages.
-	sudo yum update -y
-
 	#Disable and Stop firewalld. firewalld blocks HAProxy and needs exception rules or be disabled.
 	FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
 	if [[ FIREWALLD_STATUS -gt 0 ]]
@@ -246,34 +333,40 @@ then
 		echo "Firewalld seems to be disabled. Continuing."
 	fi
 
-	#Install haproxy keepalived; 
-	echo "Installing haproxy and keepalived."
-	dnf -y -q  install haproxy keepalived
+	if [[ ($KEEPALIVED_AVAILABLE != 0) && ($HAPROXY_AVAILABLE != 0) ]]
+	then
+		echo "Calling yum update."
+		#Update packages.
+		sudo yum update -y -q
+		#Install haproxy keepalived; 
+		echo "Installing haproxy and keepalived."
+		dnf -y -q  install haproxy keepalived
+		#Update keepalived.conf
+		echo "Replacing the default keepalived.conf with our updated version."
+		mv $HOME/keepalived.conf /etc/keepalived/keepalived.conf
+		#Start keepalived service
+		systemctl enable keepalived.service
+		systemctl start keepalived.service
+		#Update HAProxy config (haproxy.cfg)
+		echo "Replacing the default haproxy.cfg with our updated version."
+		echo "Expected path: $(pwd)/haproxy.cfg"
+		mv $HOME/haproxy.cfg /etc/haproxy/haproxy.cfg
+		#Only for Non Primary node when remote binding is not enabled/available
+		#Run below command on Primary keepalived node to switch VIP to Secondary node. 
+		#This ensures that VIP is available for HAProxy to bind to.
+		#sudo systemctl stop keepalived
+		#Start HAProxy service
+		systemctl enable haproxy.service
+		systemctl start haproxy.service
+		#Run below command on Primary keepalived node to switch VIP back to Primary node.
+		#sudo systemctl start keepalived
+	else
+		echo "keepalived and HAProxy already installed. Restarting to reflect lastest config."
+		systemctl restart keepalived.service
+		systemctl restart haproxy.service
+		echo "Done."
+	fi
 
-	#Update keepalived.conf
-	echo "Replacing the default keepalived.conf with our updated version."
-	mv $HOME/keepalived.conf /etc/keepalived/keepalived.conf
-
-	#Start keepalived service
-	systemctl enable keepalived.service
-	systemctl start keepalived.service
-
-	#Update HAProxy config (haproxy.cfg)
-	echo "Replacing the default haproxy.cfg with our updated version."
-	echo "Expected path: $(pwd)/haproxy.cfg"
-	mv $HOME/haproxy.cfg /etc/haproxy/haproxy.cfg
-	
-	#Only for Non Primary node when remote binding is not enabled/available
-	#Run below command on Primary keepalived node to switch VIP to Secondary node. 
-	#This ensures that VIP is available for HAProxy to bind to.
-	#sudo systemctl stop keepalived
-	
-	#Start HAProxy service
-	systemctl enable haproxy.service
-	systemctl start haproxy.service
-
-	#Run below command on Primary keepalived node to switch VIP back to Primary node.
-	#sudo systemctl start keepalived
 	echo "Both the services should be up. Lets check."
 fi
 sleep 20
