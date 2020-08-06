@@ -176,34 +176,33 @@ rm -f rook-operator.yaml rook-common.yaml rook-dashboard.yaml ceph-toolbox.yaml
 
 
 #Count the number of lines returned as more than 1 would mean filesystem is assigned.
-FS_ROW_COUNT=$(lsblk -f | grep $CEPH_DRIVE.* | awk -F " " '{print $2}' | wc -l)
+FS_ROW_COUNT=$(lsblk -f | grep $CEPH_DRIVE_NAME.* | awk -F " " '{print $2}' | wc -l)
 # Find the filesystem on drive specified
-FS_TYPE=$(lsblk -f | grep $CEPH_DRIVE.* | awk -F " " '{print $2}')
+FS_TYPE=$(lsblk -f | grep $CEPH_DRIVE_NAME.* | awk -F " " '{print $2}')
 if [[ $FS_ROW_COUNT == 0 && $FS_TYPE != "" ]]
 then
-
 	#Connect to each node and zap Ceph Drives
 	echo "Cleaning Ceph drives on worker nodes"
 	for node in ${WORKER_NODE_NAMES[*]}
 	do
 		echo "Trying to connect to $node"
-		
 		#Try to SSH into each node
-		ssh "$USERNAME"@$node <<- 'EOF'
-		echo "Trying to clean Ceph drive on node:$node."
-		CEPH_DRIVE=('/dev/sdb')
-		CEPH_DRIVE_PRESENT=$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo $? )
-		echo $CEPH_DRIVE_PRESENT
-		if [[ $CEPH_DRIVE_PRESENT == 0 ]]
+		ssh "$USERNAME"@$node <<- EOF
+		echo "Trying to clean Ceph drive on node:\$node."
+		#CEPH_DRIVE=('/dev/sdb')
+		CEPH_DRIVE=$CEPH_DRIVE_NAME
+		CEPH_DRIVE_PRESENT=\$(lsblk -f -o NAME,FSTYPE | grep ceph > /dev/null 2>&1; echo \$? )
+		echo "Ceph drive present flag: \$CEPH_DRIVE_PRESENT"
+		if [[ \$CEPH_DRIVE_PRESENT == 0 ]]
 		then
 			echo "Cleaning Rook and Ceph related config and zapping drive."
-			for DISK in ${CEPH_DRIVE[*]}
+			for DISK in \${CEPH_DRIVE[*]}
 			do
 				echo "Begin zapping process."
-				sgdisk --zap-all $DISK
-				dd if=/dev/zero of="$DISK" bs=1M count=100 oflag=direct,dsync
-				DMREMOVE_STATUS=$(ls /dev/mapper/ceph-* | xargs -I% -- dmsetup remove % > /dev/null 2>&1; echo $? )
-				if [[ $DMREMOVE_STATUS -gt 0 ]]
+				sgdisk --zap-all \$DISK
+				dd if=/dev/zero of="\$DISK" bs=1M count=100 oflag=direct,dsync
+				DMREMOVE_STATUS=\$(ls /dev/mapper/ceph-* | xargs -I% -- dmsetup remove % > /dev/null 2>&1; echo \$? )
+				if [[ \$DMREMOVE_STATUS -gt 0 ]]
 				then
 					rm -f /dev/mapper/ceph-*
 					echo "Manually deleted /dev/mapper/ceph "
@@ -214,7 +213,7 @@ then
 				rm -Rf /var/lib/rook
 			done
 		else
-			rm -rf /dev/ceph-*
+			rm -Rf /dev/ceph-*
 			rm -Rf /var/lib/rook
 			echo "No processing needed for Rook/Ceph."
 		fi
