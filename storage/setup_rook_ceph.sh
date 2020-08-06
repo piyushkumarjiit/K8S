@@ -37,27 +37,29 @@ SETUP_FOR_LOADBALANCER="false"
 # Flag for setting up Ceph as default storage in cluster. Allowed values true/false
 SET_AS_DEFAULT_STORAGE="false"
 #Make sure your K8S cluster is not using Pod security. If it is then you need to set 1 PodSecurityPolicy that allows privileged Pod execution
-
+# Drive that is added block/raw for use by Ceph. Valid values sdb, sdc etc.
+CEPH_DRIVE_NAME="sdb"
 #To identify the empty storage drive run below command. The one with empty FSTYPE is one we can use
-#lsblk -f
+#lsblk -a | grep sdb
 
 for node in ${WORKER_NODE_NAMES[*]}
 do
 	echo "Trying to connect to $node"
 	#Try to SSH into each node
-	ssh "$USERNAME"@$node <<- 'EOF'
+	ssh "$USERNAME"@$node <<- EOF
+	export CEPH_DRIVE=$CEPH_DRIVE_NAME
 	#Make sure chrony/ntp is running otherwise we would run in issue with Ceph
-	CHRONY_WORKING=$(systemctl status chronyd | grep running > /dev/null 2>&1; echo $?)
-	if [[ $CHRONY_WORKING -gt 0 ]]
+	CHRONY_WORKING=\$(systemctl status chronyd | grep running > /dev/null 2>&1; echo \$?)
+	if [[ \$CHRONY_WORKING -gt 0 ]]
 	then
 		echo "chronyd not running. Lets fix that."
-		CHRONY_INSTALLED=$(dnf list | grep chrony > /dev/null 2>&1; echo $?)
-		if [[ $CHRONY_INSTALLED == 0 ]]
+		CHRONY_INSTALLED=\$(dnf list | grep chrony > /dev/null 2>&1; echo \$?)
+		if [[ \$CHRONY_INSTALLED == 0 ]]
 		then
 			systemctl start chronyd
 			sleep 2
-			CHRONY_WORKING=$(systemctl status chronyd | grep running > /dev/null 2>&1; echo $?)
-			if [[ $CHRONY_WORKING == 0 ]]
+			CHRONY_WORKING=\$(systemctl status chronyd | grep running > /dev/null 2>&1; echo \$?)
+			if [[ \$CHRONY_WORKING == 0 ]]
 			then
 				echo "chronyd running now."
 			else
@@ -69,8 +71,8 @@ do
 			echo "chronyd installed"
 			systemctl enable chronyd
 			systemctl start chronyd
-			CHRONY_WORKING=$(systemctl status chronyd | grep running > /dev/null 2>&1; echo $?)
-			if [[ $CHRONY_WORKING == 0 ]]
+			CHRONY_WORKING=\$(systemctl status chronyd | grep running > /dev/null 2>&1; echo \$?)
+			if [[ \$CHRONY_WORKING == 0 ]]
 			then
 				echo "chronyd installed and running."
 			else
@@ -80,7 +82,16 @@ do
 	else
 		echo "chronyd working already. Proceeding"
 	fi
-	
+	CEPH_DRIVE_IS_PRESENT=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$1}')
+	CEPH_DRIVE_IS_EMPTY=(\$lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$2}')
+	if [[ \$CEPH_DRIVE_AVAILABLE != 0 ]]
+	then
+		echo "Please confirm that raw/block drive is mounted as sdb. Unable to proceed."
+		sleep 2
+		exit 1
+	else
+		echo "Drive found. Proceeding."
+	fi
 	echo "Worker node processed. Exiting."
 	sleep 2
 	exit
