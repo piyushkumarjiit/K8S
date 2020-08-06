@@ -16,6 +16,7 @@ BALANCER="roundrobin"
 INSTANCE_COUNT=$((2 + RANDOM % 20))
 KubeAPIServerName="KubeAPIServerName$INSTANCE_COUNT"
 KubeClusterName="KubeClusterName$INSTANCE_COUNT"
+VIRTUAL_ROUTER_ID=$((52 + RANDOM % 70))
 
 echo "----------- Setting up Load Balancing in $(hostname) ------------"
 
