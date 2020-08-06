@@ -43,7 +43,7 @@ else
 	echo "CEPH_DRIVE_NAME already set. Proceeding."
 fi
 
-if [[ $CEPH_DRIVE_NAME == "" ]]
+if [[ $USERNAME == "" ]]
 then
 	echo "USERNAME not set. Setting as root."
 	#Username that we use to connect to remote machine via SSH
