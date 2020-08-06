@@ -250,6 +250,8 @@ then
 	sed -i "s*###vip_@ddr3ss###*$KUBE_VIP*g" haproxy.cfg
 	# sed -i "s*###n0d31_1p_@ddr###*$KUBE_MASTER_1_IP*g" haproxy.cfg
 	sed -i "s*###AP1_P0RT###*$API_PORT*g" haproxy.cfg
+	sed -i "s*###Kub3@P1S3rv3rN@m31###*$KubeAPIServerName*g" haproxy.cfg
+	sed -i "s*###Kub3Clust3rN@m31###*$KubeClusterName*g" haproxy.cfg
 	#Multiple nodes with newline thus had to use awk. Sed does not handle newline properly
 	awk -i inplace -v srch="###S3rv3r###" -v repl="$FINAL_SERVER_STRING" '{ sub(srch,repl,$0); print $0 }' haproxy.cfg
 	echo "haproxy.cfg updated."
