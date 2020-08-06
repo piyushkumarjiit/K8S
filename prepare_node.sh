@@ -94,7 +94,7 @@ modprobe br_netfilter
 if [[ -r /etc/sysctl.d/99-kubernetes-cri.conf ]]
 then
 	# Set up required sysctl params, these persist across reboots.
-	cat > /etc/sysctl.d/99-kubernetes-cri.conf <<- EOF
+	cat <<- EOF > /etc/sysctl.d/99-kubernetes-cri.conf 
 	net.bridge.bridge-nf-call-iptables  = 1
 	net.ipv4.ip_forward                 = 1
 	net.bridge.bridge-nf-call-ip6tables = 1
@@ -237,9 +237,9 @@ then
 	# Install Container-d
 	#wget https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
 	#tar xvf containerd-1.3.5-linux-amd64.tar.gz
-	#dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
 	yum update -y -q
-	yum install -y -q containerd.io
+	#yum install -y -q containerd.io
 	## Configure containerd
 	mkdir -p /etc/containerd
 	containerd config default > /etc/containerd/config.toml
