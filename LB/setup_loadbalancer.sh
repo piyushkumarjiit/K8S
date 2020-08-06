@@ -1,7 +1,7 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
-#YAML/GIt variables
+#YAML/Git variables
 KEEP_ALIVED_CONF_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/keepalived_template.conf
 HA_PROXY_CONF_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/haproxy_template.cfg
 
