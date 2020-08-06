@@ -147,6 +147,7 @@ echo "Repos deleted."
 #Remove extra files created.
 rm -f /etc/sysctl.d/k8s.conf
 rm -f /etc/docker/daemon.json
+rm -f /etc/sysctl.d/99-kubernetes-cri.conf /etc/containerd/config.toml
 rm -f ~/prepare*.*
 rm -f ~/cleanup_node*.*
 echo "Files created by setup script deleted."
