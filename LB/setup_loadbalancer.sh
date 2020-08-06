@@ -15,9 +15,10 @@ STATE=MASTER
 BALANCER="roundrobin"
 INSTANCE_COUNT=$((2 + RANDOM % 20))
 KubeAPIServerName="KubeAPIServerName$INSTANCE_COUNT"
+KubeAPIServerName="KubeAPIServerName$(($(cat /etc/keepalived/keepalived.conf | grep virtual_router_id | awk -F " " '{print $2}') + 1))
 KubeClusterName="KubeClusterName$INSTANCE_COUNT"
-VIRTUAL_ROUTER_ID=$((52 + RANDOM % 70))
-
+VIRTUAL_ROUTER_ID=$(($(cat /etc/keepalived/keepalived.conf | grep virtual_router_id | awk -F " " '{print $2}') + 1))
+VRRP_INSTANCE=$(($(cat /etc/keepalived/keepalived.conf | grep vrrp_instance | awk -F " " '{print $2}') + 1))
 echo "----------- Setting up Load Balancing in $(hostname) ------------"
 
 if [[ "$KUBE_VIP" == "" ]]
@@ -178,7 +179,7 @@ then
 	#Get the keepalived_template.conf and create a copy
 	echo "Updating the keepalived.conf."
 
-	VRRP_VARIABLE=$(echo "vrrp_instance VI_$INSTANCE_COUNT")
+	VRRP_VARIABLE=$(echo "vrrp_instance $VRRP_INSTANCE")
 	VRRP_VARIABLE+=$'\n'
 	VRRP_VARIABLE+="$(echo -e "{" )"
 	VRRP_VARIABLE+=$'\n'
