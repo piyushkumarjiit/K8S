@@ -4,6 +4,7 @@
 #1. kubectl and internet access
 #2. hosts file or DNS based ssh access to all nodes
 #3. key based ssh enabled for all nodes
+#4. Make sure your K8S cluster is not using Pod security. If it is then you need to set 1 PodSecurityPolicy that allows privileged Pod execution
 
 #sudo ./setup_rook_ceph.sh | tee setup_storage.log
 #sudo ./setup_rook_ceph.sh |& tee setup_storage.log
@@ -23,22 +24,49 @@ CEPH_TOOLBOX_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluste
 export CURRENT_NODE_NAME="$(hostname)"
 #IP of the node from where we run the script
 export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
-#All Worker Nodes
-export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
-export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
+
+#All node names passed by calling script that we are trying to setup
+#export WORKER_NODE_NAMES=($TEMP_NODE_NAMES)
+#All node IP addresses passed by calling script that we are trying to setup
+#export WORKER_NODE_IPS=($TEMP_NODE_IPS)
+
+if [[ ${WORKER_NODE_NAMES[*]} == "" || ${WORKER_NODE_IPS[*]} == "" ]]
+then
+	echo "WORKER_NODE_NAMES or WORKER_NODE_IPS not passed. Unable to proceed."
+	#All Worker Nodes
+	WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
+	WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
+	exit 1
+else
+	echo "WORKER_NODE_NAMES already set. Proceeding."
+fi
+
+if [[ $CEPH_DRIVE_NAME == "" ]]
+then
+	echo "CEPH_DRIVE_NAME not set."
+	# Drive that is added block/raw for use by Ceph. Valid values sdb, sdc etc.
+	CEPH_DRIVE_NAME="sdb"
+else
+	echo "CEPH_DRIVE_NAME already set. Proceeding."
+fi
+
+if [[ $CEPH_DRIVE_NAME == "" ]]
+then
+	echo "USERNAME not set. Setting as root."
+	#Username that we use to connect to remote machine via SSH
+	USERNAME="root"
+else
+	echo "USERNAME already set. Proceeding."
+fi
 # Domain name to be used by Ingress. Using this ceph dashboard URL would become: rook.<domain.com>
-INGRESS_DOMAIN_NAME=bifrost.com
-#Username that we use to connect to remote machine via SSH
-USERNAME="root"
+# INGRESS_DOMAIN_NAME=bifrost.com
+
 # Flag for setting up Ceph tool container in K8S. Allowed values true/false
 INSTALL_CEPH_TOOLS="true"
 # Do we want Ceph dashboard to be accessible via Load Balancer/Metal LB or use via Ingress.Allowed values true/false
 SETUP_FOR_LOADBALANCER="false"
 # Flag for setting up Ceph as default storage in cluster. Allowed values true/false
 SET_AS_DEFAULT_STORAGE="false"
-#Make sure your K8S cluster is not using Pod security. If it is then you need to set 1 PodSecurityPolicy that allows privileged Pod execution
-# Drive that is added block/raw for use by Ceph. Valid values sdb, sdc etc.
-CEPH_DRIVE_NAME="sdb"
 #To identify the empty storage drive run below command. The one with empty FSTYPE is one we can use
 #lsblk -a | grep sdb
 
