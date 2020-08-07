@@ -1,8 +1,11 @@
 # K8S
 
-This script is not for Prod rather a streamlined way to setup Kubernetes cluster in homelab (or other non critical environments). Although it does support multiple stacked control planes and follows certain HA principles specified in Kubernetes documentation, use it at your own risk.
-When I started learning Kubernetes setting up the cluster was a task in itself. So I created this for my homelab and sharing in hope that it would enable others to set things up quicker.
+This script is not for Prod rather a 1-Click way to setup Kubernetes cluster along with its various components in homelab (or other non critical environments). Although it does support multiple stacked control planes and follows certain HA principles specified in Kubernetes documentation, I have not tested it extensively.Use it at your own risk.
+
+When I started learning Kubernetes setting up the cluster was a task in itself. So I created this for my homelab and sharing in hope that it would enable others to set things up quicker. 
 The script currently supports CentOS7 and CentOS 8 and I tested these 2 in my homelab. I was able to mix and match nodes without any issue.
+
+While trying to setup my first cluster, I ran into lot of issues and hopefully this script would save you from all of those. I added resolutions to script with documentation to avoid future pain :) .
 
 ## Getting Started
 Please set up public key based SSH access to all nodes (provisioned VMs) we are planning to use and connect to those nodes atleast ones via SSH. This would minimize the number of prompts (only 2 prompts) you would get during script execution.
@@ -13,15 +16,14 @@ Also make sure that raw/block drive is attached to worker nodes for Ceph to form
 ### What all the script installs:
 <li>KeepAlived</li>
 <li>HAProxy</li>
-<li></li>
 <li>Docker + Containerd</li>
 <li>Kubelet, Kubeadm, Kubectl</li>
 <li>MetalLB</li>
 <li>Nginx Ingress Controller</li>
 <li>Rook + Ceph</li>
-<li>Prometheus</li>
-<li>AlertManager</li>
-<li>Grafana with presets using mixins</li>
+<li>Prometheus (using Kube-Prometheus)</li>
+<li>AlertManager (using Kube-Prometheus)</li>
+<li>Grafana with presets using mixins (using Kube-Prometheus)</li>
 <li>CertManager</li>
 
 ### What all the script does:
@@ -148,5 +150,3 @@ Thanks to below URLs for providing me the necessary understanding and material t
 <li>https://www.Google.com</li>
 <li>https://rook.github.io/docs/rook/v1.3/</li>
 <li>https://github.com/prometheus-operator/kube-prometheus</li>
-
-
