@@ -43,12 +43,12 @@ Also make sure that raw/block drive is attached to worker nodes for Ceph to form
 <li>Sets up Dashboards for Prometheus + AlertManager + Grafana </li>
 
 
-If something is not clear on this ReadMe, I would recommend to download the script and take a look as I have added comments to make it easy for others to understand and customize as needed.
+If something is not clear on this ReadMe, I would recommend to download the script and take a look as I have added comments to make it easy for others to understand and customize.
 
 
 
 ## Prerequisites
-The script is relatively self contained and fetches necessary files from github repo. To execute the script successfully we need:
+The script is relatively self contained and fetches necessary files from github repos. To execute the script successfully we need:
 
 <li>Access to Internet</li>
 <li>Provisioned VMs that would serve as Nodes</li>
@@ -93,17 +93,17 @@ Update the permissions on the downloaded file using:
 <code>chmod 755 Setup_Kubernetes_V01.sh</code>
 
 Update below mentioned variables in the script using an editor:
-<code>START_IP_ADDRESS_RANGE</code>
-<code>END_IP_ADDRESS_RANGE</code>
-<code>LB_NODE_IPS</code>
-<code>LB_NODE_NAMES</code>
-<code>KUBE_VIP_1_IP</code>
-<code>MASTER_NODE_IPS</code>
-<code>MASTER_NODE_NAMES</code>
-<code>WORKER_NODE_IPS</code>
-<code>WORKER_NODE_NAMES</code>
-<code>CEPH_DRIVE_NAME</code>
-<code>ADMIN_USER</code>
+<li><code>START_IP_ADDRESS_RANGE</code></li>
+<li><code>END_IP_ADDRESS_RANGE</code></li>
+<li><code>LB_NODE_IPS</code></li>
+<li><li><code>LB_NODE_NAMES</code></li>
+<li><code>KUBE_VIP_1_IP</code></li>
+<li><code>MASTER_NODE_IPS</code></li>
+<li><code>MASTER_NODE_NAMES</code></li>
+<li><code>WORKER_NODE_IPS</code></li>
+<li><code>WORKER_NODE_NAMES</code></li>
+<li><code>CEPH_DRIVE_NAME</code></li>
+<li><code>ADMIN_USER</code></li>
 
 Now run below script and follow prompts:
 <code>sudo ./Setup_Kubernetes_V01.sh |& tee -a setup.log</code>
@@ -150,3 +150,5 @@ Thanks to below URLs for providing me the necessary understanding and material t
 <li>https://www.Google.com</li>
 <li>https://rook.github.io/docs/rook/v1.3/</li>
 <li>https://github.com/prometheus-operator/kube-prometheus</li>
+
+
