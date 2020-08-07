@@ -96,7 +96,7 @@ Update below mentioned variables in the script using an editor:
 <li><code>START_IP_ADDRESS_RANGE</code></li>
 <li><code>END_IP_ADDRESS_RANGE</code></li>
 <li><code>LB_NODE_IPS</code></li>
-<li><li><code>LB_NODE_NAMES</code></li>
+<li><code>LB_NODE_NAMES</code></li>
 <li><code>KUBE_VIP_1_IP</code></li>
 <li><code>MASTER_NODE_IPS</code></li>
 <li><code>MASTER_NODE_NAMES</code></li>
@@ -105,7 +105,7 @@ Update below mentioned variables in the script using an editor:
 <li><code>CEPH_DRIVE_NAME</code></li>
 <li><code>ADMIN_USER</code></li>
 
-Now run below script and follow prompts:
+Now run the script and follow prompts:
 <code>sudo ./Setup_Kubernetes_V01.sh |& tee -a setup.log</code>
 
 
@@ -150,5 +150,3 @@ Thanks to below URLs for providing me the necessary understanding and material t
 <li>https://www.Google.com</li>
 <li>https://rook.github.io/docs/rook/v1.3/</li>
 <li>https://github.com/prometheus-operator/kube-prometheus</li>
-
-
