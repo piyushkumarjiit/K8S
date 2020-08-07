@@ -1,21 +1,24 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
-# ROOK Deployment script. Need to be executed from a host where we have:
-#1. kubectl access
-#2. sudo level access
-#3. internet access to fetch files
+# Monitoring setup script. Need to be executed from a host where we have:
+#1. sudo + kubectl access
+#2. Working kubernetes cluster
+#3. Internet access to fetch files
 #4. FQDN that can be used by ingress
+#5. Storage already setup for use in PVC
+#6. Value of storageclass to be used by PVC
+#7. Size of PVC that should be requested
 
 #sudo ./setup_monitoring_all.sh | tee setup_monitoring.log
 #sudo ./setup_monitoring_all.sh |& tee setup_monitoring.log
 
-echo "----------- Setting up Prometheus + Grafana + Alertmanager  ------------"
-export KUBE_PROMETHEUS_REPO=https://github.com/coreos/kube-prometheus.git
-#export MONITORING_INGRESS_JSONNET=https://raw.githubusercontent.com/coreos/kube-prometheus/b55c2825f7fa4491c6018bd256ef5d7e0b62404c/examples/ingress.jsonnet
-export PROMETHEUS_PVC_JSONNET=https://raw.githubusercontent.com/coreos/kube-prometheus/master/examples/prometheus-pvc.jsonnet
-export KP_BUILD_SH=https://raw.githubusercontent.com/coreos/kube-prometheus/master/build.sh
-export MONITORING_INGRESS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ingress/monitoring-dashboard-ingress-http.yaml
-export GRAFANA_PVC_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/grafana_pvc.yaml
+echo "----------- Setting up Monitoring (Prometheus + Grafana + Alertmanager)  ------------"
+KUBE_PROMETHEUS_REPO=https://github.com/coreos/kube-prometheus.git
+#MONITORING_INGRESS_JSONNET=https://raw.githubusercontent.com/coreos/kube-prometheus/b55c2825f7fa4491c6018bd256ef5d7e0b62404c/examples/ingress.jsonnet
+PROMETHEUS_PVC_JSONNET=https://raw.githubusercontent.com/coreos/kube-prometheus/master/examples/prometheus-pvc.jsonnet
+KP_BUILD_SH=https://raw.githubusercontent.com/coreos/kube-prometheus/master/build.sh
+MONITORING_INGRESS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ingress/monitoring-dashboard-ingress-http.yaml
+GRAFANA_PVC_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/grafana_pvc.yaml
 
 if [[ $STORAGE_SIZE == "" ]]
 then
@@ -29,7 +32,7 @@ fi
 if [[ $INGRESS_DOMAIN_NAME == "" ]]
 then
 	echo "INGRESS_DOMAIN_NAME not set. Setting a default value."
-	# Domain name to be used by Ingress. Using this grafana URL would become: grafana.<domain.com>
+	# Domain name to be used by Ingress. Using this grafana URL would become: grafana.<domain>
 	INGRESS_DOMAIN_NAME=bifrost.com
 else
 	echo "INGRESS_DOMAIN_NAME already set. Proceeding."
@@ -52,7 +55,7 @@ then
 	fi
 fi
 
-# Run mode. Allowed values Deploy/DryRun
+# Run mode. Controls deployment of generated YAML files to cluster. Allowed values Deploy/DryRun
 RUN_MODE=""
 
 if [[ $RUN_MODE == "" ]]
@@ -113,7 +116,7 @@ then
 	fi
 fi
 
-# Install gojsonttoyaml. Used to generate files later
+# Install gojsonttoyaml. Used to generate YAML files later
 JSONTOYAML_INSTALLED=$(echo '{"test":"test \\nmultiple"}' | gojsontoyaml >/dev/null 2>&1; echo $?)
 if [[  $JSONTOYAML_INSTALLED -gt 0 ]]
 then
@@ -134,7 +137,7 @@ fi
 # Go HOME
 cd ~
 rm -Rf ~/my-kube-prometheus
-# CD to my-kube-prometheus
+# Go to my-kube-prometheus
 mkdir -p my-kube-prometheus; cd my-kube-prometheus
 jb init  # Creates the initial/empty "jsonnetfile.json"
 # Installs all the kube-prometheus jb dependency
@@ -216,5 +219,5 @@ rm -f /usr/bin/jsonnet
 rm -f /usr/bin/jb
 rm -f /usr/bin/gojsontoyaml
 
-echo "----------- All done ----------- "
+echo "----------- Monitoring setup (Prometheus + Grafana + Alertmanager) complete  ------------ "
 

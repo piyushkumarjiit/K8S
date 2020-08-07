@@ -1,9 +1,9 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 # ROOK Deployment script. Need to be executed from a host where we have:
-#1. kubectl access
-#2. sudo level access
-#3. internet access to fetch files
+#1. sudo + kubectl access
+#2. Working kubernetes cluster
+#3. Internet access to fetch files
 #4. FQDN that was used by ingress
 
 #sudo ./cleanup_monitoring_all.sh | tee cleanup_monitoring.log
