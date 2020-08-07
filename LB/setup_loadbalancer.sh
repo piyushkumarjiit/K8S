@@ -1,6 +1,16 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
+# Load balancer setup script. This isntalls and configure Keeplaived + HAProxy.
+#Need to be executed from a host where we have:
+#1. sudo and internet access
+#2. Hosts file or DNS based ssh access to all nodes
+#3. key based ssh enabled for all nodes
+
+#sudo ./setup_loadbalancer.sh | tee setup_loadbalancer.log
+#sudo ./setup_loadbalancer.sh |& tee setup_loadbalancer.log
+
+
 #YAML/Git variables
 KEEP_ALIVED_CONF_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/keepalived_template.conf
 HA_PROXY_CONF_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/haproxy_template.cfg
@@ -91,7 +101,7 @@ then
 		exit 1
 	fi
 fi
-echo "Proceeding with LB config."
+echo "Proceeding with LB config. KEEPALIVED_AVAILABLE: $KEEPALIVED_AVAILABLE, HAPROXY_AVAILABLE: $HAPROXY_AVAILABLE, VIP_ALREADY_PRESENT: $VIP_ALREADY_PRESENT"
 #Other Load Balancer nodes. Used in keepalived conf. Passed by main script and seprated by "%"
 TEMP_PEER_IPS=$(echo $UNICAST_PEER_IP | sed 's#%#\n#g')
 #All Master nodes part of the cluster. Used in haproxy.cfg. Passed by main script and seprated by "%"
@@ -176,10 +186,7 @@ then
 elif [[ -r /etc/keepalived/keepalived.conf  ]]
 then
 	echo "Found keepalived.conf in /etc/keepalived/ direcotry. Updating it with new VIP config."
-
 	echo "Creating the section to be added to existing keepalived.conf"
-	#Get the keepalived_template.conf and create a copy
-	echo "Updating the keepalived.conf."
 
 	VRRP_VARIABLE=$(echo "vrrp_instance $VRRP_INSTANCE")
 	VRRP_VARIABLE+=$'\n'
@@ -226,7 +233,7 @@ then
 	VRRP_VARIABLE+="$(echo -e "}" )"
 	VRRP_VARIABLE+=$'\n'
 
-	echo "keepalived.conf updated."
+	echo "New section for keepalived.conf ready."
 	#Create a backup copy of keepalived
 	cp /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.bak
 	echo "Created a backup of exisitng keepalived conf. Appending the new VRRP section"
@@ -278,12 +285,12 @@ then
 	VRRP_VARIABLE+="$(echo -e "$FINAL_SERVER_STRING" )"
 	VRRP_VARIABLE+=$'\n'
 
-	echo "haproxy.cfg updated."
+	echo "New section for haproxy.cfg ready."
 	#Create a backup copy of keepalived
 	cp /etc/haproxy/haproxy.cfg /etc/haproxy/haproxy.bak
 	echo "Created a backup of exisitng haproxy.cfg. Appending the new section"
 	echo -e "$VRRP_VARIABLE" >> /etc/haproxy/haproxy.cfg
-
+	echo "haproxy.cfg updated. Restart of service is required."
 else
 	echo "Found haproxy.cfg in current direcotry. Going to use it 'as is'."
 fi
@@ -308,7 +315,7 @@ distro=$(cat /etc/*-release | awk '/ID=/ { print }' | head -n 1 | awk -F "=" '{p
 
 if [[ $distro == "Ubuntu" ]]
 then
-	#Needs testing
+	#Needs lot of work. TBD
 	echo "Calling apt update."
 	#Call update
 	apt-get update
