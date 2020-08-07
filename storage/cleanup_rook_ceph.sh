@@ -3,6 +3,8 @@
 #ROOK + Ceph Cleanup script. Need to eb executed from a host where we have:
 #1. key based ssh enabled for all nodes
 #2. hosts file or DNS based ssh access to all nodes
+#3. sudo + kubectl access
+#4. Internet access to fetch files
 
 #sudo ./setup_rook_ceph.sh |& tee -a setup_storage.log
 
@@ -127,7 +129,6 @@ else
 	echo "Downloading ceph-toolbox.yaml."
 	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 	wget -q $CEPH_TOOLBOX_YAML -O ceph-toolbox.yaml
-
 fi
 
 if [[ $KUBECTL_AVAILABLE == 0  ]]
@@ -226,7 +227,5 @@ then
 else
 	echo "Filesystem for specified drive seems to be already flushed."
 fi
-
-
 
 echo "----------- Rook removed. Drives used by Ceph zapped -----------"

@@ -1,10 +1,11 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 # ROOK Deployment script. Need to be executed from a host where we have:
-#1. kubectl and internet access
-#2. hosts file or DNS based ssh access to all nodes
+#1. sudo + kubectl and internet access
+#2. Hosts file or DNS based ssh access to all nodes
 #3. key based ssh enabled for all nodes
-#4. Make sure your K8S cluster is not using Pod security. If it is then you need to set 1 PodSecurityPolicy that allows privileged Pod execution
+#4. Make sure Block/raw drive is attached to worker nodes before proceeding
+#5. Make sure your K8S cluster is not using Pod security. If it is then you need to set 1 PodSecurityPolicy that allows privileged Pod execution
 
 #sudo ./setup_rook_ceph.sh | tee setup_storage.log
 #sudo ./setup_rook_ceph.sh |& tee setup_storage.log
@@ -21,14 +22,14 @@ CEPH_FILSYSTEM_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/clus
 ROOK_STORAGE_CLASS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class.yaml
 CEPH_TOOLBOX_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 #Hostname of the node from where we run the script
-export CURRENT_NODE_NAME="$(hostname)"
+CURRENT_NODE_NAME="$(hostname)"
 #IP of the node from where we run the script
-export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
+CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 
 #All node names passed by calling script that we are trying to setup
-#export WORKER_NODE_NAMES=($TEMP_NODE_NAMES)
+# WORKER_NODE_NAMES=($TEMP_NODE_NAMES)
 #All node IP addresses passed by calling script that we are trying to setup
-#export WORKER_NODE_IPS=($TEMP_NODE_IPS)
+# WORKER_NODE_IPS=($TEMP_NODE_IPS)
 
 if [[ ${WORKER_NODE_NAMES[*]} == "" || ${WORKER_NODE_IPS[*]} == "" ]]
 then
@@ -58,8 +59,15 @@ then
 else
 	echo "USERNAME already set. Proceeding."
 fi
-# Domain name to be used by Ingress. Using this ceph dashboard URL would become: rook.<domain.com>
-# INGRESS_DOMAIN_NAME=bifrost.com
+
+if [[ $INGRESS_DOMAIN_NAME == "" ]]
+then
+	echo "INGRESS_DOMAIN_NAME not set. Setting as k8smagic.com."
+	# Domain name to be used by Ingress. Using this ceph dashboard URL would become: rook.<domain.com>
+	# INGRESS_DOMAIN_NAME=k8smagic.com
+else
+	echo "INGRESS_DOMAIN_NAME already set. Proceeding."
+fi
 
 # Flag for setting up Ceph tool container in K8S. Allowed values true/false
 INSTALL_CEPH_TOOLS="true"
