@@ -4,7 +4,13 @@ This script is not for Prod rather a streamlined way to setup Kubernetes cluster
 When I started learning Kubernetes setting up the cluster was a task in itself. So I created this for my homelab and sharing in hope that it would enable others to set things up quicker.
 The script currently supports CentOS7 and CentOS 8 and I tested these 2 in my homelab. I was able to mix and match nodes without any issue.
 
-What all the script installs:
+## Getting Started
+Please set up public key based SSH access to all nodes (provisioned VMs) we are planning to use and connect to those nodes atleast ones via SSH. This would minimize the number of prompts (only 2 prompts) you would get during script execution.
+Get block of available IP address from your local router. In case of DD-WRT based router, connect to the router via SSH and run <code> cat /var/lib/misc/dnsmasq.leases </code> to get a list of IP in use. As always I would recommend key based SSH for router as well.
+Also make sure that raw/block drive is attached to worker nodes for Ceph to format and use.
+
+
+### What all the script installs:
 <li>KeepAlived</li>
 <li>HAProxy</li>
 <li></li>
@@ -18,7 +24,7 @@ What all the script installs:
 <li>Grafana with presets using mixins</li>
 <li>CertManager</li>
 
-What all the script does:
+### What all the script does:
 <li>Takes care of all dependencies for all components involved (modprobes, firewalld, selinux, swap, DNS, IP Forwarding, CRI-O, Docker etc.)</li>
 <li>Install and sets up KeepAlived + HAProxy for use by control plane</li>
 <li>Install things that are needed by cluster (kubelet, kubeadm, kubectl)</li>
@@ -37,12 +43,9 @@ What all the script does:
 
 If something is not clear on this ReadMe, I would recommend to download the script and take a look as I have added comments to make it easy for others to understand and customize as needed.
 
-## Getting Started
-Please set up public key based SSH access to all nodes (provisioned VMs) we are planning to use and connect to those nodes atleast ones via SSH. This would minimize the number of prompts (only 2 prompts) you would get during script execution.
-Get block of available IP address from your local router. In case of DD-WRT based router, connect to the router via SSH and run <code> cat /var/lib/misc/dnsmasq.leases </code> to get a list of IP in use. As always I would recommend key based SSH for router as well.
-Also make sure that raw/block drive is attached to worker nodes for Ceph to format and use.
 
-### Prerequisites
+
+## Prerequisites
 The script is relatively self contained and fetches necessary files from github repo. To execute the script successfully we need:
 
 <li>Access to Internet</li>
@@ -56,26 +59,26 @@ The script is relatively self contained and fetches necessary files from github 
 <li>Domain name to be used by Ingress (LAN/internal would do.) </li>
 <li>Block/raw drive attached to all worker nodes (to be used by Ceph for storage)</li>
 
-### How the script works?
+## How the script works?
 To keep it as streamlined as possible, I have defined variables in main script that can be updated to align with local environment.
 All other scripts (setting up storage, setting up monitoring etc.) are sourced in main script.
 Thus we only need to update variables in main script (Setup_Kubernetes_V01.sh)
 
 
 
-#### Prepare Nodes (prepare_node.sh)
+### Prepare Nodes (prepare_node.sh)
 
-#### Set up external Load Balancer (KeepAlived + HA Proxy)
+### Set up external Load Balancer (KeepAlived + HA Proxy)
 
-#### Setup the cluster
+### Setup the cluster
 
-#### Deploy MetalLB  
+### Deploy MetalLB  
 
-#### Deploy Nginx Ingress controller 
+### Deploy Nginx Ingress controller 
 
-#### Prepare worker nodes and setup storage  (Rook + Ceph)
+### Prepare worker nodes and setup storage  (Rook + Ceph)
 
-#### Deploy Kube-Prometheus  (Prometheus + AlertManager + Grafana + mixins)
+### Deploy Kube-Prometheus  (Prometheus + AlertManager + Grafana + mixins)
 
 
 
