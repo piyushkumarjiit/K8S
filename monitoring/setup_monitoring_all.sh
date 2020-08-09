@@ -1,5 +1,5 @@
 #!/bin/bash
-#Author: Piyush Kumar (piyushkumar.jiit@.com)
+#Author: Piyush Kumar (piyushkumar.jiit@gmail.com)
 # Monitoring setup script. Need to be executed from a host where we have:
 #1. sudo + kubectl access
 #2. Working kubernetes cluster
