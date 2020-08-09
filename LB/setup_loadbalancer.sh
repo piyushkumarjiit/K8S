@@ -248,14 +248,12 @@ if [[ ! -r $HOME/haproxy.cfg && $HAPROXY_AVAILABLE != 0 ]]
 then
 	echo "Downloading the template files from github."
 	#Get the haproxy_template.cfg and create a copy
-	#wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/haproxy_template.cfg"
 	wget -q $HA_PROXY_CONF_TEMPLATE
 	cp haproxy_template.cfg haproxy.cfg
 	rm haproxy_template.cfg
 	echo "Updating the haproxy.cfg."
 	#Update the placeholders with value for primary
 	sed -i "s*###vip_@ddr3ss###*$KUBE_VIP*g" haproxy.cfg
-	# sed -i "s*###n0d31_1p_@ddr###*$KUBE_MASTER_1_IP*g" haproxy.cfg
 	sed -i "s*###AP1_P0RT###*$API_PORT*g" haproxy.cfg
 	sed -i "s*###Kub3@P1S3rv3rN@m31###*$KubeAPIServerName*g" haproxy.cfg
 	sed -i "s*###Kub3Clust3rN@m31###*$KubeClusterName*g" haproxy.cfg
@@ -367,8 +365,7 @@ then
 		echo "Expected path: $(pwd)/haproxy.cfg"
 		mv $HOME/haproxy.cfg /etc/haproxy/haproxy.cfg
 		#Only for Non Primary node when remote binding is not enabled/available
-		#Run below command on Primary keepalived node to switch VIP to Secondary node. 
-		#This ensures that VIP is available for HAProxy to bind to.
+		#Run below command on Primary keepalived node to switch VIP to Secondary node.This ensures that VIP is available for HAProxy to bind to.
 		#sudo systemctl stop keepalived
 		#Start HAProxy service
 		systemctl enable haproxy.service
@@ -385,7 +382,6 @@ then
 	echo "Both the services should be up. Lets check."
 fi
 sleep 20
-#nc -zv $KUBE_VIP $API_PORT
 
 #Check LB status
 LB_CONNECTED=$(nc -vz $KUBE_VIP $API_PORT |& grep Connected > /dev/null 2>&1; echo $?)
