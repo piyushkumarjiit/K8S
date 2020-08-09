@@ -7,34 +7,36 @@
 echo "------------ Cleanup script started --------------"
 
 #LB Details
-export KUBE_VIP_1_HOSTNAME="VIP"
-export KUBE_VIP_1_IP="192.168.2.6"
+KUBE_VIP_1_HOSTNAME="VIP"
+KUBE_VIP_1_IP="192.168.2.6"
 #Port where Control Plane API server would bind on Load Balancer
-export KUBE_MASTER_API_PORT="6443"
+KUBE_MASTER_API_PORT="6443"
 #Hostname of the node from where we run the script
-export CURRENT_NODE_NAME="$(hostname)"
+CURRENT_NODE_NAME="$(hostname)"
 #IP of the node from where we run the script
-export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
+CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 
 #All Nodes running Load Balancer
-export LB_NODES_IP=("192.168.2.205" "192.168.2.111")
-export LB_NODES_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
+LB_NODES_IP=("192.168.2.205" "192.168.2.111")
+LB_NODES_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
 #All Master nodes
-export MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186")
-export MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost")
+MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186")
+MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost")
+#export MASTER_NODE_IPS=("192.168.2.175" "192.168.2.198" "192.168.2.140")
+#export MASTER_NODE_NAMES=("K8SCentOS8Master1.bifrost" "K8SCentOS8Master2.bifrost" "K8SCentOS8Master3.bifrost")
 #All Worker Nodes
-export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.137" "192.168.2.227")
-export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
+WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
+WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
+#export WORKER_NODE_IPS=("192.168.2.208" "192.168.2.95" "192.168.2.104")
+#export WORKER_NODE_NAMES=("K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
 #All K8S nodes (Master + Worker)
-export KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
-export KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
+KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
+KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
 #All nodes we are trying to use
-export ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODES_IP[*]})
-export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODES_NAMES[*]})
-#Username that we use to connect to remote machine via SSH
-export USERNAME="root"
+ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODES_IP[*]})
+ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODES_NAMES[*]})
 #Flag to identify if LB nodes should also be cleaned
-export EXTERNAL_LB_ENABLED="true"
+EXTERNAL_LB_ENABLED="false"
 #Workaround for lack of DNS. Local node can ping itself but unable to SSH
 echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
 # Do we want to setup Rook + Ceph. Allowed values true/false
@@ -45,6 +47,15 @@ SETUP_CLUSTER_MONITORING="true"
 SETUP_NGINX_INGRESS="true"
 # Flag to setup Metal LB. Allowed values true/false
 SETUP_METAL_LB="true" 
+# Drive that is added block/raw for use by storage/Ceph. Valid values sdb, sdc etc.
+CEPH_DRIVE_NAME="sdb"
+# Used in the PVC config for Prometheus. Set the value in Name column from the result of the command: kubectl get sc
+STORAGE_CLASS="csi-cephfs"
+# Size of Prometheus PVC. Allowed value format "1Gi", "2Gi", "5Gi" etc
+STORAGE_SIZE="2Gi"
+#Username that we use to connect to remote machine via SSH
+USERNAME="root"
+
 #YAML/Git variables
 METAL_LB_NAMESPACE=https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
 METAL_LB_MANIFESTS=https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml
@@ -52,33 +63,35 @@ NGINX_LB_DEPLOY_YAML=https://raw.githubusercontent.com/kubernetes/ingress-nginx/
 NGINX_DEPLOY_YAML=https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/baremetal/deploy.yaml
 CERT_MGR_DEPLOY=https://github.com/jetstack/cert-manager/releases/download/v0.16.0/cert-manager.yaml
 SELF_SIGNED_CERT_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ingress/cert_self_signed.yaml
+CALICO_YAML="https://docs.projectcalico.org/v3.14/manifests/calico.yaml"
 
-
-
-if [[ $SETUP_CLUSTER_MONITORING == "true" ]]
+KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
+SETUP_CLUSTER_MONITORING=$(kubectl get pods -n monitoring > /dev/null 2>&1; echo $?)
+SETUP_ROOK_INSTALLED=$(kubectl get pods -n rook-ceph > /dev/null 2>&1; echo $?)
+if [[ $SETUP_CLUSTER_MONITORING == 0 ]]
 then
-	echo "Starting Ceph+Rook cleanup."
+	echo "Starting monitoring components cleanup."
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/cleanup_monitoring_all.sh
 	chmod +x cleanup_monitoring_all.sh
-	./cleanup_monitoring_all.sh
+	. ./cleanup_monitoring_all.sh # source the script to use the variables already set above.
 	echo "Monitoring cleanup complete."
 	rm -f cleanup_monitoring_all.sh
 else
 	echo "Skipping monitoring cleanup."
 fi
 
-if [[ $SETUP_ROOK_INSTALLED == "true" ]]
+if [[ $SETUP_ROOK_INSTALLED == 0 ]]
 then
-	echo "Starting Ceph+Rook cleanup."
+	echo "Starting storage components cleanup."
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/cleanup_rook_ceph.sh
 	chmod +x cleanup_rook_ceph.sh
-	./cleanup_rook_ceph.sh
+	. ./cleanup_rook_ceph.sh # source the script to use the variables already set above.
 	echo "Storage cleanup complete."
 	rm -f cleanup_rook_ceph.sh
 else
 	echo "Skipping Ceph+Rook cleanup."
 fi
-KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
+
 # To cleanup cert-manager
 if [[ $SETUP_CERT_MANAGER == "true" && $KUBECTL_AVAILABLE == 0 ]]
 	then
@@ -159,6 +172,21 @@ then
 else
 	echo "Kubectl not present."
 fi
+
+# if [[ $NETWORKING_TYPE == "calico" ]]
+# 	then
+# 		#New YAML from K8s.io docs
+# 		#kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
+# 		kubectl delete -f $CALICO_YAML
+# 		#kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml
+# 		#sleep 2
+# 		#kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml
+# 		echo "Calico set up."
+# 	else
+# 		export kubever=$(kubectl version | base64 | tr -d '\n')
+# 		kubectl delete -f https://cloud.weave.works/k8s/net?k8s-version=$kubever
+# 		echo "Weave set up."
+# fi
 
 #Check connectivity to all nodes
 HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
@@ -254,4 +282,4 @@ fi
 echo "------------ All Nodes cleaned --------------"
 
 echo "Restarting the node. Connect again."
-#shutdown -r
+shutdown -r

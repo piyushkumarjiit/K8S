@@ -1,5 +1,14 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
+
+# Node cleanup script. Need to be executed from a host where we have:
+#1. sudo and internet access
+#2. Hosts file or DNS based ssh access to all nodes
+#3. key based ssh enabled for all nodes
+
+#sudo ./cleanup_node.sh | tee cleanup_node.log
+#sudo ./cleanup_node.sh |& tee cleanup_node.log
+
 echo "========== Connected to $(hostname)) ============"
 echo "Cleanup script initiated from node: $CALLING_NODE_NAME."
 
@@ -160,8 +169,6 @@ rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docke
 rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-engine  /var/lib/dockershim
 rm -Rf /usr/lib/systemd/system/kubelet.service.d
 
-
-
 echo "Docker and Kubernetes config directories deleted."
 #groupdel docker
 echo "Docker group deleted."
@@ -171,7 +178,6 @@ echo "Docker group deleted."
 #systemctl start firewalld
 iptables -F ; iptables -t nat -F ; iptables -t mangle -F ; iptables -X ;  iptables -t nat -X;  iptables -t mangle -X
 echo "firewalld enabled and started."
-
 
 #Enable Swap manually. Uncomment for real scenarios
 #sed -ir 's/.*-swap/#&/' /etc/fstab

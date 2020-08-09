@@ -1,15 +1,23 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
+# Node prepare script. Need to be executed from a host where we have:
+#1. sudo and internet access
+#2. Hosts file or DNS based ssh access to all nodes
+#3. key based ssh enabled for all nodes
+
+#sudo ./prepare_node.sh | tee prepare_node.log
+#sudo ./prepare_node.sh |& tee prepare_node.log
+
 echo "----------- Preparing $(hostname) ------------"
 #Hostname of the node from where we run the script
-export CURRENT_NODE_NAME="$(hostname)"
+CURRENT_NODE_NAME="$(hostname)"
 #IP of the node from where we run the script
-export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
+CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 #All node names passed by calling script that we are trying to setup
-export ALL_NODE_NAMES=($TEMP_NODE_NAMES)
+ALL_NODE_NAMES=($TEMP_NODE_NAMES)
 #All node IP addresses passed by calling script that we are trying to setup
-export ALL_NODE_IPS=($TEMP_NODE_IPS)
+ALL_NODE_IPS=($TEMP_NODE_IPS)
 
 if [[ ${ALL_NODE_NAMES[*]} == "" || ${ALL_NODE_IPS[*]} == "" ]]
 then
@@ -233,6 +241,7 @@ then
 
 	# Add Docker repo as it is used by containerd and docker
 	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+	#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
 
 	# Install Container-d
 	#wget https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
@@ -248,9 +257,6 @@ then
 
 	#Install Docker on server
 	echo "Docker not available. Trying to install Docker."
-	
-	#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
-
 	dnf -y -q install docker-ce
 
 	#Enable Docker to start on start up

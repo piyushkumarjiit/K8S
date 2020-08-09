@@ -1,58 +1,84 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@.com)
 
-#./Setup_Kubernetes_V01.sh | tee setup.log
-#./Setup_Kubernetes_V01.sh |& tee -a setup.log
+#sudo ./Setup_Kubernetes_V01.sh | tee setup.log
+#sudo ./Setup_Kubernetes_V01.sh |& tee -a setup.log
 
 # K8S Component related variables/Flags
 # Do we want to setup Rook + Ceph. Allowed values true/false
-ROOK_INSTALLED="true"
+SETUP_ROOK_INSTALLED="true"
+# Do we want to setup Monitoring for Cluster (Prometheus + AlertManager+Grafana). Allowed values true/false
+SETUP_CLUSTER_MONITORING="true"
 # Flag to setup Metal LB. Allowed values true/false
-export SETUP_METAL_LB="true" 
+SETUP_METAL_LB="true"
+# Flag to indicate if there is a cloud provided LB available. Allowed values true/false
+CLOUD_PROVIDED_LB="false"
 # IP Address Pool for Metal LB
-export START_IP_ADDRESS_RANGE=192.168.2.190
-export END_IP_ADDRESS_RANGE=192.168.2.195
+START_IP_ADDRESS_RANGE=192.168.2.190
+END_IP_ADDRESS_RANGE=192.168.2.195
 #Nginx Ingress setup flag. Allowed values true/false
 SETUP_NGINX_INGRESS="true"
+# Domain name to be used by Ingress. Using this grafana URL would become: grafana.<domain.com>
+INGRESS_DOMAIN_NAME=bifrost.com
 # Flag to setup Helm. Allowed values true/false
 SETUP_HELM="true" 
+# Flag to setup CERT_MANAGER. Allowed values true/false
+SETUP_CERT_MANAGER="true"
 #Do we want to setup HAPRoxy+KeepAlived Load Balancer. Allowed values true/false
-export EXTERNAL_LB_ENABLED="true"
+EXTERNAL_LB_ENABLED="true"
 #All Nodes part of HAPRoxy+KeepAlived Load Balancer 
-export LB_NODE_IPS=("192.168.2.205" "192.168.2.111")
-export LB_NODE_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
+LB_NODE_IPS=("192.168.2.205" "192.168.2.111")
+LB_NODE_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
 # HAPRoxy+KeepAlived Load Balancer Details
-export KUBE_VIP_1_HOSTNAME="VIP"
-export KUBE_VIP_1_IP="192.168.2.6"
+KUBE_VIP_1_HOSTNAME="VIP"
+KUBE_VIP_1_IP="192.168.2.6"
+#export KUBE_VIP_1_HOSTNAME="VIP2"
+#export KUBE_VIP_1_IP="192.168.2.7"
 #Port where Control Plane API server would bind on Load Balancer
-export API_PORT="6443"
+API_PORT="6443"
 #Hostname of the node from where we run the script
-export CURRENT_NODE_NAME="$(hostname)"
+CURRENT_NODE_NAME="$(hostname)"
 #IP of the node from where we run the script
-export CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
+CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 #Do you want to set up new Primary Master nodes in this run. Allowed values true/false
-export SETUP_PRIMARY_MASTER="true"
+SETUP_PRIMARY_MASTER="true"
 #Do you want to add Master nodes in this run. Allowed values true/false
-export ADD_MASTER_NODES="true"
+ADD_MASTER_NODES="true"
 #All Master nodes
-export MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186")
-export MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost")
+#export MASTER_NODE_IPS=("192.168.2.13")
+#export MASTER_NODE_NAMES=("KubeMaster2CentOS8.bifrost")
+MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186" "192.168.2.175" "192.168.2.198" "192.168.2.140")
+MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost" "K8SCentOS8Master1.bifrost" "K8SCentOS8Master2.bifrost" "K8SCentOS8Master3.bifrost")
+#export MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186")
+#export MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost")
+#export MASTER_NODE_IPS=("192.168.2.175" "192.168.2.198" "192.168.2.140")
+#export MASTER_NODE_NAMES=("K8SCentOS8Master1.bifrost" "K8SCentOS8Master2.bifrost" "K8SCentOS8Master3.bifrost")
+
 #Do you want to add Worker nodes in this install. Allowed values true/false
-export ADD_WORKER_NODES="true"
+ADD_WORKER_NODES="true"
 #All Worker Nodes
-export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.137" "192.168.2.227")
-export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
+WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109" "192.168.2.208" "192.168.2.95" "192.168.2.104")
+WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost" "K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
+#export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
+#export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
+#export WORKER_NODE_IPS=("192.168.2.208" "192.168.2.95" "192.168.2.104")
+#export WORKER_NODE_NAMES=("K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
 #All K8S nodes (Master + Worker)
-export KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
-export KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
+KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
+KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
 #All nodes we are trying to use. This is used for setting up seamless SSH and common binary install
-export ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODE_IPS[*]})
-export ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODE_NAMES[*]})
+ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODE_IPS[*]})
+ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODE_NAMES[*]})
 #Should we use ClusterConfiguration yaml to set up master node or us kubeadm reset to set up cluster. Allowed values "yaml"/"endpoint"
-export SETUP_CLUSTER_VIA="endpoint"
+SETUP_CLUSTER_VIA="endpoint"
 #Do we want to manually copy the certificates. Allowed values true/false
 MANUALLY_COPY_CERTIFICATES="false"
-
+# Drive that is added block/raw for use by storage/Ceph. Valid values sdb, sdc etc.
+CEPH_DRIVE_NAME="sdb"
+# Used in the PVC config for Prometheus. Set the value in Name column from the result of the command: kubectl get sc
+STORAGE_CLASS=""
+# Size of Prometheus PVC. Allowed value format "1Gi", "2Gi", "5Gi" etc
+STORAGE_SIZE="2Gi"
 #Username that we use to connect to remote machine via SSH
 USERNAME="root"
 #User details for normal kubectl/kubeadm commands post install
@@ -62,8 +88,9 @@ USER_HOME="/home/$ADMIN_USER"
 #Set below variables when running the script to add specific nodes to existing K8S cluster
 MASTER_JOIN_COMMAND=""
 WORKER_JOIN_COMMAND=""
-#K8S network type. Allowed values calico/flannel
+#K8S network type. Allowed values calico/weave
 NETWORKING_TYPE="calico"
+POD_NETWORK_CIDR='10.244.0.0/16'
 
 # #When Load Balancer set up is not ready, ping would fail. So we make sure we add VIP only once.
 # VIP_PRESENT=$(cat /etc/hosts | grep $KUBE_VIP_1_HOSTNAME > /dev/null 2>&1; echo $? )
@@ -75,8 +102,6 @@ NETWORKING_TYPE="calico"
 #echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
 
 ## YAML/Git variables
-
-FLANNEL_YAML="https://cloud.weave.works/k8s/net?k8s-version=$kubever"
 CALICO_YAML="https://docs.projectcalico.org/v3.14/manifests/calico.yaml"
 
 METAL_LB_NAMESPACE=https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
@@ -254,6 +279,7 @@ do
     export TEMP_NODE_NAMES="${ALL_NODE_NAMES[*]}"
     export TEMP_NODE_IPS="${ALL_NODE_IPS[*]}"
     export CALLING_NODE_NAME=$CURRENT_NODE_NAME
+    yum -y -q install wget dnf
     #wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
     wget -q $PREPARE_NODE_SCRIPT
     chmod 755 prepare_node.sh
@@ -314,11 +340,12 @@ then
 		if [[ MANUALLY_COPY_CERTIFICATES == "true" ]]
 		then
 			#Call init with endpoint parameters needed for Load Balanced Config
-			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" | tee kubeadm_init_output.txt
+			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --pod-network-cidr=$POD_NETWORK_CIDR | tee kubeadm_init_output.txt
 			#Save the output from the previous command as you would need it to add other nodes to cluster
 		else
 			#Call init with endpoint and certificate parameters needed for Load Balanced Config
-			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
+			#kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
+			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --pod-network-cidr=$POD_NETWORK_CIDR --upload-certs | tee kubeadm_init_output.txt
 			#Save the output from the previous command as you would need it to add other nodes to cluster
 		fi
 	fi
@@ -335,17 +362,20 @@ then
 	chown $(id -u):$(id -g) kubeadm_init_output.txt
 	chown $(id -u):$(id -g) add_master.txt
 	chown $(id -u):$(id -g) add_worker.txt
+	chmod 700 kubeadm_init_output.txt add_master.txt add_worker.txt
 
 	#Create Kube config Folder.
 	mkdir -p $USER_HOME/.kube
 	mkdir -p $HOME/.kube
 	cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
 	cp /etc/kubernetes/admin.conf $HOME/.kube/config
-	chown $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config
-	chown $(id -u):$(id -g) $HOME/.kube/config
+	chown -R $(id $ADMIN_USER -u):$(id $ADMIN_USER -g) $USER_HOME/.kube/config
+	chown -R $(id -u):$(id -g) $HOME/.kube/config
 	echo "Kube config copied to Home."
 
 	kubectl get nodes # should show master as Not Ready as networking is missing
+
+	kubectl get pods -A # should show pods from all namespaces
 	
 	#Set up networking for Masternode. Networking probably is not needed after the Primary node
 	echo "Setting up network."
@@ -354,11 +384,13 @@ then
 		#New YAML from K8s.io docs
 		#kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
 		kubectl apply -f $CALICO_YAML
+		#kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml
+		#sleep 2
+		#kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml
 		echo "Calico set up."
 	else
 		export kubever=$(kubectl version | base64 | tr -d '\n')
-		#kubectl apply -f https://cloud.weave.works/k8s/net?k8s-version=$kubever
-		kubectl apply -f $FLANNEL_YAML
+		kubectl apply -f https://cloud.weave.works/k8s/net?k8s-version=$kubever
 		echo "Weave set up."
 	fi
 	kubectl get pods --all-namespaces -o wide
@@ -425,7 +457,7 @@ then
 		elif [[ -n "$MASTER_JOIN_COMMAND" ]]
 		then
 			#Add other Master nodes
-			echo "Trying to add $node"
+			echo " =========== Trying to add $node =========== "
 			#SSH into other Master nodes
 			ssh "$USERNAME"@$node <<- EOF
 			cd ~
@@ -453,14 +485,14 @@ then
 			echo "Command: /etc/kubernetes/admin.conf \$HOME/.kube/config"
 			cp /etc/kubernetes/admin.conf \$HOME/.kube/config
 			cp /etc/kubernetes/admin.conf $USER_HOME/.kube/config
-			echo " ChCommand \$(id -u):\$(id -g) \$HOME/.kube/config"
+			#echo " ChCommand \$(id -u):\$(id -g) \$HOME/.kube/config"
 			chown \$(id -u):\$(id -g) \$HOME/.kube/config
 			chown \$(id $ADMIN_USER -u):\$(id $ADMIN_USER -g) $USER_HOME/.kube/config
 			
 			echo "Master node added. Exiting."
 			exit
 			EOF
-			echo "Master node: $node added."
+			echo " =========== Master node: $node added =========== "
 		else
 			echo "MASTER_JOIN_COMMAND is undefined. Exiting."
 			sleep 2
@@ -483,7 +515,7 @@ then
 		echo "Setting up worker nodes"
 		for node in ${WORKER_NODE_NAMES[*]}
 		do
-			echo "Trying to add $node"
+			echo " =========== Trying to add $node =========== "
 			#Try to SSH into each node
 			ssh "$USERNAME"@$node <<- EOF
 			echo "Trying to add Worker node:$node to cluster."
@@ -491,7 +523,7 @@ then
 			echo "Worker node added. Exiting."
 			exit
 			EOF
-			echo "Back from Worker: "$node
+			echo " =========== Back from Worker: $node  =========== "
 		done
 		echo "All workers added."
 		sleep 10
@@ -522,7 +554,7 @@ if [[ $SETUP_HELM == "true" ]]
 then
 	echo "Installing Helm"
 	curl -fsSL -o get_helm.sh $HELM_INSTALL_SCRIPT
-	chmod 700 get_helm.sh
+	chmod 755 get_helm.sh
 	./get_helm.sh
 	echo "Helm installed."
 	rm -f get_helm.sh
@@ -538,16 +570,18 @@ then
 	echo "Proceeding with Metal LB setup."
 	#Check that we are not using kube-proxy in IPVS mode.
 	# See what changes would be made, returns nonzero return code if different
-	IPVS_FLAG=$(kubectl get configmap kube-proxy -n kube-system -o yaml | sed -e "s/strictARP: false/strictARP: true/" | kubectl diff -f - -n kube-system)
+	#IPVS_FLAG=$(kubectl get configmap kube-proxy -n kube-system -o yaml | sed -e "s/strictARP: false/strictARP: true/" | kubectl diff -f - -n kube-system)
 	#Alternate way 
 	#IPVS_FLAG=$(kubectl describe configmap -n kube-system kube-proxy | grep -w 'kind: KubeProxyConfiguration
 	#mode:' | awk -F " " '{print $2}' | tail -n 1 | sed -e 's/"//g')
+
+	IPVS_FLAG=$(kubectl describe configmap -n kube-system kube-proxy | grep -w 'strictARP: false' > /dev/null 2>&1; echo $?)
 
 	#If yes, then edit to add
 	# Actually apply the changes, returns nonzero return code on errors only
 	if [[ $IPVS_FLAG -gt 0 ]]
 	then
-		echo "Setting strictARP flag."
+		echo "Setting strictARP flag to true."
 		kubectl get configmap kube-proxy -n kube-system -o yaml | sed -e "s/strictARP: false/strictARP: true/" | kubectl apply -f - -n kube-system
 	else
 		echo "strictARP flag already set. Continuing."
@@ -562,51 +596,97 @@ then
 	kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 
 	#Get the MetalLb config template from github
-	#wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/metal_lb_configmap.yaml"
+	#wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/metal_lb_configmap.yaml"
 	wget -q $METAL_LB_CONFIGMAP
 	#Update the template with provided address range
 	sed -i "s*###st@rt_@ddr3ss###*$START_IP_ADDRESS_RANGE*g" metal_lb_configmap.yaml
 	sed -i "s*###3nd_@ddr3ss###*$END_IP_ADDRESS_RANGE*g" metal_lb_configmap.yaml
+	echo "MetalLB configmap yaml updated."
 	#Apply MetalLB Config
 	kubectl apply -f metal_lb_configmap.yaml
 	rm -f metal_lb_configmap.yaml
 
-	echo "Metal LB config complete."
 
-	if [[ $SETUP_NGINX_INGRESS == "true" ]]
-	then
+	
+	CONTINUE_WAITING=$(kubectl get pods -n metallb-system | grep controller | grep Running > /dev/null 2>&1; echo $?)
+	echo -n "MetalLB controller pod not ready. Waiting ."
+	while [[ $CONTINUE_WAITING != 0 ]]
+	do
+		sleep 10
+		echo -n "."
+	 	CONTINUE_WAITING=$(kubectl get pods -n metallb-system | grep controller | grep Running > /dev/null 2>&1; echo $?)
+	done
+	echo ""
+	#sleep 60
+	echo " =========== Metal LB config complete. =========== "
+	kubectl get pods -A
+else
+	echo "Skipping Metal LB setup."
+fi
+
+if [[ $SETUP_NGINX_INGRESS == "true" && $SETUP_METAL_LB == "true" && $CLOUD_PROVIDED_LB == "false" ]]
+then
 		echo "Setting up Nginx Ingress to work with MetalLB"
 		#wget -q -O ingress_deploy.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud/deploy.yaml
 		wget -q -O ingress_deploy.yaml $NGINX_LB_DEPLOY_YAML
 		kubectl apply -f ingress_deploy.yaml
 		echo "Nginx ingress deployed."
 		rm -f ingress_deploy.yaml
-	else
-		echo "Skipping setting up Nginx Ingress with MetalLB"
-	fi
-	kubectl get pods -A
+elif [[ $SETUP_NGINX_INGRESS == "true" && $SETUP_METAL_LB == "false" && $CLOUD_PROVIDED_LB == "true" ]]
+then
+		echo "Skipping setting up Nginx Ingress for external cloud."
 else
-	echo "Skipping Metal LB setup."
-fi
-
-if [[ $SETUP_NGINX_INGRESS == "true" ]]
-	then
 		echo "Setting up Nginx Ingress to work without a load balancer"
 		#wget -q -O ingress_deploy.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/baremetal/deploy.yaml
 		wget -q -O ingress_deploy.yaml $NGINX_DEPLOY_YAML
 		kubectl apply -f ingress_deploy.yaml
+		CONTINUE_WAITING=$(kubectl get pods -n ingress-nginx | grep controller | grep Running > /dev/null 2>&1; echo $?)
+		echo -n "Nginx controller pod not ready. Waiting ."
+		while [[ $CONTINUE_WAITING != 0 ]]
+		do
+			sleep 10
+			echo -n "."
+		 	CONTINUE_WAITING=$(kubectl get pods -n ingress-nginx | grep controller | grep Running > /dev/null 2>&1; echo $?)
+		done
+		echo ""
 		echo "Nginx ingress deployed."
 		rm -f ingress_deploy.yaml
-else
-	echo "Skipping setting up Nginx Ingress"
 fi
-
+echo " =========== Nginx ingress config complete. =========== "
 # To generate SSL secret for
 #openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ${KEY_FILE} -out ${CERT_FILE} -subj "/CN=${HOST}/O=${HOST}"
 
 
 #Install Kustomize
 #curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+
+if [[ $SETUP_ROOK_INSTALLED == "true" ]]
+then
+	echo "Starting Ceph+Rook installation."
+	export TEMP_NODE_NAMES="${WORKER_NODE_NAMES[*]}"
+    export TEMP_NODE_IPS="${WORKER_NODE_IPS[*]}"
+	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/setup_rook_ceph.sh
+	chmod +x setup_rook_ceph.sh
+	. ./setup_rook_ceph.sh # source the script to use the variables already set above.
+	echo "Storage setup complete."
+	rm -f setup_rook_ceph.sh
+else
+	echo "Skipping Ceph+Rook installation."
+fi
+echo " =========== Ceph+Rook installation complete. =========== "
+
+if [[ $SETUP_CLUSTER_MONITORING == "true" ]]
+then
+	echo "Starting monitoring installation."
+	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/setup_monitoring_all.sh
+	chmod +x setup_monitoring_all.sh
+	. ./setup_monitoring_all.sh # source the script to use the variables already set above.
+	echo "Monitoring setup complete."
+	rm -f setup_monitoring_all.sh
+else
+	echo "Skipping Monitoring installation."
+fi
+echo " =========== Monitoring installation complete. =========== "
 
 # To install cert-manager
 if [[ $SETUP_CERT_MANAGER == "true" ]]
@@ -616,12 +696,21 @@ if [[ $SETUP_CERT_MANAGER == "true" ]]
 		kubectl apply --validate=false -f $CERT_MGR_DEPLOY
 		echo "Cert Manager deployed."
 		wget -q $SELF_SIGNED_CERT_TEMPLATE
+		echo -n "Cert Manager pod not ready. Waiting ."
+		CONTINUE_WAITING=$(kubectl get pods -n cert-manager | grep cert-manager-webhook | grep Running > /dev/null 2>&1; echo $?)
+		while [[ $CONTINUE_WAITING != 0 ]]
+		do
+			sleep 20
+			echo -n "."
+		 	CONTINUE_WAITING=$(kubectl get pods -n cert-manager | grep cert-manager-webhook | grep Running > /dev/null 2>&1; echo $?)
+		done
+		echo ""
+		sleep 15
 		kubectl apply -f cert_self_signed.yaml
 		echo "Self Signed issuer setup."
 		rm -f cert-manager.yaml cert_self_signed.yaml
 else
 	echo "Skipping setting up Cert Manager"
 fi
-
 
 
