@@ -140,11 +140,10 @@ We can login into other dashboards (Rook, Prometheus and AlertManager) as well.
 ### To add a new node to cluster
 We can add new nodes to the cluster without rerunning the script.
 To add a node, copy the <code>prepare_node.sh</code> to the node to eb added, update the variables in <code>prepare_node.sh</code> to be only applicable to the specific node and execute <code>prepare_node.sh</code>.
-Once it completes successfully, copy the applicable node on-boarding command from primary node (the node from where you ran the script). In the HOME folder there would be 2 files <code>add_worker.txt</code> and <code>add_master.txt</code> which contain respective commands. Execute these commands from your new node.
-The node would be added to the cluster.
+Once it completes successfully, copy the applicable node on-boarding command from primary node (the node from where you ran the script). In the HOME folder there would be 2 files <code>add_worker.txt</code> and <code>add_master.txt</code> which contain respective commands. Execute these commands from your new node and it would be added to the cluster.
 
 ## Cleanup
-As I had to iterate multiple times, I have also created set of scripts that would cleanup and bring your nodes to original state (almost).
+I have also created set of scripts that would cleanup and bring your nodes to original state (almost).
 
 Connect to your server (terminal or SSH session), got your home directory and download the script using:
 <code>wget https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/Cleanup_Kubernetes_V01.sh</code>
@@ -160,7 +159,7 @@ Now run below script and follow prompts:
 ## Whats Next
 This is just a start and the script(s) could be further improved.
 NFS could be added to Ceph/storage via automated shell scripts.
-We can update the script to add firewall rules in place of disabling Firewalld.
+You can update the script to add firewall rules in place of disabling Firewalld.
 I am planning to add Ubuntu and Raspberry pi support down the line (if people find it useful).
 
 
