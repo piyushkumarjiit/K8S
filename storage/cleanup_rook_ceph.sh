@@ -63,7 +63,6 @@ then
 else
 	echo "Downloading rook-storage_class.yaml"
 	#Fetch the StorageClass YAML
-	#wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/rook_storage_class.yaml
 	wget -q $ROOK_STORAGE_CLASS_YAML -O rook-storage_class.yaml
 fi
 
@@ -73,7 +72,6 @@ then
 else
 	echo "Downloading rook-filesystem.yaml"
 	# Fetch the filesystem YAML
-	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
 	wget -q $CEPH_FILSYSTEM_YAML -O rook-filesystem.yaml
 fi
 
@@ -85,7 +83,6 @@ else
 	if [[ $SETUP_FOR_LOADBALANCER == "true" ]]
 	then
 		# Download Cephs cluster YAML
-		#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
 		wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
 		sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" rook-dashboard.yaml
 	else
@@ -99,7 +96,6 @@ then
 else
 	echo "Downloading rook-cluster.yaml"
 	# Download Cephs cluster YAML
-	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
 	wget -q $CEPH_CLUSTER_YAML -O rook-cluster.yaml
 fi
 if [[ -f rook-operator.yaml ]]
@@ -108,7 +104,6 @@ then
 else
 	echo "Downloading rook-operator.yaml"
 	# Get Operator YAML
-	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
 	wget -q $CEPH_OPERATOR_YAML -O rook-operator.yaml
 fi
 if [[ -f rook-common.yaml ]]
@@ -117,7 +112,6 @@ then
 else
 	echo "Downloading rook-common.yaml"
 	# Get Common YAML
-	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
 	wget -q $CEPH_COMMON_YAML -O rook-common.yaml
 fi
 if [[ -f ceph-toolbox.yaml ]]
@@ -127,7 +121,6 @@ then
 	#kubectl -n rook-ceph exec -it $(kubectl -n rook-ceph get pod -l "app=rook-ceph-tools" -o jsonpath='{.items[0].metadata.name}') bash
 else
 	echo "Downloading ceph-toolbox.yaml."
-	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 	wget -q $CEPH_TOOLBOX_YAML -O ceph-toolbox.yaml
 fi
 

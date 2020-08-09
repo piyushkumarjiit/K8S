@@ -63,7 +63,7 @@ fi
 if [[ $INGRESS_DOMAIN_NAME == "" ]]
 then
 	echo "INGRESS_DOMAIN_NAME not set. Setting as k8smagic.com."
-	# Domain name to be used by Ingress. Using this ceph dashboard URL would become: rook.<domain.com>
+	# Domain name to be used by Ingress. Using this ceph dashboard URL would become: rook.<domain>
 	# INGRESS_DOMAIN_NAME=k8smagic.com
 else
 	echo "INGRESS_DOMAIN_NAME already set. Proceeding."
@@ -139,11 +139,9 @@ do
 done
 
 # Get Common YAML
-#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/common.yaml
 wget -q $CEPH_COMMON_YAML -O rook-common.yaml
 sleep 15
 # Get Operator YAML
-#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/operator.yaml
 wget -q $CEPH_OPERATOR_YAML -O rook-operator.yaml
 
 # Deploy Rook
@@ -153,7 +151,6 @@ sleep 15
 kubectl create -f rook-operator.yaml
 sleep 15
 # Download Cephs cluster YAML
-#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/cluster.yaml
 wget -q $CEPH_CLUSTER_YAML -O rook-cluster.yaml
 # Create Cluster
 kubectl create -f rook-cluster.yaml
@@ -178,12 +175,7 @@ then
 	echo "Done. rook.$INGRESS_DOMAIN_NAME dashboard would use load balancer."
 else
 	echo "Setting up rook.$INGRESS_DOMAIN_NAME to be used with ingress."
-	wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
-	#Update the file to make the name same as the one running in cluster and then apply. Possible workaround as operator is not creating service
-	#sed -i "s/rook-ceph-mgr-dashboard-loadbalancer/rook-ceph-mgr-dashboard/" rook-dashboard.yaml
-	#sed -i "s/type: LoadBalancer/type: ClusterIP/" rook-dashboard.yaml
-	#kubectl apply -f rook-dashboard.yaml
-	#rm -f rook-dashboard.yaml
+	#wget -q $CEPH_LB_DASHBOARD_YAML -O rook-dashboard.yaml
 	wget -q $CEPH_DASHBOARD_YAML -O rook-dashboard.yaml
 	sed -i "s/rook-ceph.example.com/rook\.$INGRESS_DOMAIN_NAME/g" rook-dashboard.yaml
 	kubectl apply -f rook-dashboard.yaml
@@ -193,7 +185,6 @@ fi
 
 
 # Fetch the filesystem YAML
-#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
 wget -q $CEPH_FILSYSTEM_YAML -O rook-filesystem.yaml
 kubectl apply -f rook-filesystem.yaml
 sleep 15
@@ -201,7 +192,6 @@ echo "Ceph Filesystem type storage created."
 rm -f rook-filesystem.yaml
 
 #Fetch the StorageClass YAML
-#wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/rook_storage_class.yaml
 wget -q $ROOK_STORAGE_CLASS_YAML -O rook-storage_class.yaml
 kubectl apply -f rook-storage_class.yaml
 echo "StorageClass config applied."
@@ -209,7 +199,6 @@ rm -f rook-storage_class.yaml
 sleep 15
 if [[ $INSTALL_CEPH_TOOLS == "true" ]]
 then
-	#wget -q https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 	wget -q $CEPH_TOOLBOX_YAML -O ceph-toolbox.yaml
 	kubectl apply -f ceph-toolbox.yaml
 	echo "Created Ceph toolbox instance."
