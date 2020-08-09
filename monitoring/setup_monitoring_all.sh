@@ -50,8 +50,6 @@ then
 		echo "Unable to set storageclass: $STORAGE_CLASS. Setting the default value: csi-cephfs. "
 		# Used in the PVC config for Prometheus. Set the value in Name column from the result of the command: kubectl get sc
 		STORAGE_CLASS="csi-cephfs"
-		#sleep 2.
-		#exit 1
 	fi
 fi
 
@@ -156,12 +154,6 @@ wget -q $PROMETHEUS_PVC_JSONNET -O monitoring-example.jsonnet
 sed -i "s/pvc.mixin.spec.withStorageClassName('ssd'),/pvc.mixin.spec.withStorageClassName('$STORAGE_CLASS'),/" monitoring-example.jsonnet
 sed -i "s/pvc.mixin.spec.resources.withRequests({ storage: '100Gi' }/pvc.mixin.spec.resources.withRequests({ storage: '$STORAGE_SIZE' }/" monitoring-example.jsonnet
 echo "PROMETHEUS_PVC_JSONNET downloaded and PVC config updated."
-# Update Jsonnet to include extra namespaces in the cluster. Probably not needed.
-# Fetch namespace jsonnet
-#wget -q https://raw.githubusercontent.com/coreos/kube-prometheus/b55c2825f7fa4491c6018bd256ef5d7e0b62404c/examples/additional-namespaces.jsonnet
-#wget -q https://raw.githubusercontent.com/coreos/kube-prometheus/b55c2825f7fa4491c6018bd256ef5d7e0b62404c/examples/additional-namespaces-servicemonitor.jsonnet
-# Update Ingress for Prometheus, Grafana and Alertmanager. Easier to do through YAML
-#wget -q $MONITORING_INGRESS_JSONNET
 
 # Execute monitoring-build.sh
 ./monitoring-build.sh monitoring-example.jsonnet
