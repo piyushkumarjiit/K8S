@@ -65,7 +65,7 @@ All other scripts (setting up storage, setting up monitoring etc.) are sourced i
 Thus we only need to update variables in the main script (Setup_Kubernetes_V01.sh)
 
 
-### Set up external Load Balancer ( <code> setup_loadbalancer.sh </code> )
+### Set up external Load Balancer (<code> setup_loadbalancer.sh </code>)
 Before setting up Kubernetes nodes, we set up KeepAlived and HAProxy to provide virtual ip address for control plane (used by Kubernetes cluster later).
 This script installs and configures all prerequisites needed by KeepAlived and HAProxy.
 The script supports 3 modes:
@@ -74,12 +74,12 @@ The script supports 3 modes:
 <li>Setup as per user provided config: script uses user provided keepalived.conf and haproxy.cfg (should be present in $HOME) </li>
 This script can be used to setup multiple virtual ip addresses that can be utilized by different Kubernetes clusters.
 
-### Prepare Nodes ( <code> prepare_node.sh </code> )
-Main script calls prepare_node.sh to set up all prerequisites of nodes in a Kubernetes cluster.
+### Prepare Nodes (<code> prepare_node.sh </code>)
+Main script calls <code>prepare_node.sh</code> to set up all prerequisites of nodes in a Kubernetes cluster.
 DNS/IP based access to nodes, SELinux setting, Swap disable, Firewall, IP Forwarding, kernel mods, CRI-O/Containerd, Docker, Kuberadm, Kubelet, Kubectl and anything else required by a node in a Kubernetes cluster is setup by this script for all nodes (Master as well as workers).
 
 ### Setup the cluster
-Once nodes are setup, script initializes the primary node ( with flags: --control-plane-endpoint, --pod-network-cidr  and --upload-certs) sets up networking (Calico and Weave supported via flags), adds other master nodes (defined in MASTER_NODE_NAMES) and adds worker nodes to the cluster (defined in WORKER_NODE_NAMES). Note: <code> kubectl get cs </code> would show error due to a known Kubernetes bug.
+Once nodes are setup, script initializes the primary node ( with flags: --control-plane-endpoint, --pod-network-cidr  and --upload-certs) sets up networking (Calico and Weave supported via flags), adds other master nodes (defined in MASTER_NODE_NAMES) and adds worker nodes to the cluster (defined in WORKER_NODE_NAMES). Note: <code>kubectl get cs</code> would show error due to a known Kubernetes bug.
 
 ### Deploy MetalLB
 Once the cluster is ready, the script deploys MetalLB to act as load balancer (External IP would populate for services utilizing LoadBalancer).
@@ -89,7 +89,7 @@ The script waits till MetalLB is ready before proceeding. MetalLB allocates IP a
 Next the script deploys Nginx as ingress controller. Using MetalLB, the ingress controller gets external ip address and exposes services/dashboards.
 
 ### Prepare worker nodes and setup storage  (Rook + Ceph)
-Based on flag (SETUP_ROOK_INSTALLED), script calls <code> setup_rook_ceph.sh</code> to:
+Based on flag (SETUP_ROOK_INSTALLED), script calls <code>setup_rook_ceph.sh</code> to:
 <li>Setup prerequisites for Rook and Ceph</li>
 <li>Ensures NTP/Chronyd is working on all nodes</li>
 <li>Ensures Block/Raw drive is added on each worker node</li>
@@ -98,7 +98,7 @@ Based on flag (SETUP_ROOK_INSTALLED), script calls <code> setup_rook_ceph.sh</co
 <li>Sets up Ceph dashboard with Ingress (could be configured to be available via MetalLB as well)</li>
 
 ### Deploy Kube-Prometheus  (Prometheus + AlertManager + Grafana + mixins)
-Based on flag (SETUP_CLUSTER_MONITORING), script calls <code> setup_monitoring.sh</code> to:
+Based on flag (SETUP_CLUSTER_MONITORING), script calls <code>setup_monitoring.sh</code> to:
 <li>Installs Git, Go, JSONNET, JB and gojsonttoyaml</li>
 <li>Downloads the latest jsonnet samples from kube-prometheus repo</li>
 <li>Updates the samples for current config (storage class, ingress config, PVC etc.</li>
