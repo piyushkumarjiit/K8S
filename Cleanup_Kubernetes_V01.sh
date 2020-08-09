@@ -109,8 +109,7 @@ if [[ $SETUP_CERT_MANAGER == "true" && $KUBECTL_AVAILABLE == 0 ]]
 		fi
 		if [[ -f cert-manager.yaml ]]
 		then
-			echo "Deleting Cert Manager"
-			#kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.16.0/cert-manager.yaml
+			echo "Deleting Cert Manager"	
 			kubectl delete -f $CERT_MGR_DEPLOY
 			echo "Cert Manager deleted."
 			rm -f cert-manager.yaml
@@ -129,7 +128,6 @@ then
 	if [[ -f ingress_deploy.yaml ]]
 	then
 		echo "Removing Nginx Ingress"
-		#wget -q -O ingress_deploy.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/baremetal/deploy.yaml
 		kubectl delete -f ingress_deploy.yaml
 		echo "Nginx ingress removed."
 		rm -f ingress_deploy.yaml
@@ -138,7 +136,6 @@ then
 		if [[ $SETUP_METAL_LB == "true" && $CLOUD_PROVIDED_LB == "false" ]]
 		then
 			echo "Downloading Nginx Ingress YAML that works with MetalLB"
-			#wget -q -O ingress_deploy.yaml https://raw.githubusercontent.com/kubernetes/ingress-nginx/master/deploy/static/provider/cloud/deploy.yaml
 			wget -q -O ingress_deploy.yaml $NGINX_LB_DEPLOY_YAML
 		elif [[ $SETUP_METAL_LB == "false" && $CLOUD_PROVIDED_LB == "true" ]]
 		then
@@ -172,21 +169,6 @@ then
 else
 	echo "Kubectl not present."
 fi
-
-# if [[ $NETWORKING_TYPE == "calico" ]]
-# 	then
-# 		#New YAML from K8s.io docs
-# 		#kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
-# 		kubectl delete -f $CALICO_YAML
-# 		#kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml
-# 		#sleep 2
-# 		#kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml
-# 		echo "Calico set up."
-# 	else
-# 		export kubever=$(kubectl version | base64 | tr -d '\n')
-# 		kubectl delete -f https://cloud.weave.works/k8s/net?k8s-version=$kubever
-# 		echo "Weave set up."
-# fi
 
 #Check connectivity to all nodes
 HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )

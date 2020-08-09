@@ -244,8 +244,6 @@ then
 	#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
 
 	# Install Container-d
-	#wget https://github.com/containerd/containerd/releases/download/v1.3.5/containerd-1.3.5-linux-amd64.tar.gz
-	#tar xvf containerd-1.3.5-linux-amd64.tar.gz
 	dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
 	yum update -y -q
 	#yum install -y -q containerd.io
@@ -313,11 +311,6 @@ else
 	systemctl enable --now kubelet
 	echo "Installed kubelet, kubeadm and kubectl on Master node."
 fi
-
-#Setup Cgroup drivers. Either run this as root or accept the bad alignment of script :(
-#echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-#echo 'Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true --fail-swap-on=false"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
-#echo "Updated kubeadm.conf"
 
 if [[ -f /etc/docker/daemon.json ]]
 then

@@ -32,8 +32,6 @@ LB_NODE_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
 # HAPRoxy+KeepAlived Load Balancer Details
 KUBE_VIP_1_HOSTNAME="VIP"
 KUBE_VIP_1_IP="192.168.2.6"
-#export KUBE_VIP_1_HOSTNAME="VIP2"
-#export KUBE_VIP_1_IP="192.168.2.7"
 #Port where Control Plane API server would bind on Load Balancer
 API_PORT="6443"
 #Hostname of the node from where we run the script
@@ -45,24 +43,13 @@ SETUP_PRIMARY_MASTER="true"
 #Do you want to add Master nodes in this run. Allowed values true/false
 ADD_MASTER_NODES="true"
 #All Master nodes
-#export MASTER_NODE_IPS=("192.168.2.13")
-#export MASTER_NODE_NAMES=("KubeMaster2CentOS8.bifrost")
 MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186" "192.168.2.175" "192.168.2.198" "192.168.2.140")
 MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost" "K8SCentOS8Master1.bifrost" "K8SCentOS8Master2.bifrost" "K8SCentOS8Master3.bifrost")
-#export MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186")
-#export MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost")
-#export MASTER_NODE_IPS=("192.168.2.175" "192.168.2.198" "192.168.2.140")
-#export MASTER_NODE_NAMES=("K8SCentOS8Master1.bifrost" "K8SCentOS8Master2.bifrost" "K8SCentOS8Master3.bifrost")
-
 #Do you want to add Worker nodes in this install. Allowed values true/false
 ADD_WORKER_NODES="true"
 #All Worker Nodes
 WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109" "192.168.2.208" "192.168.2.95" "192.168.2.104")
 WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost" "K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
-#export WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
-#export WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
-#export WORKER_NODE_IPS=("192.168.2.208" "192.168.2.95" "192.168.2.104")
-#export WORKER_NODE_NAMES=("K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
 #All K8S nodes (Master + Worker)
 KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
 KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
@@ -91,13 +78,6 @@ WORKER_JOIN_COMMAND=""
 #K8S network type. Allowed values calico/weave
 NETWORKING_TYPE="calico"
 POD_NETWORK_CIDR='10.244.0.0/16'
-
-# #When Load Balancer set up is not ready, ping would fail. So we make sure we add VIP only once.
-# VIP_PRESENT=$(cat /etc/hosts | grep $KUBE_VIP_1_HOSTNAME > /dev/null 2>&1; echo $? )
-# if [[ $VIP_PRESENT != 0 ]]
-# then
-# 	echo "$KUBE_VIP_1_IP"	"$KUBE_VIP_1_HOSTNAME" | tee -a /etc/hosts
-# fi	
 
 #echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
 
@@ -157,8 +137,6 @@ then
 		fi
 	fi
 fi
-
-#read -n 1 -p "Press any key to continue:"
 
 #Workaround for lack of DNS. Local node can ping itself but unable to SSH
 HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $?)
@@ -301,9 +279,6 @@ echo "All K8S nodes prepared."
 #     podSubnet: 10.244.0.0/16
 # EOF
 
-#To migrate old config file to new version
-#kubeadm config migrate --old-config old.yaml --new-config new.yaml
-
 #Set up the Primary Master node in the cluster.
 if [[ $SETUP_PRIMARY_MASTER == "true" ]]
 then
@@ -381,12 +356,8 @@ then
 	echo "Setting up network."
 	if [[ $NETWORKING_TYPE == "calico" ]]
 	then
-		#New YAML from K8s.io docs
-		#kubectl apply -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
+		#YAML from K8s.io docs
 		kubectl apply -f $CALICO_YAML
-		#kubectl create -f https://docs.projectcalico.org/manifests/tigera-operator.yaml
-		#sleep 2
-		#kubectl create -f https://docs.projectcalico.org/manifests/custom-resources.yaml
 		echo "Calico set up."
 	else
 		export kubever=$(kubectl version | base64 | tr -d '\n')
@@ -399,7 +370,7 @@ then
 	echo -n "Primary master node not ready. Waiting ."
 	while [[ $CONTINUE_WAITING != 0 ]]
 	do
-		sleep 20
+		sleep 10
 		echo -n "."
 	 	CONTINUE_WAITING=$(kubectl get nodes | grep -w Ready > /dev/null 2>&1; echo $?)
 	done
@@ -569,16 +540,8 @@ if [[ $SETUP_METAL_LB == "true" ]]
 then
 	echo "Proceeding with Metal LB setup."
 	#Check that we are not using kube-proxy in IPVS mode.
-	# See what changes would be made, returns nonzero return code if different
-	#IPVS_FLAG=$(kubectl get configmap kube-proxy -n kube-system -o yaml | sed -e "s/strictARP: false/strictARP: true/" | kubectl diff -f - -n kube-system)
-	#Alternate way 
-	#IPVS_FLAG=$(kubectl describe configmap -n kube-system kube-proxy | grep -w 'kind: KubeProxyConfiguration
-	#mode:' | awk -F " " '{print $2}' | tail -n 1 | sed -e 's/"//g')
-
 	IPVS_FLAG=$(kubectl describe configmap -n kube-system kube-proxy | grep -w 'strictARP: false' > /dev/null 2>&1; echo $?)
-
-	#If yes, then edit to add
-	# Actually apply the changes, returns nonzero return code on errors only
+	#If yes, then edit to add. Actually apply the changes, returns nonzero return code on errors only
 	if [[ $IPVS_FLAG -gt 0 ]]
 	then
 		echo "Setting strictARP flag to true."
@@ -588,15 +551,13 @@ then
 	fi
 
 	#Apply below YAMLs
-	#kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
 	kubectl apply -f $METAL_LB_NAMESPACE
-	#kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml
+
 	kubectl apply -f $METAL_LB_MANIFESTS
 	# On first install only
 	kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 
 	#Get the MetalLb config template from github
-	#wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/metal_lb_configmap.yaml"
 	wget -q $METAL_LB_CONFIGMAP
 	#Update the template with provided address range
 	sed -i "s*###st@rt_@ddr3ss###*$START_IP_ADDRESS_RANGE*g" metal_lb_configmap.yaml
@@ -605,8 +566,6 @@ then
 	#Apply MetalLB Config
 	kubectl apply -f metal_lb_configmap.yaml
 	rm -f metal_lb_configmap.yaml
-
-
 	
 	CONTINUE_WAITING=$(kubectl get pods -n metallb-system | grep controller | grep Running > /dev/null 2>&1; echo $?)
 	echo -n "MetalLB controller pod not ready. Waiting ."
@@ -653,6 +612,7 @@ else
 		rm -f ingress_deploy.yaml
 fi
 echo " =========== Nginx ingress config complete. =========== "
+
 # To generate SSL secret for
 #openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ${KEY_FILE} -out ${CERT_FILE} -subj "/CN=${HOST}/O=${HOST}"
 
@@ -700,7 +660,7 @@ if [[ $SETUP_CERT_MANAGER == "true" ]]
 		CONTINUE_WAITING=$(kubectl get pods -n cert-manager | grep cert-manager-webhook | grep Running > /dev/null 2>&1; echo $?)
 		while [[ $CONTINUE_WAITING != 0 ]]
 		do
-			sleep 20
+			sleep 10
 			echo -n "."
 		 	CONTINUE_WAITING=$(kubectl get pods -n cert-manager | grep cert-manager-webhook | grep Running > /dev/null 2>&1; echo $?)
 		done
