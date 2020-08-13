@@ -31,6 +31,8 @@ echo "Value of passed ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 DISTRO=$(cat /etc/*-release | awk '/ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
 DISTRO_VERSION=$(cat /etc/*-release | awk '/VERSION_ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
 OS_VERSION="$DISTRO$DISTRO_VERSION"
+
+
 echo "Node OS Version: $OS_VERSION"
 echo "CRI requested is $CONTAINER_RUNTIME"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
@@ -85,19 +87,26 @@ then
 else
 	echo "SELinux already set as permissive. No change needed."
 fi
+# To enable firewalld and testout firewall rule config
 
+systemctl enable firewalld
+systemctl start firewalld
 #Disable and Stop firewalld. Unless firewalld is stopped, HAProxy would not work
 FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
 if [[ FIREWALLD_STATUS -gt 0 ]]
 then
 	# Setup your firewall settings
-	#firewall-cmd --zone=public --add-port=10250/tcp --permanent        # Port used by kubelet
-	#firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
-	#firewall-cmd --reload
+	firewall-cmd --get-active-zones
+	firewall-cmd --zone=public --add-port=6443/tcp --permanent        	# Port used by API Server
+	firewall-cmd --zone=public --add-port=10250/tcp --permanent        # Port used by kubelet
+	firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
+	firewall-cmd --zone=public --add-port=10010/tcp --permanent 		# CRI-O’s so called stream_port 
+	firewall-cmd --reload
 	
 	#Stop and disable firewalld. Quick fix when you dont want to set up firewall fules.
-	systemctl stop firewalld
-	systemctl disable firewalld
+	#systemctl stop firewalld
+	#systemctl disable firewalld
+	systemctl restart firewalld
 else
 	echo "Firewalld seems to be disabled. Continuing."
 fi
@@ -221,17 +230,19 @@ then
 	if [[ $OS_VERSION == "centos8" ]]
 	then
 		#For CentOS8
-		curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
-		#curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-		curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
-		#curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://provo-mirror.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.3/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.3.repo
+		OS="CentOS_$DISTRO_VERSION"
+
+		VERSION=$CRI-O_VERSION
+		curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/devel:kubic:libcontainers:stable.repo
+		curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:$VERSION.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:$VERSION/$OS/devel:kubic:libcontainers:stable:cri-o:$VERSION.repo
 		echo "Added COPR and CRI-O repos for CentOS8."
 	elif [[ $OS_VERSION == "centos7"  ]]
 	then
 		#For CentOS7
-		curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
-		#curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-		curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+		OS="CentOS_$DISTRO_VERSION"
+		VERSION=$CRI-O_VERSION
+		curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/devel:kubic:libcontainers:stable.repo
+		curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:$VERSION.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:$VERSION/$OS/devel:kubic:libcontainers:stable:cri-o:$VERSION.repo
 		echo "Added COPR and CRI-O repos for CentOS7."
 	else
 		echo "Unable to install. Exiting."
@@ -240,11 +251,12 @@ then
 	fi
 	#Update packages.
 	yum -y -q update
-
+	
 	#install Containers common
 
 	#Install CRI-O
 	echo "Install CRI-O"
+	# yum -y -q install https://cbs.centos.org/kojifiles/packages/cri-o/1.15.3/1.el7/x86_64/cri-o-1.15.3-1.el7.x86_64.rpm
 	yum -y -q install cri-o
 	systemctl -q daemon-reload
 	systemctl -q start crio
@@ -401,11 +413,41 @@ else
 	echo "Installed kubelet, kubeadm and kubectl on Master node."
 fi
 
-systemctl stop kubelet
-#Restart kublet
-systemctl daemon-reload
-systemctl enable kubelet 
-systemctl start kubelet
+if [[ $CONTAINER_RUNTIME == "cri-o" ]]
+then
+	systemctl stop kubelet
+	# Add CRI-O related config
+	# Fetch existing KUBELET_ARGS in the file or kubelet.service
+	CURRNET_ARGS=$(cat /etc/kubernetes/kubelet.env | grep KUBELET_ARGS)
+
+	#Add below to KUBELET_ARGS
+	echo "Current Args: $CURRNET_ARGS"
+	CURRNET_ARGS+=$'\n'
+	CURRNET_ARGS+='--container-runtime=remote' # Use remote runtime with provided socket.
+	CURRNET_ARGS+=$'\n'
+	CURRNET_ARGS+='--container-runtime-endpoint=unix:///var/run/crio/crio.sock' #Socket for remote runtime
+	CURRNET_ARGS+=$'\n'
+	CURRNET_ARGS+='--image-service-endpoint=unix:///run/crio/crio.sock'
+	CURRNET_ARGS+=$'\n'
+	CURRNET_ARGS+='--runtime-request-timeout=10m' # Optional to allow for pulling large images that take long
+	echo "Updated Args: $CURRNET_ARGS"
+	#Create a backup copy of /etc/kubernetes/kubelet.env
+	cp /etc/keepalived/keepalived.conf /etc/kubernetes/kubelet.env.bak
+	echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
+	echo -e "$CURRNET_ARGS" >> /etc/kubernetes/kubelet.env
+	echo "kubelet.env updated. Restart of service is required."
+	#KUBELET_EXTRA_ARGS=--feature-gates="AllAlpha=false,RunAsGroup=true" --container-runtime=remote --cgroup-driver=systemd --container-runtime-endpoint='unix:///var/run/crio/crio.sock' --runtime-request-timeout=5m
+	#Restart kublet
+	# Set cgroup driver for the kubelet and set it in the /var/lib/kubelet/config.yaml
+	#echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+	systemctl daemon-reload
+	systemctl enable kubelet 
+	systemctl start kubelet
+else
+	echo "No extra CRI-O related config required."
+fi
+
 
 if [[ $RESTART_NEEDED == 0 ]]
 then
