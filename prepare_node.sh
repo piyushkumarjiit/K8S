@@ -187,7 +187,7 @@ yum -y -q install yum-utils device-mapper-persistent-data lvm2
 echo "Installed yum-utils"
 
 #Add EPEL Repo. Not needed thus commented out.
-#yum -y -q install epel-re*
+yum -y -q install epel-re*
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
