@@ -90,7 +90,7 @@ else
 fi
 
 #yum -y -q remove kube.*
-yum -y -q remove kubelet kubeadm kubectl containerd.io
+yum -y -q remove kubelet kubeadm kubectl containerd.io cri-o docker-ce docker-ce-cli
 yum -y -q autoremove
 yum -y -q clean all
 #yum -y -q history sync
