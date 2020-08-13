@@ -74,7 +74,7 @@ USERNAME="root"
 ADMIN_USER="ichigo"
 USER_HOME="/home/$ADMIN_USER"
 # Container Runtime to be used. Allowed values containerd, cri-o and docker
-CONTAINER_RUNTIME="cri-o"
+CONTAINER_RUNTIME="docker"
 # CRI-O version. Required only in case of cri-o.
 CRI_O_VERSION=1.17
 #K8S network (CNI) plugin. Allowed values calico/weave
