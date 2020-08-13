@@ -19,6 +19,8 @@ ALL_NODE_NAMES=($TEMP_NODE_NAMES)
 #All node IP addresses passed by calling script that we are trying to setup
 ALL_NODE_IPS=($TEMP_NODE_IPS)
 
+CONTAINER_RUNTIME="containerd"
+
 if [[ ${ALL_NODE_NAMES[*]} == "" || ${ALL_NODE_IPS[*]} == "" ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
@@ -27,6 +29,12 @@ fi
 
 echo "Value of passed ALL_NODE_NAMES ${ALL_NODE_NAMES[*]}"
 echo "Value of passed ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
+
+DISTRO=$(cat /etc/*-release | awk '/ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
+DISTRO_VERSION=$(cat /etc/*-release | awk '/VERSION_ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
+OS_VERSION="$DISTRO$DISTRO_VERSION"
+echo "Node OS Version: $OS_VERSION"
+
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
 #Workaround for lack of DNS. Local node can ping itself but unable to SSH
 HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
@@ -94,23 +102,6 @@ then
 	systemctl disable firewalld
 else
 	echo "Firewalld seems to be disabled. Continuing."
-fi
-
-# Added below to fix the issue with IP4 forwarding. These are also required for CRI-O
-modprobe overlay
-modprobe br_netfilter
-if [[ -r /etc/sysctl.d/99-kubernetes-cri.conf ]]
-then
-	echo "99-kubernetes-cri.conf exists. Using as is."
-else
-	# Set up required sysctl params, these persist across reboots.
-	cat <<- EOF > /etc/sysctl.d/99-kubernetes-cri.conf 
-	net.bridge.bridge-nf-call-iptables  = 1
-	net.ipv4.ip_forward                 = 1
-	net.bridge.bridge-nf-call-ip6tables = 1
-	EOF
-	sysctl -q --system
-	echo "99-kubernetes-cri.conf created and updated."
 fi
 
 IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
@@ -202,47 +193,90 @@ echo "Installed yum-utils"
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-#echo "Add COPR and CRI-O repos."
-#Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
-#dnf -y -q install 'dnf-command(copr)'
-
-#Below repo seems to be a dev one so use with caution
-#dnf -y -q copr enable rhcontainerbot/container-selinux
-#Add CRI-O Repo.
-#For CentOS8
-#curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
-#sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-#curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
-#curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://provo-mirror.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.3/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.3.repo
-
-#For CentOS7
-#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
-#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
-#curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
-
-#install Containers common
-
-#Install CRI-O
-#echo "Install CRI-O"
-#yum -y -q install cri-o
-#systemctl -q daemon-reload
-#systemctl -q start crio
-#echo "Installed CRI-O"
-
-#echo "Added COPR and CRI-O repos."
-
-#Update packages.
-yum -y -q update
-
-#Check if Docker needs to be installed
-DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
-if [[ $DOCKER_INSTALLED -gt 0 ]]
+if [[ $CONTAINER_RUNTIME == "CRI-O" ]]
 then
+	# Added below to fix the issue with IP4 forwarding. These are also required for CRI-O
+	modprobe overlay
+	modprobe br_netfilter
+	if [[ -r /etc/sysctl.d/99-kubernetes-cri.conf ]]
+	then
+		echo "99-kubernetes-cri.conf exists. Using as is."
+	else
+		# Set up required sysctl params, these persist across reboots.
+		cat <<- EOF > /etc/sysctl.d/99-kubernetes-cri.conf 
+		net.bridge.bridge-nf-call-iptables  = 1
+		net.ipv4.ip_forward                 = 1
+		net.bridge.bridge-nf-call-ip6tables = 1
+		EOF
+		sysctl -q --system
+		echo "99-kubernetes-cri.conf created and updated for CRI-O."
+	fi
+
+	echo "Add COPR and CRI-O repos."
+	Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
+	dnf -y -q install 'dnf-command(copr)'
+
+	Below repo seems to be a dev one so use with caution
+	dnf -y -q copr enable rhcontainerbot/container-selinux
+	Add CRI-O Repo.
+
+	if [[ $OS_VERSION == "centos8" ]]
+	then
+		#For CentOS8
+		curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_8/devel:kubic:libcontainers:stable.repo
+		sudo curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18.repo
+		curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+		curl -s -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://provo-mirror.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.3/CentOS_8/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.3.repo
+		echo "Added COPR and CRI-O repos for CentOS8."
+	elif [[ $OS_VERSION == "centos7"  ]]
+	then
+		#For CentOS7
+		curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable/CentOS_7/devel:kubic:libcontainers:stable.repo
+		curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.repo https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:1.18/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18.repo
+		curl -L -o /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:1.18.1.repo https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.18:/1.18.1/CentOS_7/devel:kubic:libcontainers:stable:cri-o:1.18:1.18.1.repo
+		echo "Added COPR and CRI-O repos for CentOS7."
+	else
+		echo "Unable to install. Exiting."
+		sleep 2
+		exit 1
+	fi
+	#Update packages.
+	yum -y -q update
+
+	#install Containers common
+
+	#Install CRI-O
+	echo "Install CRI-O"
+	yum -y -q install cri-o
+	systemctl -q daemon-reload
+	systemctl -q start crio
+	echo "Installed CRI-O"
+elif [[ $CONTAINER_RUNTIME == "containerd" ]]
+then
+	cat > /etc/modules-load.d/containerd.conf <<-EOF
+	overlay
+	br_netfilter
+	EOF
+
+	modprobe overlay
+	modprobe br_netfilter
+
+	# Setup required sysctl params, these persist across reboots.
+	cat > /etc/sysctl.d/99-kubernetes-cri.conf <<-EOF
+	net.bridge.bridge-nf-call-iptables  = 1
+	net.ipv4.ip_forward                 = 1
+	net.bridge.bridge-nf-call-ip6tables = 1
+	EOF
+	echo "99-kubernetes-cri.conf created and updated for containerd."
+	sysctl -q --system
 
 	# Add Docker repo as it is used by containerd and docker
 	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 	#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
-
+	
+	#Update packages.
+	yum -y -q update
+	
 	# Install Container-d
 	dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
 	yum update -y -q
@@ -252,6 +286,27 @@ then
 	containerd config default > /etc/containerd/config.toml
 	echo "Installed Container-d"
 	systemctl restart containerd
+else
+#Check if Docker needs to be installed
+DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
+if [[ $DOCKER_INSTALLED -gt 0 ]]
+then
+
+	# Add Docker repo as it is used by containerd and docker
+	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+	#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
+	#Update packages.
+	yum -y -q update
+
+	# # Install Container-d
+	# dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+	# yum update -y -q
+	# #yum install -y -q containerd.io
+	# ## Configure containerd
+	# mkdir -p /etc/containerd
+	# containerd config default > /etc/containerd/config.toml
+	# echo "Installed Container-d"
+	# systemctl restart containerd
 
 	#Install Docker on server
 	echo "Docker not available. Trying to install Docker."
@@ -293,9 +348,35 @@ then
 			sleep 5
 			#exit 1
 		fi
-	fi		
-else
-	echo "Docker already installed."
+	fi
+
+	if [[ -f /etc/docker/daemon.json ]]
+	then
+		echo "daemon.json is already present. Keeping it as is."
+	else
+		bash -c 'cat <<- EOF > /etc/docker/daemon.json
+		{
+		"exec-opts": ["native.cgroupdriver=systemd"],
+		"log-driver": "json-file",
+		"log-opts": {"max-size": "100m"},
+		"storage-driver": "overlay2",
+	  	"storage-opts": [
+	    "overlay2.override_kernel_check=true"
+	  	]
+		}
+		EOF'
+		echo "Cgroup drivers updated."
+		mkdir -p /etc/systemd/system/docker.service.d
+	fi
+
+	# Restart Docker for changes to take effect
+	systemctl daemon-reload
+	systemctl restart docker
+	echo "Docker restarted."
+
+	else
+		echo "Docker already installed."
+	fi
 fi
 
 echo "Installing kubelet, kubeadm and kubectl (optional)."
@@ -311,30 +392,6 @@ else
 	systemctl enable --now kubelet
 	echo "Installed kubelet, kubeadm and kubectl on Master node."
 fi
-
-if [[ -f /etc/docker/daemon.json ]]
-then
-	echo "daemon.json is already present. Keeping it as is."
-else
-	bash -c 'cat <<- EOF > /etc/docker/daemon.json
-	{
-	"exec-opts": ["native.cgroupdriver=systemd"],
-	"log-driver": "json-file",
-	"log-opts": {"max-size": "100m"},
-	"storage-driver": "overlay2",
-  	"storage-opts": [
-    "overlay2.override_kernel_check=true"
-  	]
-	}
-	EOF'
-	echo "Cgroup drivers updated."
-	mkdir -p /etc/systemd/system/docker.service.d
-fi
-
-# Restart Docker for changes to take effect
-systemctl daemon-reload
-systemctl restart docker
-echo "Docker restarted."
 
 systemctl stop kubelet
 #Restart kublet
