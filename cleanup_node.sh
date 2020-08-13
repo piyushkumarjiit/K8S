@@ -102,10 +102,12 @@ if [[ $CEPH_DRIVE_PRESENT == 0 ]]
 then
 	echo "Cleaning Rook and Ceph related config and zapping drive."
 	yum -y -q install gdisk
+	echo "Installed gdisk."
 	CEPH_DRIVE=('/dev/sdb')
 	#DISK='/dev/sdb'
 	for DISK in ${CEPH_DRIVE[*]}
 	do
+		echo "Zapping $DISK"
 		# Zap the disk to a fresh, usable state (zap-all is important, b/c MBR has to be clean)
 		# You will have to run this step for all disks.
 		sgdisk --zap-all $DISK
@@ -115,6 +117,7 @@ then
 		DMREMOVE_STATUS=$(ls /dev/mapper/ceph-* | xargs -I% -- dmsetup remove % > /dev/null 2>&1; echo $? )
 		if [[ $DMREMOVE_STATUS -gt 0 ]]
 		then
+			echo "Trying to manually delete /dev/mapper/ceph "
 			rm -f /dev/mapper/ceph-*
 			echo "Manually deleted /dev/mapper/ceph "
 		else
@@ -125,6 +128,7 @@ then
 		rm -Rf /var/lib/rook
 	done
 	yum -y -q remove gdisk
+	echo "Uninstalled gdisk"
 else
 	echo "No processing needed for Rook/Ceph."
 fi
