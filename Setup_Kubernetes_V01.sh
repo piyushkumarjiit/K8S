@@ -630,7 +630,7 @@ then
 	export TEMP_NODE_NAMES="${WORKER_NODE_NAMES[*]}"
     export TEMP_NODE_IPS="${WORKER_NODE_IPS[*]}"
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/setup_rook_ceph.sh
-	chmod +x setup_rook_ceph.sh
+	chmod 755 setup_rook_ceph.sh
 	. ./setup_rook_ceph.sh # source the script to use the variables already set above.
 	echo "Storage setup complete."
 	sleep 2
@@ -644,7 +644,7 @@ if [[ $SETUP_CLUSTER_MONITORING == "true" ]]
 then
 	echo "Starting monitoring installation."
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/setup_monitoring_all.sh
-	chmod +x setup_monitoring_all.sh
+	chmod 755 setup_monitoring_all.sh
 	. ./setup_monitoring_all.sh # source the script to use the variables already set above.
 	echo "Monitoring setup complete."
 	sleep 2
