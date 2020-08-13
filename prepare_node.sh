@@ -116,7 +116,10 @@ then
 	firewall-cmd --zone=public --add-port=6443/tcp --permanent        	# Port used by API Server
 	firewall-cmd --zone=public --add-port=10250/tcp --permanent        # Port used by kubelet
 	firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
+	firewall-cmd --zone=public --add-port=6800-7300/tcp --permanent		# Ceph Manager listens on the first available port on the public network beginning at port 6800
 	firewall-cmd --zone=public --add-port=10010/tcp --permanent 		# CRI-O’s so called stream_port 
+	firewall-cmd --zone=public --add-port=3300/tcp --permanent 		# CRI-O’s so called stream_port 
+	firewall-cmd --zone=public --add-port=6789/tcp --permanent 		# CRI-O’s so called stream_port 
 	firewall-cmd --reload
 	systemctl restart firewalld
 elif [[ $FIREWALLD_STATUS -gt 0 ]]
