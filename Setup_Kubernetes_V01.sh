@@ -27,7 +27,7 @@ SETUP_CERT_MANAGER="true"
 #Do we want to setup HAPRoxy+KeepAlived Load Balancer. Allowed values true/false
 EXTERNAL_LB_ENABLED="true"
 # Disable firewall on each Kubernetes node or add rules. Allowed values true/false
-KEEP_FIREWALL_ENABLED="true"
+KEEP_FIREWALL_ENABLED="false"
 #All Nodes part of HAPRoxy+KeepAlived Load Balancer 
 LB_NODE_IPS=("192.168.2.205" "192.168.2.111")
 LB_NODE_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
