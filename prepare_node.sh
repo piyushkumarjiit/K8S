@@ -211,12 +211,12 @@ then
 	fi
 
 	echo "Add COPR and CRI-O repos."
-	Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
+	#Enable the copr plugin and then rhcontainerbot/container-selinux repo for smooth Docker install
 	dnf -y -q install 'dnf-command(copr)'
 
-	Below repo seems to be a dev one so use with caution
+	#Below repo seems to be a dev one so use with caution
 	dnf -y -q copr enable rhcontainerbot/container-selinux
-	Add CRI-O Repo.
+	#Add CRI-O Repo.
 
 	if [[ $OS_VERSION == "centos8" ]]
 	then
