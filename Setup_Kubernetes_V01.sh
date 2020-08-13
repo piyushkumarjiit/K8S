@@ -75,6 +75,10 @@ USER_HOME="/home/$ADMIN_USER"
 #Set below variables when running the script to add specific nodes to existing K8S cluster
 MASTER_JOIN_COMMAND=""
 WORKER_JOIN_COMMAND=""
+
+# Container Runtime to be used. Allowed values containerd, cri-o and docker
+CONTAINER_RUNTIME="containerd"
+
 #K8S network type. Allowed values calico/weave
 NETWORKING_TYPE="calico"
 POD_NETWORK_CIDR='10.244.0.0/16'
@@ -629,6 +633,7 @@ then
 	chmod +x setup_rook_ceph.sh
 	. ./setup_rook_ceph.sh # source the script to use the variables already set above.
 	echo "Storage setup complete."
+	sleep 2
 	rm -f setup_rook_ceph.sh
 else
 	echo "Skipping Ceph+Rook installation."
@@ -642,6 +647,7 @@ then
 	chmod +x setup_monitoring_all.sh
 	. ./setup_monitoring_all.sh # source the script to use the variables already set above.
 	echo "Monitoring setup complete."
+	sleep 2
 	rm -f setup_monitoring_all.sh
 else
 	echo "Skipping Monitoring installation."
