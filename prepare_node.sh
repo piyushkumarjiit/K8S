@@ -32,7 +32,7 @@ DISTRO=$(cat /etc/*-release | awk '/ID=/ { print }' | head -n 1 | awk -F "=" '{p
 DISTRO_VERSION=$(cat /etc/*-release | awk '/VERSION_ID=/ { print }' | head -n 1 | awk -F "=" '{print $2}' | sed -e 's/^"//' -e 's/"$//')
 OS_VERSION="$DISTRO$DISTRO_VERSION"
 echo "Node OS Version: $OS_VERSION"
-
+echo "CRI requested is $CONTAINER_RUNTIME"
 #Check if we can ping other nodes in cluster. If not, add IP Addresses and Hostnames in hosts file
 #Workaround for lack of DNS. Local node can ping itself but unable to SSH
 HOST_PRESENT=$(cat /etc/hosts | grep $(hostname) > /dev/null 2>&1; echo $? )
