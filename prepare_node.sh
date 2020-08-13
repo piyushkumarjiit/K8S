@@ -295,21 +295,31 @@ else
 		#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
 		#Update packages.
 		yum -y -q update
-
-		# # Install Container-d
-		# dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
-		# yum update -y -q
-		# #yum install -y -q containerd.io
-		# ## Configure containerd
-		# mkdir -p /etc/containerd
-		# containerd config default > /etc/containerd/config.toml
-		# echo "Installed Container-d"
-		# systemctl restart containerd
-
 		#Install Docker on server
 		echo "Docker not available. Trying to install Docker."
-		dnf -y -q install docker-ce
-
+		if [[ $OS_VERSION == "centos8" ]]
+		then
+			# Install Container-d
+			dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+			dnf -y -q install docker-ce-19.03.11 docker-ce-cli-19.03.11
+			# yum update -y -q
+			# #yum install -y -q containerd.io
+			# ## Configure containerd
+			# mkdir -p /etc/containerd
+			# containerd config default > /etc/containerd/config.toml
+			# echo "Installed Container-d"
+			# systemctl restart containerd
+			echo "Docker installed in CentOS8."
+		elif [[ $OS_VERSION == "centos7" ]]
+		then
+			#dnf -y -q install docker-ce
+			dnf -y -q install containerd.io-1.2.13 docker-ce-19.03.11 docker-ce-cli-19.03.11
+			echo "Docker installed in CentOS7."
+		else
+			echo "Unable to identify OSVersion. Exiting."
+			sleep 2
+			exit 1
+		fi
 		#Enable Docker to start on start up
 		systemctl enable docker
 		#Start Docker
