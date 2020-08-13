@@ -25,6 +25,22 @@ then
 	exit 1
 fi
 
+if [[ $KEEP_FIREWALL_ENABLED == "" ]]
+then
+	echo "KEEP_FIREWALL_ENABLED not set. Defaulting to false. Will disbale the firewall."
+	KEEP_FIREWALL_ENABLED="false"
+else
+	echo "KEEP_FIREWALL_ENABLED defined: $KEEP_FIREWALL_ENABLED"
+fi
+
+if [[ $CONTAINER_RUNTIME == "cri-o" && $CRI_O_VERSION == "" ]]
+then
+	echo "CRI_O_VERSION not set for $CONTAINER_RUNTIME. Defaulting to 1.17."
+	CRI_O_VERSION=1.17
+else
+	echo "Passed CONTAINER_RUNTIME: $CONTAINER_RUNTIME and CRI_O_VERSION: $CRI_O_VERSION."
+fi
+
 echo "Value of passed ALL_NODE_NAMES ${ALL_NODE_NAMES[*]}"
 echo "Value of passed ALL_NODE_IPS ${ALL_NODE_IPS[*]}"
 
@@ -89,11 +105,11 @@ else
 fi
 # To enable firewalld and testout firewall rule config
 
-systemctl enable firewalld
-systemctl start firewalld
+#systemctl enable firewalld
+#systemctl start firewalld
 #Disable and Stop firewalld. Unless firewalld is stopped, HAProxy would not work
 FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
-if [[ FIREWALLD_STATUS -gt 0 ]]
+if [[ $FIREWALLD_STATUS -gt 0 && $KEEP_FIREWALL_ENABLED == "true" ]]
 then
 	# Setup your firewall settings
 	firewall-cmd --get-active-zones
@@ -102,11 +118,13 @@ then
 	firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
 	firewall-cmd --zone=public --add-port=10010/tcp --permanent 		# CRI-O’s so called stream_port 
 	firewall-cmd --reload
-	
-	#Stop and disable firewalld. Quick fix when you dont want to set up firewall fules.
-	#systemctl stop firewalld
-	#systemctl disable firewalld
 	systemctl restart firewalld
+elif [[ $FIREWALLD_STATUS -gt 0 ]]
+then
+	#Stop and disable firewalld. Quick fix when you dont want to set up firewall fules.
+	systemctl stop firewalld
+	systemctl disable firewalld
+	echo "Firewalld disabled. Continuing."
 else
 	echo "Firewalld seems to be disabled. Continuing."
 fi
