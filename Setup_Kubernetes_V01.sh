@@ -26,6 +26,8 @@ SETUP_HELM="true"
 SETUP_CERT_MANAGER="true"
 #Do we want to setup HAPRoxy+KeepAlived Load Balancer. Allowed values true/false
 EXTERNAL_LB_ENABLED="true"
+# Disable firewall on each Kubernetes node or add rules. Allowed values true/false
+KEEP_FIREWALL_ENABLED="true"
 #All Nodes part of HAPRoxy+KeepAlived Load Balancer 
 LB_NODE_IPS=("192.168.2.205" "192.168.2.111")
 LB_NODE_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
@@ -71,18 +73,16 @@ USERNAME="root"
 #User details for normal kubectl/kubeadm commands post install
 ADMIN_USER="ichigo"
 USER_HOME="/home/$ADMIN_USER"
-
+# Container Runtime to be used. Allowed values containerd, cri-o and docker
+CONTAINER_RUNTIME="cri-o"
+# CRI-O version. Required only in case of cri-o.
+CRI_O_VERSION=1.17
+#K8S network (CNI) plugin. Allowed values calico/weave
+NETWORKING_TYPE="calico"
+POD_NETWORK_CIDR='10.244.0.0/16'
 #Set below variables when running the script to add specific nodes to existing K8S cluster
 MASTER_JOIN_COMMAND=""
 WORKER_JOIN_COMMAND=""
-
-# Container Runtime to be used. Allowed values containerd, cri-o and docker
-CONTAINER_RUNTIME="containerd"
-
-#K8S network type. Allowed values calico/weave
-NETWORKING_TYPE="calico"
-POD_NETWORK_CIDR='10.244.0.0/16'
-
 #echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
 
 ## YAML/Git variables
@@ -223,14 +223,14 @@ then
 	    ssh "${USERNAME}"@$node <<- EOF
 	    echo "Connected to $node"
 	    cd ~
-	    export KUBE_VIP="$KUBE_VIP_1_IP"
-	    export UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
-		export MASTER_PEER_IP=$MASTER_PEER_IP
-		export CALLING_NODE=$CURRENT_NODE_IP
+	    KUBE_VIP="$KUBE_VIP_1_IP"
+	    UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
+		MASTER_PEER_IP=$MASTER_PEER_IP
+		CALLING_NODE=$CURRENT_NODE_IP
 	    # wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/setup_loadbalancer.sh"
 	    wget -q $SETUP_HA_KEEPALIVED_SCRIPT
 	    chmod 755 setup_loadbalancer.sh
-	    ./setup_loadbalancer.sh
+	    . ./setup_loadbalancer.sh
 	    #./setup_loadbalancer.sh $PRIORITY $INTERFACE $AUTH_PASS $API_PORT $node
 	    rm -f setup_loadbalancer.sh
 	    exit
@@ -262,11 +262,13 @@ do
     TEMP_NODE_IPS="${ALL_NODE_IPS[*]}"
     CALLING_NODE_NAME=$CURRENT_NODE_NAME
     CONTAINER_RUNTIME=$CONTAINER_RUNTIME
+    CRI_O_VERSION=$CRI_O_VERSION
+    KEEP_FIREWALL_ENABLED=$KEEP_FIREWALL_ENABLED
     yum -y -q install wget dnf
     #wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
     wget -q $PREPARE_NODE_SCRIPT
     chmod 755 prepare_node.sh
-	./prepare_node.sh
+	. ./prepare_node.sh
 	rm -f ./prepare_node.sh
 	exit
 	EOF
