@@ -19,8 +19,6 @@ ALL_NODE_NAMES=($TEMP_NODE_NAMES)
 #All node IP addresses passed by calling script that we are trying to setup
 ALL_NODE_IPS=($TEMP_NODE_IPS)
 
-CONTAINER_RUNTIME="containerd"
-
 if [[ ${ALL_NODE_NAMES[*]} == "" || ${ALL_NODE_IPS[*]} == "" ]]
 then
 	echo "ALL_NODE_NAMES or ALL_NODE_IPS not passed. Unable to proceed."
@@ -193,7 +191,7 @@ echo "Installed yum-utils"
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 #yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-if [[ $CONTAINER_RUNTIME == "CRI-O" ]]
+if [[ $CONTAINER_RUNTIME == "cri-o" ]]
 then
 	# Added below to fix the issue with IP4 forwarding. These are also required for CRI-O
 	modprobe overlay
@@ -287,92 +285,92 @@ then
 	echo "Installed Container-d"
 	systemctl restart containerd
 else
-#Check if Docker needs to be installed
-DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
-if [[ $DOCKER_INSTALLED -gt 0 ]]
-then
-
-	# Add Docker repo as it is used by containerd and docker
-	dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-	#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
-	#Update packages.
-	yum -y -q update
-
-	# # Install Container-d
-	# dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
-	# yum update -y -q
-	# #yum install -y -q containerd.io
-	# ## Configure containerd
-	# mkdir -p /etc/containerd
-	# containerd config default > /etc/containerd/config.toml
-	# echo "Installed Container-d"
-	# systemctl restart containerd
-
-	#Install Docker on server
-	echo "Docker not available. Trying to install Docker."
-	dnf -y -q install docker-ce
-
-	#Enable Docker to start on start up
-	systemctl enable docker
-	#Start Docker
-	systemctl start docker
-	#Check again
+	#Check if Docker needs to be installed
 	DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
-	if [[ $DOCKER_INSTALLED == 0 ]]
+	if [[ $DOCKER_INSTALLED -gt 0 ]]
 	then
-		usermod -aG docker $USER
-		usermod -aG docker "$USERNAME"
-		echo "Docker seems to be working."
-		echo "But you might need to disconnect and reconnect for usermod changes to reflect."
-	else
-		echo "Unable to install Docker. Trying the nobest option as last resort."
-		sleep 2
-		#dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-		dnf -y -q install docker-ce --nobest
+
+		# Add Docker repo as it is used by containerd and docker
+		dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+		#wget -O /etc/yum.repos.d/docker-ce.repo https://download.docker.com/linux/centos/docker-ce.repo
+		#Update packages.
+		yum -y -q update
+
+		# # Install Container-d
+		# dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
+		# yum update -y -q
+		# #yum install -y -q containerd.io
+		# ## Configure containerd
+		# mkdir -p /etc/containerd
+		# containerd config default > /etc/containerd/config.toml
+		# echo "Installed Container-d"
+		# systemctl restart containerd
+
+		#Install Docker on server
+		echo "Docker not available. Trying to install Docker."
+		dnf -y -q install docker-ce
+
 		#Enable Docker to start on start up
 		systemctl enable docker
 		#Start Docker
 		systemctl start docker
 		#Check again
 		DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
-		if [[ $DOCKER_INSTALLED != 0 ]]
+		if [[ $DOCKER_INSTALLED == 0 ]]
 		then
-			echo "Unable to install Docker. Exiting."
-			sleep 2
-			exit 1
-		else
 			usermod -aG docker $USER
 			usermod -aG docker "$USERNAME"
-			RESTART_NEEDED=0
-			echo "Docker seems to be working but you may need to disconnect and reconnect for usermod changes to reflect."
-			sleep 5
-			#exit 1
+			echo "Docker seems to be working."
+			echo "But you might need to disconnect and reconnect for usermod changes to reflect."
+		else
+			echo "Unable to install Docker. Trying the nobest option as last resort."
+			sleep 2
+			#dnf -y -q config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+			dnf -y -q install docker-ce --nobest
+			#Enable Docker to start on start up
+			systemctl enable docker
+			#Start Docker
+			systemctl start docker
+			#Check again
+			DOCKER_INSTALLED=$(docker -v > /dev/null 2>&1; echo $?)
+			if [[ $DOCKER_INSTALLED != 0 ]]
+			then
+				echo "Unable to install Docker. Exiting."
+				sleep 2
+				exit 1
+			else
+				usermod -aG docker $USER
+				usermod -aG docker "$USERNAME"
+				RESTART_NEEDED=0
+				echo "Docker seems to be working but you may need to disconnect and reconnect for usermod changes to reflect."
+				sleep 5
+				#exit 1
+			fi
 		fi
-	fi
 
-	if [[ -f /etc/docker/daemon.json ]]
-	then
-		echo "daemon.json is already present. Keeping it as is."
-	else
-		bash -c 'cat <<- EOF > /etc/docker/daemon.json
-		{
-		"exec-opts": ["native.cgroupdriver=systemd"],
-		"log-driver": "json-file",
-		"log-opts": {"max-size": "100m"},
-		"storage-driver": "overlay2",
-	  	"storage-opts": [
-	    "overlay2.override_kernel_check=true"
-	  	]
-		}
-		EOF'
-		echo "Cgroup drivers updated."
-		mkdir -p /etc/systemd/system/docker.service.d
-	fi
+		if [[ -f /etc/docker/daemon.json ]]
+		then
+			echo "daemon.json is already present. Keeping it as is."
+		else
+			bash -c 'cat <<- EOF > /etc/docker/daemon.json
+			{
+			"exec-opts": ["native.cgroupdriver=systemd"],
+			"log-driver": "json-file",
+			"log-opts": {"max-size": "100m"},
+			"storage-driver": "overlay2",
+		  	"storage-opts": [
+		    "overlay2.override_kernel_check=true"
+		  	]
+			}
+			EOF'
+			echo "Cgroup drivers updated."
+			mkdir -p /etc/systemd/system/docker.service.d
+		fi
 
-	# Restart Docker for changes to take effect
-	systemctl daemon-reload
-	systemctl restart docker
-	echo "Docker restarted."
+		# Restart Docker for changes to take effect
+		systemctl daemon-reload
+		systemctl restart docker
+		echo "Docker restarted."
 
 	else
 		echo "Docker already installed."
