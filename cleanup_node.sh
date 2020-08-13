@@ -124,7 +124,7 @@ then
 			echo "DMREMOVE_STATUS completed successfully."
 		fi
 		# ceph-volume setup can leave ceph-<UUID> directories in /dev (unnecessary clutter)
-		rm -rf /dev/ceph-*
+		rm -Rf /dev/ceph-*
 		rm -Rf /var/lib/rook
 	done
 	yum -y -q remove gdisk

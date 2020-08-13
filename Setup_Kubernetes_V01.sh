@@ -232,7 +232,7 @@ then
 	    chmod 755 setup_loadbalancer.sh
 	    ./setup_loadbalancer.sh
 	    #./setup_loadbalancer.sh $PRIORITY $INTERFACE $AUTH_PASS $API_PORT $node
-	    rm setup_loadbalancer.sh
+	    rm -f setup_loadbalancer.sh
 	    exit
 		EOF
 		echo "Load balancer config completed on $node"
@@ -256,17 +256,18 @@ do
 	ssh "${USERNAME}"@$node <<- EOF
     echo "Connected to Kube node: $node"
     cd ~
-    export NODE_TYPE=$NODE_TYPE
-    export USERNAME="$ADMIN_USER"
-    export TEMP_NODE_NAMES="${ALL_NODE_NAMES[*]}"
-    export TEMP_NODE_IPS="${ALL_NODE_IPS[*]}"
-    export CALLING_NODE_NAME=$CURRENT_NODE_NAME
+    NODE_TYPE=$NODE_TYPE
+    USERNAME="$ADMIN_USER"
+    TEMP_NODE_NAMES="${ALL_NODE_NAMES[*]}"
+    TEMP_NODE_IPS="${ALL_NODE_IPS[*]}"
+    CALLING_NODE_NAME=$CURRENT_NODE_NAME
+    CONTAINER_RUNTIME=$CONTAINER_RUNTIME
     yum -y -q install wget dnf
     #wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
     wget -q $PREPARE_NODE_SCRIPT
     chmod 755 prepare_node.sh
 	./prepare_node.sh
-	rm ./prepare_node.sh
+	rm -f ./prepare_node.sh
 	exit
 	EOF
 	echo "Prep script completed on $node"
