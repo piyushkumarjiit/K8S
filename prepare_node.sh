@@ -312,6 +312,11 @@ then
 	#Install CRI-O
 	echo "Install CRI-O"
 	# yum -y -q install https://cbs.centos.org/kojifiles/packages/cri-o/1.15.3/1.el7/x86_64/cri-o-1.15.3-1.el7.x86_64.rpm
+	
+	# Install Nix package manager
+	curl -L https://nixos.org/nix/install | sh
+	# Download the CRI-O Nix package directly from latest commit in google bucket
+	curl -f https://storage.googleapis.com/k8s-conform-cri-o/artifacts/crio-$(git ls-remote https://github.com/cri-o/cri-o master | cut -c1-9).tar.gz -o crio.tar.gz
 	yum -y -q install cri-o
 	systemctl -q daemon-reload
 	systemctl -q start crio
@@ -471,30 +476,80 @@ fi
 if [[ $CONTAINER_RUNTIME == "cri-o" ]]
 then
 	systemctl stop kubelet
+	# Set systemd as default cgroup driver
+	
+	#Check if the flag is defined in the file /var/lib/kubelet/config.yaml or kubelet.service
+	CGROUPS_DEFINED=$(cat /var/lib/kubelet/config.yaml | grep cgroupDriver > /dev/null 2>&1; echo $?)
+	if [[ $CGROUPS_DEFINED == 0 ]]
+	then
+		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
+		CURRNET_ARGS=$(cat /var/lib/kubelet/config.yaml)
+		# Update the flag to systemd
+		#sed -i 
+	else
+		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
+		CURRNET_ARGS=$(cat /var/lib/kubelet/config.yaml)
+		#Add cgroups config to the file /var/lib/kubelet/config.yaml
+		echo "Current Args: $CURRNET_ARGS"
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='cgroupDriver: systemd'
+		echo "Updated Args: $CURRNET_ARGS"
+		#Create a backup copy of /etc/kubernetes/kubelet.env
+		cp /var/lib/kubelet/config.yaml /var/lib/kubelet/config.yaml.bak
+		echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
+		echo -e "$CURRNET_ARGS" > /var/lib/kubelet/config.yaml
+		echo "Cgroups config updated in /var/lib/kubelet/config.yaml."
+	fi
+
 	# Add CRI-O related config
 	# Fetch existing KUBELET_ARGS in the file or kubelet.service
-	CURRNET_ARGS=$(cat /etc/kubernetes/kubelet.env | grep KUBELET_ARGS)
-
-	#Add below to KUBELET_ARGS
-	echo "Current Args: $CURRNET_ARGS"
-	CURRNET_ARGS+=$'\n'
-	CURRNET_ARGS+='--container-runtime=remote' # Use remote runtime with provided socket.
-	CURRNET_ARGS+=$'\n'
-	CURRNET_ARGS+='--container-runtime-endpoint=unix:///var/run/crio/crio.sock' #Socket for remote runtime
-	CURRNET_ARGS+=$'\n'
-	CURRNET_ARGS+='--image-service-endpoint=unix:///run/crio/crio.sock'
-	CURRNET_ARGS+=$'\n'
-	CURRNET_ARGS+='--runtime-request-timeout=10m' # Optional to allow for pulling large images that take long
-	echo "Updated Args: $CURRNET_ARGS"
-	#Create a backup copy of /etc/kubernetes/kubelet.env
-	cp /etc/keepalived/keepalived.conf /etc/kubernetes/kubelet.env.bak
-	echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
-	echo -e "$CURRNET_ARGS" >> /etc/kubernetes/kubelet.env
-	echo "kubelet.env updated. Restart of service is required."
-	#KUBELET_EXTRA_ARGS=--feature-gates="AllAlpha=false,RunAsGroup=true" --container-runtime=remote --cgroup-driver=systemd --container-runtime-endpoint='unix:///var/run/crio/crio.sock' --runtime-request-timeout=5m
-	#Restart kublet
-	# Set cgroup driver for the kubelet and set it in the /var/lib/kubelet/config.yaml
-	#echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+	KUBELET_ARGS_DEFINED=$(cat /etc/kubernetes/kubelet.env | grep KUBELET_ARGS > /dev/null 2>&1; echo $?)
+	if [[ $KUBELET_ARGS_DEFINED == 0 ]]
+	then
+		echo "KUBELET_ARGS present in /etc/kubernetes/kubelet.env. Updating existing config."
+		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
+		CURRNET_ARGS=$(cat /etc/kubernetes/kubelet.env)
+		#Add below to KUBELET_ARGS
+		echo "Current Args: $CURRNET_ARGS"
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='--container-runtime=remote' # Use remote runtime with provided socket.
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='--container-runtime-endpoint=unix:///var/run/crio/crio.sock' #Socket for remote runtime
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='--image-service-endpoint=unix:///run/crio/crio.sock'
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='--runtime-request-timeout=10m' # Optional to allow for pulling large images that take long
+		echo "Updated Args: $CURRNET_ARGS"
+		#Create a backup copy of /etc/kubernetes/kubelet.env
+		cp /etc/kubernetes/kubelet.env /etc/kubernetes/kubelet.env.bak
+		echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
+		echo -e "$CURRNET_ARGS" >> /etc/kubernetes/kubelet.env
+		echo "kubelet.env updated. Restart of service is required."
+	else
+		echo "KUBELET_ARGS not defined in /etc/kubernetes/kubelet.env. Adding config."
+		CURRNET_ARGS=$(cat /etc/kubernetes/kubelet.env)
+		#Add below to KUBELET_ARGS
+		echo "Current Args: $CURRNET_ARGS"
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='--container-runtime=remote' # Use remote runtime with provided socket.
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='--container-runtime-endpoint=unix:///var/run/crio/crio.sock' #Socket for remote runtime
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='--image-service-endpoint=unix:///run/crio/crio.sock'
+		CURRNET_ARGS+=$'\n'
+		CURRNET_ARGS+='--runtime-request-timeout=10m' # Optional to allow for pulling large images that take long
+		echo "Updated Args: $CURRNET_ARGS"
+		#Create a backup copy of /etc/kubernetes/kubelet.env
+		cp /etc/kubernetes/kubelet.env /etc/kubernetes/kubelet.env.bak
+		echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
+		echo -e "$CURRNET_ARGS" >> /etc/kubernetes/kubelet.env
+		echo "kubelet.env updated. Restart of service is required."
+		#KUBELET_EXTRA_ARGS=--feature-gates="AllAlpha=false,RunAsGroup=true" --container-runtime=remote --cgroup-driver=systemd \
+		#--container-runtime-endpoint='unix:///var/run/crio/crio.sock' --runtime-request-timeout=5m
+		#Restart kublet
+		#echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' \
+		# >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+	fi
 
 	systemctl daemon-reload
 	systemctl enable kubelet 
