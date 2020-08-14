@@ -97,8 +97,8 @@ then
 	# Set SELinux in permissive mode (effectively disabling it). Needed for K8s as well as HAProxy
 	echo "Disabling SELINUX."
 	setenforce 0
-	#sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
-	sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config
+	sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+	#sed -i 's/^SELINUX=enforcing$/SELINUX=disabled/' /etc/selinux/config
 	echo "Done."
 else
 	echo "SELinux already set as permissive. No change needed."
