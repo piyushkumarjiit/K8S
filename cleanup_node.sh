@@ -174,22 +174,22 @@ rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-e
 rm -Rf /usr/lib/systemd/system/kubelet.service.d
 
 echo "Docker and Kubernetes config directories deleted."
-#groupdel docker
+groupdel docker
 echo "Docker group deleted."
 
 #Enable and Start firewalld. Uncomment for real scenarios
-#systemctl enable firewalld
-#systemctl start firewalld
+systemctl enable firewalld
+systemctl start firewalld
 iptables -F ; iptables -t nat -F ; iptables -t mangle -F ; iptables -X ;  iptables -t nat -X;  iptables -t mangle -X
 echo "firewalld enabled and started."
 
 #Enable Swap manually. Uncomment for real scenarios
-#sed -ir 's/.*-swap/#&/' /etc/fstab
+sed -ir 's/.*-swap/#&/' /etc/fstab
 echo "Swap enabled for restart."
 
 #Enable SELinux. Uncomment for real scenarios
-#setenforce 1
-#sed -i 's/^SELINUX=permissive$/SELINUX=enforcing/' /etc/selinux/config
+setenforce 1
+sed -i 's/^SELINUX=permissive$/SELINUX=enforcing/' /etc/selinux/config
 echo "SELINUX enabled for restart."
 
 #Restore the /etc/hosts file
