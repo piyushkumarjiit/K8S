@@ -111,7 +111,7 @@ then
 	# To enable firewalld and testout firewall rule config
 	systemctl enable firewalld
 	systemctl start firewalld
-	# Setup your firewall settings
+	# Setup your firewall settings. These need to be further refined
 	firewall-cmd --get-active-zones
 	firewall-cmd --zone=public --add-port=22/tcp --permanent 		# SSHD
 	firewall-cmd --zone=public --add-port=25/tcp --permanent 		# Master
