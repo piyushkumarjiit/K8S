@@ -113,13 +113,50 @@ if [[ $FIREWALLD_STATUS -gt 0 && $KEEP_FIREWALL_ENABLED == "true" ]]
 then
 	# Setup your firewall settings
 	firewall-cmd --get-active-zones
-	firewall-cmd --zone=public --add-port=6443/tcp --permanent        	# Port used by API Server
-	firewall-cmd --zone=public --add-port=10250/tcp --permanent        # Port used by kubelet
+	firewall-cmd --zone=public --add-port=22/tcp --permanent 		# SSHD
+	firewall-cmd --zone=public --add-port=25/tcp --permanent 		# Master
+	firewall-cmd --zone=public --add-port=53/tcp --permanent 		# system-resolv
+
+	firewall-cmd --zone=public --add-port=68/tcp --permanent 		# dhclient
+	firewall-cmd --zone=public --add-port=179/tcp --permanent 		# Bird
+	firewall-cmd --zone=public --add-port=323/tcp --permanent 		# Chronyd to sync time between nodes
+
+	firewall-cmd --zone=public --add-port=2379/tcp --permanent 		# etcd
+	firewall-cmd --zone=public --add-port=2380/tcp --permanent 		# etcd
+	firewall-cmd --zone=public --add-port=2381/tcp --permanent 		# etcd
+	firewall-cmd --zone=public --add-port=3300/tcp --permanent 		# Ceph monitor uses this port
+	firewall-cmd --zone=public --add-port=5355/tcp --permanent 		# system-resolv
+
+	firewall-cmd --zone=public --add-port=6443/tcp --permanent      # Port used by API Server
+	firewall-cmd --zone=public --add-port=6789/tcp --permanent 		# Ceph monitor uses this port 
+	firewall-cmd --zone=public --add-port=6800-7300/tcp --permanent	# Ceph Manager listens on the first available port on the public network beginning at port 6800
+	
+	firewall-cmd --zone=public --add-port=7946/tcp --permanent 		# MetalLB Speaker
+	firewall-cmd --zone=public --add-port=7472/tcp --permanent 		# MetalLB Speaker
+	#firewall-cmd --zone=public --add-port=8472/udp --permanent		# Need to check
+	
+	firewall-cmd --zone=public --add-port=9080/tcp --permanent 		# cephcsi
+	firewall-cmd --zone=public --add-port=9081/tcp --permanent 		# cephcsi
+	firewall-cmd --zone=public --add-port=9090/tcp --permanent 		# cephcsi
+	firewall-cmd --zone=public --add-port=9091/tcp --permanent 		# cephcsi
+	firewall-cmd --zone=public --add-port=9099/tcp --permanent 		# Calico-node
+	firewall-cmd --zone=public --add-port=9100/tcp --permanent 		# Kube RBAC-p / node_exporter
+	
+	firewall-cmd --zone=public --add-port=10010/tcp --permanent 	# CRI-O’s so called stream_port 
+
+	firewall-cmd --zone=public --add-port=10248/tcp --permanent     # Port used by kubelet
+	firewall-cmd --zone=public --add-port=10249/tcp --permanent     # Port used by kube proxy
+	firewall-cmd --zone=public --add-port=10250/tcp --permanent     # Port used by kubelet
+	firewall-cmd --zone=public --add-port=10256/tcp --permanent 	# Port used by kube proxy
+	firewall-cmd --zone=public --add-port=10257/tcp --permanent 	# Port used by kube controller
+	firewall-cmd --zone=public --add-port=10259/tcp --permanent 	# Port used by kube scheduler
 	firewall-cmd --zone=public --add-port=30000-32767/tcp --permanent  # range of ports used by NodePort
-	firewall-cmd --zone=public --add-port=6800-7300/tcp --permanent		# Ceph Manager listens on the first available port on the public network beginning at port 6800
-	firewall-cmd --zone=public --add-port=10010/tcp --permanent 		# CRI-O’s so called stream_port 
-	firewall-cmd --zone=public --add-port=3300/tcp --permanent 		# CRI-O’s so called stream_port 
-	firewall-cmd --zone=public --add-port=6789/tcp --permanent 		# CRI-O’s so called stream_port 
+	firewall-cmd --zone=public --add-port=36203/tcp --permanent 	# kubelet
+	firewall-cmd --zone=public --add-port=38514/tcp --permanent     # Port used by kubelet
+	firewall-cmd --zone=public --add-port=44167/tcp --permanent     # Port used by kubelet
+	#firewall-cmd --zone=public --add-masquerade --permanent		# Need to check
+
+
 	firewall-cmd --reload
 	systemctl restart firewalld
 elif [[ $FIREWALLD_STATUS -gt 0 ]]
