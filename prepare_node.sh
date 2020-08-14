@@ -483,21 +483,21 @@ then
 	if [[ $CGROUPS_DEFINED == 0 ]]
 	then
 		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
-		CURRNET_ARGS=$(cat /var/lib/kubelet/config.yaml)
+		CURRENT_ARGS=$(cat /var/lib/kubelet/config.yaml)
 		# Update the flag to systemd
 		#sed -i 
 	else
 		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
-		CURRNET_ARGS=$(cat /var/lib/kubelet/config.yaml)
+		CURRENT_ARGS=$(cat /var/lib/kubelet/config.yaml)
 		#Add cgroups config to the file /var/lib/kubelet/config.yaml
-		echo "Current Args: $CURRNET_ARGS"
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='cgroupDriver: systemd'
-		echo "Updated Args: $CURRNET_ARGS"
+		echo "Current Args: $CURRENT_ARGS"
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='cgroupDriver: systemd'
+		echo "Updated Args: $CURRENT_ARGS"
 		#Create a backup copy of /etc/kubernetes/kubelet.env
 		cp /var/lib/kubelet/config.yaml /var/lib/kubelet/config.yaml.bak
 		echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
-		echo -e "$CURRNET_ARGS" > /var/lib/kubelet/config.yaml
+		echo -e "$CURRENT_ARGS" > /var/lib/kubelet/config.yaml
 		echo "Cgroups config updated in /var/lib/kubelet/config.yaml."
 	fi
 
@@ -508,47 +508,71 @@ then
 	then
 		echo "KUBELET_ARGS present in /etc/kubernetes/kubelet.env. Updating existing config."
 		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
-		CURRNET_ARGS=$(cat /etc/kubernetes/kubelet.env)
+		CURRENT_ARGS=$(cat /etc/kubernetes/kubelet.env)
 		#Add below to KUBELET_ARGS
-		echo "Current Args: $CURRNET_ARGS"
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='--container-runtime=remote' # Use remote runtime with provided socket.
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='--container-runtime-endpoint=unix:///var/run/crio/crio.sock' #Socket for remote runtime
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='--image-service-endpoint=unix:///run/crio/crio.sock'
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='--runtime-request-timeout=10m' # Optional to allow for pulling large images that take long
-		echo "Updated Args: $CURRNET_ARGS"
+		echo "Current Args: $CURRENT_ARGS"
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='--container-runtime=remote' # Use remote runtime with provided socket.
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='--container-runtime-endpoint=unix:///var/run/crio/crio.sock' #Socket for remote runtime
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='--image-service-endpoint=unix:///run/crio/crio.sock'
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='--runtime-request-timeout=10m' # Optional to allow for pulling large images that take long
+		echo "Updated Args: $CURRENT_ARGS"
 		#Create a backup copy of /etc/kubernetes/kubelet.env
 		cp /etc/kubernetes/kubelet.env /etc/kubernetes/kubelet.env.bak
 		echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
-		echo -e "$CURRNET_ARGS" >> /etc/kubernetes/kubelet.env
+		echo -e "$CURRENT_ARGS" >> /etc/kubernetes/kubelet.env
 		echo "kubelet.env updated. Restart of service is required."
 	else
 		echo "KUBELET_ARGS not defined in /etc/kubernetes/kubelet.env. Adding config."
-		CURRNET_ARGS=$(cat /etc/kubernetes/kubelet.env)
+		CURRENT_ARGS=$(cat /etc/kubernetes/kubelet.env)
 		#Add below to KUBELET_ARGS
-		echo "Current Args: $CURRNET_ARGS"
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='--container-runtime=remote' # Use remote runtime with provided socket.
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='--container-runtime-endpoint=unix:///var/run/crio/crio.sock' #Socket for remote runtime
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='--image-service-endpoint=unix:///run/crio/crio.sock'
-		CURRNET_ARGS+=$'\n'
-		CURRNET_ARGS+='--runtime-request-timeout=10m' # Optional to allow for pulling large images that take long
-		echo "Updated Args: $CURRNET_ARGS"
+		echo "Current Args: $CURRENT_ARGS"
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='--container-runtime=remote' # Use remote runtime with provided socket.
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='--container-runtime-endpoint=unix:///var/run/crio/crio.sock' #Socket for remote runtime
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='--image-service-endpoint=unix:///run/crio/crio.sock'
+		CURRENT_ARGS+=$'\n'
+		CURRENT_ARGS+='--runtime-request-timeout=10m' # Optional to allow for pulling large images that take long
+		echo "Updated Args: $CURRENT_ARGS"
 		#Create a backup copy of /etc/kubernetes/kubelet.env
 		cp /etc/kubernetes/kubelet.env /etc/kubernetes/kubelet.env.bak
 		echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
-		echo -e "$CURRNET_ARGS" >> /etc/kubernetes/kubelet.env
-		echo "kubelet.env updated. Restart of service is required."
-		#KUBELET_EXTRA_ARGS=--feature-gates="AllAlpha=false,RunAsGroup=true" --container-runtime=remote --cgroup-driver=systemd \
-		#--container-runtime-endpoint='unix:///var/run/crio/crio.sock' --runtime-request-timeout=5m
+		echo -e "$CURRENT_ARGS" >> /etc/kubernetes/kubelet.env
+		echo "kubelet.env updated. Restart of service is required."+
+		
+
 		#Restart kublet
 		#echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' \
 		# >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
+	fi
+
+	#Check if the flag is defined in the file /var/lib/kubelet/config.yaml or kubelet.service
+	EXTRA_ARGS_DEFINED=$(cat /etc/default/kubelet  > /dev/null 2>&1; echo $?)
+	if [[ $EXTRA_ARGS_DEFINED == 0 ]]
+	then
+		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
+		echo "Adding extra args to /etc/default/kubelet"
+		KUBELET_EXTRA_ARGS=$(cat /etc/default/kubelet)
+		# Update the flag to systemd
+		#sed -i 
+	else
+		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
+		KUBELET_EXTRA_ARGS=$(cat /etc/default/kubelet)
+		#Add cgroups config to the file /var/lib/kubelet/config.yaml
+		echo "Current Args: $KUBELET_EXTRA_ARGS"
+		KUBELET_EXTRA_ARGS+=$'\n'
+		KUBELET_EXTRA_ARGS+='--feature-gates="AllAlpha=false,RunAsGroup=true" --container-runtime=remote --cgroup-driver=systemd --container-runtime-endpoint="unix:///var/run/crio/crio.sock" --runtime-request-timeout=5m'
+		echo "Updated Args: $KUBELET_EXTRA_ARGS"
+		#Create a backup copy of /etc/kubernetes/kubelet.env
+		cp /etc/default/kubelet /etc/default/kubelet.bak
+		echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
+		echo -e "$KUBELET_EXTRA_ARGS" > /etc/default/kubelet
+		echo "Cgroups config updated in /etc/default/kubelet."
 	fi
 
 	systemctl daemon-reload
