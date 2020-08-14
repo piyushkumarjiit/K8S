@@ -180,7 +180,6 @@ echo "Docker group deleted."
 #Enable and Start firewalld. Uncomment for real scenarios
 systemctl enable firewalld
 systemctl start firewalld
-iptables -F ; iptables -t nat -F ; iptables -t mangle -F ; iptables -X ;  iptables -t nat -X;  iptables -t mangle -X
 echo "firewalld enabled and started."
 
 #Enable Swap manually. Uncomment for real scenarios
