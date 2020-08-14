@@ -177,6 +177,8 @@ echo "Docker and Kubernetes config directories deleted."
 groupdel docker
 echo "Docker group deleted."
 
+# Reset firewalld rules
+rm -rf /etc/firewalld/zones/
 #Enable and Start firewalld. Uncomment for real scenarios
 systemctl enable firewalld
 systemctl start firewalld
