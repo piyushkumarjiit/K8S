@@ -314,9 +314,9 @@ then
 	# yum -y -q install https://cbs.centos.org/kojifiles/packages/cri-o/1.15.3/1.el7/x86_64/cri-o-1.15.3-1.el7.x86_64.rpm
 	
 	# Install Nix package manager
-	curl -L https://nixos.org/nix/install | sh
+	#curl -L https://nixos.org/nix/install | sh
 	# Download the CRI-O Nix package directly from latest commit in google bucket
-	curl -f https://storage.googleapis.com/k8s-conform-cri-o/artifacts/crio-$(git ls-remote https://github.com/cri-o/cri-o master | cut -c1-9).tar.gz -o crio.tar.gz
+	#curl -f https://storage.googleapis.com/k8s-conform-cri-o/artifacts/crio-$(git ls-remote https://github.com/cri-o/cri-o master | cut -c1-9).tar.gz -o crio.tar.gz
 	yum -y -q install cri-o
 	systemctl -q daemon-reload
 	systemctl -q start crio
