@@ -20,23 +20,19 @@ CURRENT_NODE_IP="$(hostname -I | cut -d" " -f 1)"
 LB_NODES_IP=("192.168.2.205" "192.168.2.111")
 LB_NODES_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
 #All Master nodes
-MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186")
-MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost")
-#export MASTER_NODE_IPS=("192.168.2.175" "192.168.2.198" "192.168.2.140")
-#export MASTER_NODE_NAMES=("K8SCentOS8Master1.bifrost" "K8SCentOS8Master2.bifrost" "K8SCentOS8Master3.bifrost")
+MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186" "192.168.2.175" "192.168.2.198" "192.168.2.140")
+MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost" "K8SCentOS8Master1.bifrost" "K8SCentOS8Master2.bifrost" "K8SCentOS8Master3.bifrost")
 #All Worker Nodes
-WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109")
-WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost")
-#export WORKER_NODE_IPS=("192.168.2.208" "192.168.2.95" "192.168.2.104")
-#export WORKER_NODE_NAMES=("K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
-#All K8S nodes (Master + Worker)
-KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
-KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
+WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109" "192.168.2.208" "192.168.2.95" "192.168.2.104")
+WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost" "K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
+#All K8S nodes (Worker + Master)
+KUBE_CLUSTER_NODE_IPS=(${WORKER_NODE_IPS[*]} ${MASTER_NODE_IPS[*]})
+KUBE_CLUSTER_NODE_NAMES=(${WORKER_NODE_NAMES[*]} ${MASTER_NODE_NAMES[*]})
 #All nodes we are trying to use
 ALL_NODE_IPS=($KUBE_VIP_1_IP ${KUBE_CLUSTER_NODE_IPS[*]} ${LB_NODES_IP[*]})
 ALL_NODE_NAMES=($KUBE_VIP_1_HOSTNAME ${KUBE_CLUSTER_NODE_NAMES[*]} ${LB_NODES_NAMES[*]})
 #Flag to identify if LB nodes should also be cleaned
-EXTERNAL_LB_ENABLED="false"
+EXTERNAL_LB_ENABLED="true"
 #Workaround for lack of DNS. Local node can ping itself but unable to SSH
 echo "$CURRENT_NODE_IP"	"$CURRENT_NODE_NAME" | tee -a /etc/hosts
 # Do we want to setup Rook + Ceph. Allowed values true/false
@@ -66,9 +62,9 @@ SELF_SIGNED_CERT_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/
 CALICO_YAML="https://docs.projectcalico.org/v3.14/manifests/calico.yaml"
 
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
-SETUP_CLUSTER_MONITORING=$(kubectl get pods -n monitoring > /dev/null 2>&1; echo $?)
-SETUP_ROOK_INSTALLED=$(kubectl get pods -n rook-ceph > /dev/null 2>&1; echo $?)
-if [[ $SETUP_CLUSTER_MONITORING == 0 ]]
+MONITORING_PODS_PRESENT=$(kubectl get pods -n monitoring > /dev/null 2>&1; echo $?)
+STORAGE_PODS_PRESENT=$(kubectl get pods -n rook-ceph > /dev/null 2>&1; echo $?)
+if [[ $SETUP_CLUSTER_MONITORING == "true" && $MONITORING_PODS_PRESENT == 0 ]]
 then
 	echo "Starting monitoring components cleanup."
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/cleanup_monitoring_all.sh
@@ -80,7 +76,7 @@ else
 	echo "Skipping monitoring cleanup."
 fi
 
-if [[ $SETUP_ROOK_INSTALLED == 0 ]]
+if [[ $SETUP_ROOK_INSTALLED == "true" && $STORAGE_PODS_PRESENT == 0 ]]
 then
 	echo "Starting storage components cleanup."
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/cleanup_rook_ceph.sh
