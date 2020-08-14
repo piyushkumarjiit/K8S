@@ -103,13 +103,12 @@ then
 else
 	echo "SELinux already set as permissive. No change needed."
 fi
-# To enable firewalld and testout firewall rule config
-systemctl enable firewalld
-systemctl start firewalld
+
 #Disable and Stop firewalld. Unless firewalld is stopped, HAProxy would not work
 FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
 if [[ $FIREWALLD_STATUS -gt 0 && $KEEP_FIREWALL_ENABLED == "true" ]]
 then
+
 	# Setup your firewall settings. These need to be further refined
 	firewall-cmd --get-active-zones
 	firewall-cmd --zone=public --add-port=22/tcp --permanent 		# SSHD
