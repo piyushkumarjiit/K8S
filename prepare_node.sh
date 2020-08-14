@@ -156,7 +156,6 @@ then
 	firewall-cmd --zone=public --add-port=44167/tcp --permanent     # Port used by kubelet
 	#firewall-cmd --zone=public --add-masquerade --permanent		# Need to check
 
-
 	firewall-cmd --reload
 	systemctl restart firewalld
 elif [[ $FIREWALLD_STATUS -gt 0 ]]
