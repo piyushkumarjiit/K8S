@@ -17,7 +17,8 @@ CEPH_CLUSTER_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluste
 CEPH_DASHBOARD_YAML=https://raw.githubusercontent.com/rook/rook/master/cluster/examples/kubernetes/ceph/dashboard-ingress-https.yaml
 CEPH_LB_DASHBOARD_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
 CEPH_FILSYSTEM_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
-ROOK_STORAGE_CLASS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class.yaml
+ROOK_STORAGE_CLASS_CEPHFS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class_cephfs.yaml
+ROOK_STORAGE_CLASS_RBD_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class_rbd.yaml
 CEPH_TOOLBOX_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 
 # Flag for setting up Ceph tool container in K8S. Allowed values true/false
@@ -57,13 +58,22 @@ fi
 # Check if Kubectl is available or not
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 
-if [[ -f rook-storage_class.yaml ]]
+if [[ -f rook-storage_class_cephfs.yaml ]]
 then
 	echo "rook-storage_class.yaml already present. Proceeding."
 else
 	echo "Downloading rook-storage_class.yaml"
 	#Fetch the StorageClass YAML
-	wget -q $ROOK_STORAGE_CLASS_YAML -O rook-storage_class.yaml
+	wget -q $ROOK_STORAGE_CLASS_CEPHFS_YAML -O rook-storage_class_cephfs.yaml
+fi
+
+if [[ -f rook-storage_class_rbd.yaml ]]
+then
+	echo "rook-storage_class.yaml already present. Proceeding."
+else
+	echo "Downloading rook-storage_class.yaml"
+	#Fetch the StorageClass YAML
+	wget -q $ROOK_STORAGE_CLASS_RBD_YAML -O rook-storage_class_rbd.yaml
 fi
 
 if [[ -f rook-filesystem.yaml ]]
@@ -128,9 +138,12 @@ if [[ $KUBECTL_AVAILABLE == 0  ]]
 then
 	# Make sure it is not set as default storage
 	kubectl patch storageclass csi-cephfs -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
-	# Delete rook_storage_class using YAML 
-	kubectl delete -f rook-storage_class.yaml
-	echo "Rook StorageClass config deleted."
+	# Delete rook_storage_class_rbd using YAML 
+	kubectl delete -f rook-storage_class_rbd.yaml
+	echo "Rook RBD StorageClass config deleted."
+	# Delete rook_storage_class_cephfs using YAML 
+	kubectl delete -f rook-storage_class_cephfs.yaml
+	echo "Rook CephFS StorageClass config deleted."
 	# Delete Filesystem using YAML 
 	kubectl delete -f rook-filesystem.yaml
 	echo "Rook Filesystem config deleted."
