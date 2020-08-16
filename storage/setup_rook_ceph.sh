@@ -19,7 +19,8 @@ CEPH_CLUSTER_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluste
 CEPH_DASHBOARD_YAML=https://raw.githubusercontent.com/rook/rook/master/cluster/examples/kubernetes/ceph/dashboard-ingress-https.yaml
 CEPH_LB_DASHBOARD_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/dashboard-loadbalancer.yaml
 CEPH_FILSYSTEM_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/filesystem.yaml
-ROOK_STORAGE_CLASS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class.yaml
+ROOK_STORAGE_CLASS_CEPHFS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class_cephfs.yaml
+ROOK_STORAGE_CLASS_RBD_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/rook_storage_class_rbd.yaml
 CEPH_TOOLBOX_YAML=https://raw.githubusercontent.com/rook/rook/release-1.3/cluster/examples/kubernetes/ceph/toolbox.yaml
 #Hostname of the node from where we run the script
 CURRENT_NODE_NAME="$(hostname)"
@@ -191,12 +192,19 @@ sleep 15
 echo "Ceph Filesystem type storage created."
 rm -f rook-filesystem.yaml
 
-#Fetch the StorageClass YAML
-wget -q $ROOK_STORAGE_CLASS_YAML -O rook-storage_class.yaml
+#Fetch the CephFS StorageClass YAML
+wget -q $ROOK_STORAGE_CLASS_CEPHFS_YAML -O rook-storage_class.yaml
 kubectl apply -f rook-storage_class.yaml
 echo "StorageClass config applied."
 rm -f rook-storage_class.yaml
 sleep 15
+#Fetch the RBD StorageClass YAML
+wget -q $ROOK_STORAGE_CLASS_RBD_YAML -O rook-storage_class_rbd.yaml
+kubectl apply -f rook-storage_class_rbd.yaml
+echo "StorageClass config applied."
+rm -f rook-storage_class_rbd.yaml
+sleep 15
+
 if [[ $INSTALL_CEPH_TOOLS == "true" ]]
 then
 	wget -q $CEPH_TOOLBOX_YAML -O ceph-toolbox.yaml
