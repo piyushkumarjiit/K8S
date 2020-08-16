@@ -108,8 +108,7 @@ fi
 FIREWALLD_STATUS=$(sudo systemctl status firewalld | grep -w "Active: inactive" > /dev/null 2>&1; echo $?)
 if [[ $FIREWALLD_STATUS -gt 0 && $KEEP_FIREWALL_ENABLED == "true" ]]
 then
-
-	# Setup your firewall settings. These need to be further refined
+	# Setup your firewall settings. These need to be further refined. PVC was not working with firewall on
 	firewall-cmd --get-active-zones
 	firewall-cmd --zone=public --add-port=22/tcp --permanent 		# SSHD
 	firewall-cmd --zone=public --add-port=25/tcp --permanent 		# Master
@@ -164,6 +163,20 @@ then
 	echo "Firewalld disabled. Continuing."
 else
 	echo "Firewalld seems to be disabled. Continuing."
+fi
+
+# Increase Max Virtual memory on nodes if running Elasticsearch
+VM_MAX_MAP_STATUS=$(cat /etc/sysctl.conf | grep -w 'vm.max_map_count=262144' > /dev/null 2>&1; echo $?)
+if [[ $VM_MAX_MAP_STATUS != 0 ]]
+then	
+	echo "Adding Virtual Memory value."
+	bash -c 'cat <<-EOF >>  /etc/sysctl.conf
+	vm.max_map_count=262144
+	EOF'
+	sysctl -p -q
+	echo "Done."
+else
+	echo "Virtual Memory value already set. No change needed."
 fi
 
 IP4_FORWARDING_STATUS=$(cat /etc/sysctl.conf | grep -w 'net.ipv4.ip_forward=1' > /dev/null 2>&1; echo $?)
@@ -309,7 +322,7 @@ then
 	
 	#install Containers common
 
-	#Install CRI-O
+	#Install CRI-O. Not working properly
 	echo "Install CRI-O"
 	# yum -y -q install https://cbs.centos.org/kojifiles/packages/cri-o/1.15.3/1.el7/x86_64/cri-o-1.15.3-1.el7.x86_64.rpm
 	
@@ -371,16 +384,9 @@ else
 		echo "Docker not available. Trying to install Docker."
 		if [[ $OS_VERSION == "centos8" ]]
 		then
-			# Install Container-d
+			# Install Container-d and Docker-CE
 			dnf -y -q install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/containerd.io-1.2.10-3.2.el7.x86_64.rpm
 			dnf -y -q install docker-ce-19.03.11 docker-ce-cli-19.03.11
-			# yum update -y -q
-			# #yum install -y -q containerd.io
-			# ## Configure containerd
-			# mkdir -p /etc/containerd
-			# containerd config default > /etc/containerd/config.toml
-			# echo "Installed Container-d"
-			# systemctl restart containerd
 			echo "Docker installed in CentOS8."
 		elif [[ $OS_VERSION == "centos7" ]]
 		then
@@ -403,7 +409,7 @@ else
 			usermod -aG docker $USER
 			usermod -aG docker "$USERNAME"
 			echo "Docker seems to be working."
-			echo "But you might need to disconnect and reconnect for usermod changes to reflect."
+			#echo "But you might need to disconnect and reconnect for usermod changes to reflect."
 		else
 			echo "Unable to install Docker. Trying the nobest option as last resort."
 			sleep 2
@@ -484,7 +490,7 @@ then
 	then
 		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
 		CURRENT_ARGS=$(cat /var/lib/kubelet/config.yaml)
-		# Update the flag to systemd
+		# Update the cgroups flag to systemd
 		#sed -i 
 	else
 		# Fetch existing KubeletConfiguration in the file /var/lib/kubelet/config.yaml or kubelet.service
@@ -544,8 +550,6 @@ then
 		echo "Created a backup of exisitng kubelet.env. Appending the new ARGS"
 		echo -e "$CURRENT_ARGS" >> /etc/kubernetes/kubelet.env
 		echo "kubelet.env updated. Restart of service is required."+
-		
-
 		#Restart kublet
 		#echo 'Environment="KUBELET_CGROUP_ARGS=--cgroup-driver=cgroupfs --runtime-cgroups=/systemd/system.slice --kubelet-cgroups=/systemd/system.slice"' \
 		# >> /usr/lib/systemd/system/kubelet.service.d/10-kubeadm.conf
@@ -581,7 +585,6 @@ then
 else
 	echo "No extra CRI-O related config required."
 fi
-
 
 if [[ $RESTART_NEEDED == 0 ]]
 then
