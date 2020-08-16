@@ -20,14 +20,6 @@ KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 KUBEADM_AVAILABLE=$(kubeadm version > /dev/null 2>&1; echo $?)
 KUBELET_AVAILABLE=$(systemctl status kubelet > /dev/null 2>&1; echo $?)
 
-if [[ $KUBEADM_AVAILABLE == 0  ]]
-then
-	echo "Kubeadm reset called."
-	kubeadm reset -f
-	yum -y -q remove kubeadm
-	echo "kubeadm removed."
-fi
-
 if [[ $KUBECTL_AVAILABLE == 0  ]]
 then
 	kubectl drain $CURRENT_NODE_IP --delete-local-data --force --ignore-daemonsets
@@ -35,6 +27,14 @@ then
 	echo "Kubectl delete node called."
 	yum -y -q remove kubectl
 	echo "kubectl removed."
+fi
+
+if [[ $KUBEADM_AVAILABLE == 0  ]]
+then
+	echo "Kubeadm reset called."
+	kubeadm reset -f
+	yum -y -q remove kubeadm
+	echo "kubeadm removed."
 fi
 
 if [[ $KUBELET_AVAILABLE == 0 ]]
