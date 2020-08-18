@@ -635,7 +635,7 @@ data:
     plugin_dir = /usr/share/graylog/plugin
     http_bind_address = 0.0.0.0:9000
     http_external_uri = Gr@ylogExt3rn@lUR1/
-    elasticsearch_hosts = http://R31E@S3-elasticsearch-client.logging.svc.cluster.local:9200
+    elasticsearch_hosts = http://R31E@S3-elasticsearch-client.N@m3Sp@c3.svc.cluster.local:9200
     allow_leading_wildcard_searches = false
     allow_highlighting = false
     output_batch_size = 500
@@ -654,7 +654,7 @@ data:
     message_journal_dir = /usr/share/graylog/data/journal
     lb_recognition_period_seconds = 3
     # Use a replica set instead of a single host
-    mongodb_uri = mongodb://R31E@S3-mongodb-replicaset.logging.svc.cluster.local:27017/graylog?replicaSet=rs0
+    mongodb_uri = mongodb://R31E@S3-mongodb-replicaset.N@m3Sp@c3.svc.cluster.local:27017/graylog?replicaSet=rs0
     mongodb_max_connections = 1000
     mongodb_threads_allowed_to_block_multiplier = 5
     # Email transport
@@ -679,14 +679,14 @@ data:
 
     GRAYLOG_HOME=/usr/share/graylog
     # Looking for Master IP
-    MASTER_IP=`/k8s/kubectl --namespace logging get pod -o jsonpath='{range .items[*]}{.metadata.name} {.status.podIP}{"\n"}{end}' -l graylog-role=master --field-selector=status.phase=Running|awk '{print $2}'`
-    SELF_IP=`/k8s/kubectl --namespace logging get pod $HOSTNAME -o jsonpath='{.status.podIP}'`
+    MASTER_IP=`/k8s/kubectl --namespace N@m3Sp@c3 get pod -o jsonpath='{range .items[*]}{.metadata.name} {.status.podIP}{"\n"}{end}' -l graylog-role=master --field-selector=status.phase=Running|awk '{print $2}'`
+    SELF_IP=`/k8s/kubectl --namespace N@m3Sp@c3 get pod $HOSTNAME -o jsonpath='{.status.podIP}'`
     echo "Current master is $MASTER_IP"
     echo "Self IP is $SELF_IP"
     if [[ -z "$MASTER_IP" ]]; then
       echo "Launching $HOSTNAME as master"
       export GRAYLOG_IS_MASTER="true"
-      /k8s/kubectl --namespace logging label --overwrite pod $HOSTNAME graylog-role="master"
+      /k8s/kubectl --namespace N@m3Sp@c3 label --overwrite pod $HOSTNAME graylog-role="master"
     else
       # When container was recreated or restart, MASTER_IP == SELF_IP, running as master and no need to change label graylog-role="master"
       if [ "$SELF_IP" == "$MASTER_IP" ];then
@@ -695,7 +695,7 @@ data:
         # MASTER_IP != SELF_IP, running as coordinating
         echo "Launching $HOSTNAME as coordinating"
         export GRAYLOG_IS_MASTER="false"
-        /k8s/kubectl --namespace logging label --overwrite pod $HOSTNAME graylog-role="coordinating"
+        /k8s/kubectl --namespace N@m3Sp@c3 label --overwrite pod $HOSTNAME graylog-role="coordinating"
       fi
     fi
     # Download plugins
@@ -1726,7 +1726,7 @@ spec:
         - name: FULL_NAME
           value: R31E@S3-mongodb-replicaset
         - name: NAMESPACE
-          value: logging
+          value: N@m3Sp@c3
         - name: REPLICAS
           value: "3"
       volumeMounts:
