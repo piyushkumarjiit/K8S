@@ -894,7 +894,7 @@ spec:
     app.kubernetes.io/name: graylog
     app.kubernetes.io/instance: "R31E@S3"
     graylog-role: "master"
-  type: "LoadBalancer"
+  type: "ClusterIP"
 ---
 # Source: graylog/templates/web-service.yaml
 apiVersion: v1
