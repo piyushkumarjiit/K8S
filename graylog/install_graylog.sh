@@ -1,35 +1,51 @@
 #!/bin/bash
 #Author: Piyush Kumar (piyushkumar.jiit@gmail.com)
 
-# Graylog Chart values
-GRAYLOG_NAMESPACE=logging
+# Graylog YAML/Chart values
+GRAYLOG_NAMESPACE=graylog
 RELEASE_NAME="d2lsdev"
-GRAYLOG_EXTERNAL_URL='graylog.bifrost.com'
+GRAYLOG_EXTERNAL_URL='http://graylog.bifrost.com'
+INGRESS_HOST_NAME="graylog.bifrost.com"
 #PERSISTENCE_STORAGECLASS="csi-cephfs"
 PERSISTENCE_STORAGECLASS="rook-ceph-block"
 PERSISTENCE_STORAGE_SIZE=5Gi
 PERSISTENCE_ACCESS_MODE=ReadWriteOnce
+MONGO_STORAGE_SIZE=5Gi
+ELASTIC_DATA_STORAGE_SIZE=5Gi
+ELASTIC_MASTERSTORAGE_SIZE=5Gi
+GRAYLOG_STORAGE_SIZE=5Gi
+
 METRICS_ENABLED=true
 REPLICA_COUNT=3
 
 GRAYLOG_ADMIN="admin"
-GRAYLOG_PASSWORD="ChangeMe123"
-GRAYLOG_PASSWORD_SHA="$(echo -n $GRAYLOG_PASSWORD | sha256sum)"
+#Minimum 16 characters
+GRAYLOG_PASSWORD="ChangeMe123456789"
+#GRAYLOG_PASSWORD="RNoIcSGKBu5eXDI8"
+
+GRAYLOG_ADMIN_SECRET=$(echo -n "$GRAYLOG_ADMIN" | base64)
+#"YWRtaW4="
+GRAYLOG_PASSWORD_SECRET=$(echo -n "$GRAYLOG_PASSWORD" | base64)
+#"Uk5vSWNTR0tCdTVlWERJOA=="
+
+GRAYLOG_PASSWD_SHA=$(echo -n "$GRAYLOG_PASSWORD" | sha256sum | awk -F " " '{print $1}' | tr -dc '[:print:]'| base64 | tr -dc '[:print:]' )
+#GRAYLOG_PASSWD_SHA=$(echo -n "$GRAYLOG_PASSWORD" |openssl dgst -sha256 | awk -F " " '{print $2}' | tr -dc '[:print:]'| base64 | tr -dc '[:print:]')
+#"ZTk3MDg5OTdhYmVjMWVmNzYxZTQ5YTJiNDhmMjRjMWNmODExYjcxZWFiNzY4ZmNkMTE5ZGMwZTY5YzVkYzA1Yw=="
 
 GRAYLOG_YAML="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/graylog/graylog_template.yaml"
 
-
-if [[ $GRAYLOG_PASSWORD == "ChangeMe123" ]]
-then
-	echo "Using default GRAYLOG_PASSWORD. Please update and rerun the script. Exiting."
-	sleep 2
-	exit 1
-else
-	echo "Not using default GRAYLOG_PASSWORD. Proceeding."
-fi
+# if [[ $GRAYLOG_PASSWORD == "ChangeMe123456789" ]]
+# then
+# 	echo "Using default GRAYLOG_PASSWORD. Please update and rerun the script. Exiting."
+# 	sleep 2
+# 	exit 1
+# else
+# 	echo "Not using default GRAYLOG_PASSWORD. Proceeding."
+# fi
 
 # Check if Helm is present
 HELM_PRESENT=$(helm version > /dev/null 2>&1; echo $?)
+echo "Helm result: $HELM_PRESENT"
 if [[ $HELM_PRESENT == 0 ]]
 then
 	# Add Default Helm repo
@@ -69,26 +85,29 @@ then
 		echo "Downloading deploy_graylog_stack.yaml"
 		# Download Graylog Template file from github
 		wget -q $GRAYLOG_YAML -O deploy_graylog_stack.yaml
+
+		# Update Namespace
+		sed -i "s*N@m3Sp@c3*$GRAYLOG_NAMESPACE*g" deploy_graylog_stack.yaml
 		# Update StorgeClass used for peristence
 		sed -i "s*St0r3@g3C1@ss*$PERSISTENCE_STORAGECLASS*g" deploy_graylog_stack.yaml
 		# Update ReleaseName
 		sed -i "s*R31E@S3*$RELEASE_NAME*g" deploy_graylog_stack.yaml
 		# Update Storage size for MongoDB
-		sed -i "s*M0ng0DBSt0r@g3S1z3*$PERSISTENCE_STORAGE_SIZE*g" deploy_graylog_stack.yaml
+		sed -i "s*M0ng0DBSt0r@g3S1z3*$MONGO_STORAGE_SIZE*g" deploy_graylog_stack.yaml
 		# Update Storage size for Elastic Data node
-		sed -i "s*E1@st1cD@t@St0r@g3*$PERSISTENCE_STORAGE_SIZE*g" deploy_graylog_stack.yaml
+		sed -i "s*E1@st1cD@t@St0r@g3*$ELASTIC_DATA_STORAGE_SIZE*g" deploy_graylog_stack.yaml
 		# Update Storage size for Elastic Master node
-		sed -i "s*E1@st1cM@st3rSt0r@g3*$PERSISTENCE_STORAGE_SIZE*g" deploy_graylog_stack.yaml
+		sed -i "s*E1@st1cM@st3rSt0r@g3*$ELASTIC_MASTERSTORAGE_SIZE*g" deploy_graylog_stack.yaml
 		# Update Storage size for Graylog
-		sed -i "s*Gr@yL0gStor@g3*$PERSISTENCE_STORAGE_SIZE*g" deploy_graylog_stack.yaml
+		sed -i "s*Gr@yL0gStor@g3*$GRAYLOG_STORAGE_SIZE*g" deploy_graylog_stack.yaml
 		# Update External URL used by Graylog. Not used.
-		sed -i "s*Ingr3ssH0stN@m3*$GRAYLOG_EXTERNAL_URL*g" deploy_graylog_stack.yaml
+		sed -i "s*Ingr3ssH0stN@m3*$INGRESS_HOST_NAME*g" deploy_graylog_stack.yaml
 		# Update Graylog Admin user name. Default is admin
-		sed -i "s*Gr@yL0gR00tUs3rN@m3*$GRAYLOG_ADMIN*g" deploy_graylog_stack.yaml
+		sed -i "s*Gr@yL0gR00tUs3rN@m3*$GRAYLOG_ADMIN_SECRET*g" deploy_graylog_stack.yaml
 		# Update Graylog Admin Password
-		sed -i "s*Gr@yL0gP@ssw0rdS3cr3t*$GRAYLOG_PASSWORD*g" deploy_graylog_stack.yaml
+		sed -i "s*Gr@yL0gP@ssw0rdS3cr3t*$GRAYLOG_PASSWORD_SECRET*g" deploy_graylog_stack.yaml
 		# Update Graylog Admin Password SHA
-		sed -i "s*Gr@yL0gP@ssw0rdSh@*$GRAYLOG_PASSWORD_SHA*g" deploy_graylog_stack.yaml
+		sed -i "s*Gr@yL0gP@ssw0rdSh@*$GRAYLOG_PASSWD_SHA*g" deploy_graylog_stack.yaml
 		# Update External URL used by Graylog. Not used.
 		sed -i "s*Gr@ylogExt3rn@lUR1*$GRAYLOG_EXTERNAL_URL*g" deploy_graylog_stack.yaml
 		# Update External URL used by Graylog. Not used.
@@ -98,14 +117,14 @@ then
 	fi
 
 	# Deploy Graylog
-	kubectl apply -f deploy_graylog_stack.yaml
-	CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep web | grep Running > /dev/null 2>&1; echo $?)
+	kubectl apply -f deploy_graylog_stack.yaml -n $GRAYLOG_NAMESPACE
+	CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep graylog-0 | grep Running > /dev/null 2>&1; echo $?)
 	echo -n "Graylog cluster not ready. Waiting ."
 	while [[ $CONTINUE_WAITING != 0 ]]
 	do
 		sleep 10
 		echo -n "."
-	 	CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep web | grep Running > /dev/null 2>&1; echo $?)
+	 	CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep graylog-0 | grep Running > /dev/null 2>&1; echo $?)
 	done
 	echo ""
 
