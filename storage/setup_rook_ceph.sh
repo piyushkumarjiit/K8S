@@ -141,7 +141,6 @@ done
 
 # Get Common YAML
 wget -q $CEPH_COMMON_YAML -O rook-common.yaml
-sleep 15
 # Get Operator YAML
 wget -q $CEPH_OPERATOR_YAML -O rook-operator.yaml
 
