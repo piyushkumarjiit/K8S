@@ -180,6 +180,7 @@ fi
 
 rm -f rook-storage_class.yaml rook-filesystem.yaml rook-cluster.yaml 
 rm -f rook-operator.yaml rook-common.yaml rook-dashboard.yaml ceph-toolbox.yaml
+rm -f rook-storage_class_rbd.yaml rook-storage_class_cephfs.yaml
 
 
 #Count the number of lines returned as more than 1 would mean filesystem is assigned.
