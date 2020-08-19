@@ -73,21 +73,21 @@ ELASTIC_MASTER_SET_REPLICAS=2
 MONGO_MASTER_SET_REPLICAS=$REPLICA_COUNT
 GRAYLOG_MASTER_SET_REPLICAS=2
 
-GRAYLOG_ADMIN="admin"
+#GRAYLOG_ADMIN="admin"
 #Minimum 16 characters
-GRAYLOG_PASSWORD="ChangeMe123456789"
+#GRAYLOG_PASSWORD="ChangeMe123456789"
 
 
 GRAYLOG_YAML="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/graylog/graylog_template.yaml"
 
-# if [[ $GRAYLOG_PASSWORD == "ChangeMe123456789" ]]
-# then
-# 	echo "Using default GRAYLOG_PASSWORD. Please update and rerun the script. Exiting."
-# 	sleep 2
-# 	exit 1
-# else
-# 	echo "Not using default GRAYLOG_PASSWORD. Proceeding."
-# fi
+if [[ $GRAYLOG_PASSWORD == "ChangeMe123456789" ]]
+then
+	echo "Using default GRAYLOG_PASSWORD. Please update and rerun the script. Exiting."
+	sleep 2
+	exit 1
+else
+	echo "Not using default GRAYLOG_PASSWORD. Proceeding."
+fi
 
 #Create namesapce
 echo "Creating namesapce"
