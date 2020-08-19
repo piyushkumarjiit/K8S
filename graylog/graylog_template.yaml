@@ -936,7 +936,7 @@ spec:
       app: elasticsearch
       component: "client"
       release: R31E@S3
-  replicas: 2
+  replicas: e1@st1cC1i3ntR3p1ic@
   template:
     metadata:
       labels:
@@ -1039,7 +1039,7 @@ spec:
       release: R31E@S3
       role: data
   serviceName: R31E@S3-elasticsearch-data
-  replicas: 2
+  replicas: e1@st1cD@t@R3p1ic@
   template:
     metadata:
       labels:
@@ -1186,7 +1186,7 @@ spec:
       release: R31E@S3
       role: master
   serviceName: R31E@S3-elasticsearch-master
-  replicas: 3
+  replicas: e1@st1cM@st3rR3p1ic@
   template:
     metadata:
       labels:
@@ -1316,7 +1316,7 @@ spec:
       app: mongodb-replicaset
       release: R31E@S3
   serviceName: R31E@S3-mongodb-replicaset
-  replicas: 3
+  replicas: M0ng0M@st3rR3p1ic@
   template:
     metadata:
       labels:
@@ -1479,7 +1479,7 @@ metadata:
     app.kubernetes.io/version: "3.1"
 spec:
   serviceName: R31E@S3-graylog
-  replicas: 2
+  replicas: Gr@yL0gM@st3rR3p1ic@
   selector:
     matchLabels:
       app.kubernetes.io/name: graylog
