@@ -917,7 +917,7 @@ spec:
   selector:
     app.kubernetes.io/name: graylog
     app.kubernetes.io/instance: "R31E@S3"
-  type: "LoadBalancer"
+  type: "ClusterIP"
 ---
 # Source: graylog/charts/elasticsearch/templates/client-deployment.yaml
 apiVersion: apps/v1
