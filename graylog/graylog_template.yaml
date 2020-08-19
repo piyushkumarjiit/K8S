@@ -1634,6 +1634,8 @@ metadata:
     app.kubernetes.io/managed-by: "Helm"
     app.kubernetes.io/version: "3.1"
     app.kubernetes.io/component: "web"
+    app.kubernetes.io/ingress.allow-http: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
   name: R31E@S3-graylog-web
 spec:
   rules:
