@@ -1622,28 +1622,28 @@ spec:
           requests:
             storage: "Gr@yL0gStor@g3"
 ---
-# # Source: graylog/templates/ingress.yaml
-# apiVersion: networking.k8s.io/v1beta1
-# kind: Ingress
-# metadata:
-#   annotations:
-#   labels:
-#     helm.sh/chart: graylog-1.6.10
-#     app.kubernetes.io/name: graylog
-#     app.kubernetes.io/instance: "R31E@S3"
-#     app.kubernetes.io/managed-by: "Helm"
-#     app.kubernetes.io/version: "3.1"
-#     app.kubernetes.io/component: "web"
-#   name: R31E@S3-graylog-web
-# spec:
-#   rules:
-#     - host: Ingr3ssH0stN@m3
-#       http:
-#         paths:
+# Source: graylog/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+  labels:
+    helm.sh/chart: graylog-1.6.10
+    app.kubernetes.io/name: graylog
+    app.kubernetes.io/instance: "R31E@S3"
+    app.kubernetes.io/managed-by: "Helm"
+    app.kubernetes.io/version: "3.1"
+    app.kubernetes.io/component: "web"
+  name: R31E@S3-graylog-web
+spec:
+  rules:
+    - host: Ingr3ssH0stN@m3
+      http:
+        paths:
           
-#           - backend:
-#               serviceName: R31E@S3-graylog-web
-#               servicePort: graylog
+          - backend:
+              serviceName: R31E@S3-graylog-web
+              servicePort: graylog
 ---
 # Source: graylog/charts/elasticsearch/templates/tests/test.yaml
 apiVersion: v1
