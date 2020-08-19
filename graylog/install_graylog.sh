@@ -98,7 +98,7 @@ GRAYLOG_ADMIN_SECRET=$(echo -n "$GRAYLOG_ADMIN" | base64 | tr -dc '[:print:]')
 GRAYLOG_PASSWORD_SECRET=$(echo -n "$GRAYLOG_PASSWORD" | base64 | tr -dc '[:print:]')
 GRAYLOG_PASSWD_SHA=$(echo -n "$GRAYLOG_PASSWORD" | sha256sum | awk -F " " '{print $1}' | tr -dc '[:print:]'| base64 | tr -dc '[:print:]' )
 
-cd ~
+
 if [[ -f deploy_graylog_stack.yaml ]]
 then
 	echo "deploy_graylog_stack.yaml already present. Will use the file as is."
