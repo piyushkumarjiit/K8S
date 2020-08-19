@@ -113,6 +113,8 @@ then
 	 	CONTINUE_WAITING=$(kubectl get pods -n graylog | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $?)
 	done
 	echo ""
+	# Delete the YAML file
+	rm -f deploy_graylog_stack.yaml
 	# Get Graylog SVC
 	GRAYLOG_EXT_IP=$(kubectl get svc -n graylog | grep d2lsdev-graylog-web | awk -F " " '{print $4}')
 	# Get Graylog admin password
@@ -174,6 +176,8 @@ else
 	 	CONTINUE_WAITING=$(kubectl get pods -n graylog | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $?)
 	done
 	echo ""
+	# Delete the YAML file
+	rm -f deploy_graylog_stack.yaml
 	# Get Graylog SVC
 	GRAYLOG_EXT_IP=$(kubectl get svc -n graylog | grep d2lsdev-graylog-web | awk -F " " '{print $4}')
 	# Get Graylog admin password
