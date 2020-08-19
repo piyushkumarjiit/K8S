@@ -89,6 +89,7 @@ then
 	echo "deploy_graylog_stack.yaml already present. Will use the file as is."
 	# Wait for Graylog cluster to be ready
 	kubectl delete -f deploy_graylog_stack.yaml -n $GRAYLOG_NAMESPACE
+	kubectl delete pvc -n $GRAYLOG_NAMESPACE --all
 	echo "Graylog removed"
 
 else
@@ -137,10 +138,9 @@ else
 
 	# Wait for Graylog cluster to be ready
 	kubectl delete -f deploy_graylog_stack.yaml -n $GRAYLOG_NAMESPACE
+	kubectl delete pvc -n $GRAYLOG_NAMESPACE --all
 	
 	echo "Graylog removed."
 fi
-# Delete namespace
-echo "Deleting namespace"
-kubectl delete namespace $GRAYLOG_NAMESPACE
+
 echo "Graylog removal script completed."
