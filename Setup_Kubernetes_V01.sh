@@ -230,6 +230,7 @@ then
 		#Iterate over all Addresses mentioned in LB_NODE_IPS array and set UNICAST_PEER_IP which is set in keepalived.conf
 		for UNICAST_PEER_IP in ${LB_NODE_IPS[*]}
 		do
+			FINAL_UNICAST_PEER_IP=""
 			if [[ "$UNICAST_PEER_IP" == "$node" ]]
 			then
 				echo "Ignoring node as it would be UNICAST_SRC_IP"
