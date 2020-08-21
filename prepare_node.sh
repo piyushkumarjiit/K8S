@@ -367,6 +367,8 @@ then
 	## Configure containerd
 	mkdir -p /etc/containerd
 	containerd config default > /etc/containerd/config.toml
+	# Enable Containerd to start on start up
+	systemctl enable containerd
 	echo "Installed Container-d"
 	systemctl restart containerd
 else
@@ -398,6 +400,8 @@ else
 			sleep 2
 			exit 1
 		fi
+		# Enable Containerd to start on start up
+		systemctl enable containerd
 		#Enable Docker to start on start up
 		systemctl enable docker
 		#Start Docker
