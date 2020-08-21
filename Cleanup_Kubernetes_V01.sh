@@ -51,6 +51,14 @@ STORAGE_CLASS="csi-cephfs"
 STORAGE_SIZE="2Gi"
 #Username that we use to connect to remote machine via SSH
 USERNAME="root"
+#User details for normal kubectl/kubeadm commands post install
+ADMIN_USER="ichigo"
+USER_HOME="/home/$ADMIN_USER"
+
+# Flag to setup Graylog +Elasticsearch + MongoDB for logging. Allowed values true/false
+SETUP_GRAYLOG_LOGGING="true"
+# Graylog YAML/Chart values
+GRAYLOG_NAMESPACE=graylog
 
 #YAML/Git variables
 METAL_LB_NAMESPACE=https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
@@ -64,6 +72,25 @@ CALICO_YAML="https://docs.projectcalico.org/v3.14/manifests/calico.yaml"
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
 MONITORING_PODS_PRESENT=$(kubectl get pods -n monitoring > /dev/null 2>&1; echo $?)
 STORAGE_PODS_PRESENT=$(kubectl get pods -n rook-ceph > /dev/null 2>&1; echo $?)
+GRAYLOG_PODS_PRESENT=$(kubectl get pods -n graylog > /dev/null 2>&1; echo $?)
+
+if [[ $SETUP_GRAYLOG_LOGGING == "true" && $GRAYLOG_PODS_PRESENT == 0 ]]
+then
+	echo "Starting Graylog cleanup."
+	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/graylog/remove_graylog.sh
+	chmod +x remove_graylog.sh
+	. ./remove_graylog.sh # source the script to use the variables already set above.
+	
+	# Delete namespace
+	echo "Deleting namespace"
+	kubectl delete namespace $GRAYLOG_NAMESPACE
+	echo "Graylog cleanup complete."
+	cd $USER_HOME
+	rm -f remove_graylog.sh
+else
+	echo "Skipping Graylog cleanup."
+fi
+
 if [[ $SETUP_CLUSTER_MONITORING == "true" && $MONITORING_PODS_PRESENT == 0 ]]
 then
 	echo "Starting monitoring components cleanup."
@@ -71,7 +98,9 @@ then
 	chmod +x cleanup_monitoring_all.sh
 	. ./cleanup_monitoring_all.sh # source the script to use the variables already set above.
 	echo "Monitoring cleanup complete."
+	cd $USER_HOME
 	rm -f cleanup_monitoring_all.sh
+
 else
 	echo "Skipping monitoring cleanup."
 fi

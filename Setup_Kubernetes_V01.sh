@@ -74,7 +74,7 @@ USERNAME="root"
 ADMIN_USER="ichigo"
 USER_HOME="/home/$ADMIN_USER"
 # Container Runtime to be used. Allowed values containerd, cri-o and docker
-CONTAINER_RUNTIME="docker"
+CONTAINER_RUNTIME="containerd"
 # CRI-O version. Required only in case of cri-o.
 CRI_O_VERSION=1.17
 #K8S network (CNI) plugin. Allowed values calico/weave
@@ -84,6 +84,30 @@ POD_NETWORK_CIDR='10.244.0.0/16'
 MASTER_JOIN_COMMAND=""
 WORKER_JOIN_COMMAND=""
 #echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
+
+# Flag to setup Graylog +Elasticsearch + MongoDB for logging. Allowed values true/false
+SETUP_GRAYLOG_LOGGING="true"
+# Graylog YAML/Chart values
+GRAYLOG_NAMESPACE=graylog
+RELEASE_NAME="d2lsdev"
+# External Loadbalanced URL with Port where we can access Graylog
+GRAYLOG_EXTERNAL_URL='http://graylog.bifrost.com:9000'
+#PERSISTENCE_STORAGECLASS="csi-cephfs"
+PERSISTENCE_STORAGECLASS="rook-ceph-block"
+PERSISTENCE_STORAGE_SIZE=5Gi
+MONGO_STORAGE_SIZE=$PERSISTENCE_STORAGE_SIZE
+ELASTIC_DATA_STORAGE_SIZE=$PERSISTENCE_STORAGE_SIZE
+ELASTIC_MASTERSTORAGE_SIZE=$PERSISTENCE_STORAGE_SIZE
+GRAYLOG_STORAGE_SIZE=$PERSISTENCE_STORAGE_SIZE
+REPLICA_COUNT=3
+ELASTIC_CLIENT_REPLICAS=2
+ELASTIC_DATA_REPLICAS=$REPLICA_COUNT
+ELASTIC_MASTER_SET_REPLICAS=2
+MONGO_MASTER_SET_REPLICAS=$REPLICA_COUNT
+GRAYLOG_MASTER_SET_REPLICAS=2
+GRAYLOG_ADMIN="admin"
+#Minimum 16 characters password required
+GRAYLOG_PASSWORD="ChangeMe12345678"
 
 ## YAML/Git variables
 CALICO_YAML="https://docs.projectcalico.org/v3.14/manifests/calico.yaml"
@@ -101,7 +125,7 @@ SELF_SIGNED_CERT_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/
 CERTIFICATE_MOVER=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/certificate_mover.sh
 SETUP_HA_KEEPALIVED_SCRIPT=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/setup_loadbalancer.sh
 PREPARE_NODE_SCRIPT="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
-
+GRAYLOG_SETUP_SCRIPT="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/graylog/install_graylog.sh"
 
 if [[ $SETUP_PRIMARY_MASTER != "true" ]]
 then
@@ -326,8 +350,8 @@ then
 			#Save the output from the previous command as you would need it to add other nodes to cluster
 		else
 			#Call init with endpoint and certificate parameters needed for Load Balanced Config
-			#kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --upload-certs | tee kubeadm_init_output.txt
 			kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --pod-network-cidr=$POD_NETWORK_CIDR --upload-certs | tee kubeadm_init_output.txt
+			#kubeadm init --control-plane-endpoint "$KUBE_VIP_1_IP:$API_PORT" --pod-network-cidr=$POD_NETWORK_CIDR --upload-certs --cri-socket=unix:///var/run/crio/crio.sock | tee kubeadm_init_output.txt
 			#Save the output from the previous command as you would need it to add other nodes to cluster
 		fi
 	fi
@@ -651,6 +675,7 @@ then
 	. ./setup_monitoring_all.sh # source the script to use the variables already set above.
 	echo "Monitoring setup complete."
 	sleep 2
+	cd $USER_HOME
 	rm -f setup_monitoring_all.sh
 else
 	echo "Skipping Monitoring installation."
@@ -683,3 +708,19 @@ else
 fi
 
 
+# To install Graylog (Mongo + Elasticsearch + Graylog)
+if [[ $SETUP_GRAYLOG_LOGGING == "true" ]]
+then
+	echo "Starting logging installation."
+	cd $USER_HOME
+	wget -q $GRAYLOG_SETUP_SCRIPT -O setup_graylog_logging.sh
+	chmod 755 setup_graylog_logging.sh
+	. ./setup_graylog_logging.sh # source the script to use the variables already set above.
+	echo "Graylog setup complete."
+	sleep 2
+	cd $USER_HOME
+	rm -f setup_graylog_logging.sh
+else
+	echo "Skipping Graylog installation."
+fi
+echo " =========== Graylog installation complete. =========== "
