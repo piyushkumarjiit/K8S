@@ -21,7 +21,7 @@ API_PORT=6443
 INTERFACE=ens192
 AUTH_PASS=K33p@Gu3ss1ng
 ROUTER_ID="RouterID1"
-STATE=MASTER
+#INSTANCE_STATE=MASTER
 BALANCER="roundrobin"
 #INSTANCE_COUNT=$((2 + RANDOM % 20))
 INSTANCE_COUNT=$(($(cat /etc/haproxy/haproxy.cfg | grep KubeAPIServerName | sed 's/[^0-9]*//g' | tail -n 1) + 1))
@@ -83,6 +83,14 @@ then
 else
 	UNICAST_SRC_IP="$5"
 	echo "Using passed UNICAST_SRC_IP: "$UNICAST_SRC_IP
+fi
+
+if [[ $INSTANCE_STATE == "" ]]
+then
+	INSTANCE_STATE=MASTER
+	echo "INSTANCE_STATE not passed. Using default value: "$INSTANCE_STATE
+else
+	echo "Using passed INSTANCE_STATE: "$INSTANCE_STATE
 fi
 
 KEEPALIVED_AVAILABLE=$(systemctl status keepalived.service > /dev/null 2>&1; echo $?)
@@ -174,7 +182,9 @@ then
 	echo "Updating the keepalived.conf."
 	#Update the placeholders with value for primary
 	sed -i "s*###r0ut3r_1d###*$ROUTER_ID*g" keepalived.conf
+	sed -i "s###Inst@nc3St@t3###*$INSTANCE_STATE*g" keepalived.conf
 	sed -i "s*###1nt3rf@c3###*$INTERFACE*g" keepalived.conf
+	#sed -i "s###V1rtu@lR0uT3r1D###*$VI_ROUTER_ID*g" keepalived.conf
 	sed -i "s*###pr10r1ty###*$PRIORITY*g" keepalived.conf
 	sed -i "s*###un1c@st_src_1p###*$UNICAST_SRC_IP*g" keepalived.conf
 	#sed -i "s*###un1c@st_p33r###*$UNICAST_PEER_IP*g" keepalived.conf
@@ -192,7 +202,7 @@ then
 	VRRP_VARIABLE+=$'\n'
 	VRRP_VARIABLE+="$(echo -e "{" )"
 	VRRP_VARIABLE+=$'\n'
-	VRRP_VARIABLE+="$(echo -e "state $STATE" )"
+	VRRP_VARIABLE+="$(echo -e "state $INSTANCE_STATE" )"
 	VRRP_VARIABLE+=$'\n'
 	VRRP_VARIABLE+="$(echo -e "interface $INTERFACE" )"
 	VRRP_VARIABLE+=$'\n'
