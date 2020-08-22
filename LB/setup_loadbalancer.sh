@@ -115,7 +115,7 @@ TEMP_PEER_IPS=$(echo $UNICAST_PEER_IP | sed 's#%#\n#g')
 #All Master nodes part of the cluster. Used in haproxy.cfg. Passed by main script and seprated by "%"
 TEMP_MASTER_IPS=$(echo $MASTER_PEER_IP | sed 's#%#\n#g')
 #HAProxy.cfg server node params. This can be updated if needed.
-LB_PARAMS="check port $API_PORT inter 5000 fall 5"
+LB_PARAMS="check port $API_PORT inter 5000 fall 5 rise 3"
 
 node=1
 FINAL_SERVER_STRING=""
