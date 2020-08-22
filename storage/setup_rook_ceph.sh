@@ -47,7 +47,8 @@ if [[ $CEPH_DRIVE_NAME == "" ]]
 then
 	echo "CEPH_DRIVE_NAME not set."
 	# Drive that is added block/raw for use by Ceph. Valid values sdb, sdc etc.
-	CEPH_DRIVE_NAME="sdb"
+	CEPH_DRIVE_NAME=("sdb" "nvme0n1")
+	#CEPH_DRIVE_NAME="nvme0n1"
 else
 	echo "CEPH_DRIVE_NAME already set. Proceeding."
 fi
@@ -84,7 +85,7 @@ do
 	echo "Trying to connect to $node"
 	#Try to SSH into each node
 	ssh "$USERNAME"@$node <<- EOF
-	CEPH_DRIVE=$CEPH_DRIVE_NAME
+	ALL_CEPH_DRIVES="${CEPH_DRIVE_NAME[*]}""
 	echo "CEPH DRIVE: \$CEPH_DRIVE"
 	#Make sure chrony/ntp is running otherwise we would run in issue with Ceph
 	CHRONY_WORKING=\$(systemctl status chronyd | grep running > /dev/null 2>&1; echo \$?)
@@ -121,17 +122,21 @@ do
 	else
 		echo "chronyd working already. Proceeding"
 	fi
-	CEPH_DRIVE_IS_PRESENT=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$1}')
-	CEPH_DRIVE_IS_EMPTY=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$2}')
-	echo "CEPH drive flag: \$CEPH_DRIVE_IS_PRESENT"
-	if [[ \$CEPH_DRIVE_IS_PRESENT != \$CEPH_DRIVE ]]
-	then
-		echo "Please confirm that raw/block drive is mounted as \$CEPH_DRIVE. Unable to proceed."
-		sleep 2
-		exit 1
-	else
-		echo "Drive found. Proceeding."
-	fi
+
+	for CEPH_DRIVE in \${ALL_CEPH_DRIVES[*]}
+	do
+		CEPH_DRIVE_IS_PRESENT=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$1}')
+		CEPH_DRIVE_IS_EMPTY=\$(lsblk -f | grep \$CEPH_DRIVE | awk -F " " '{print \$2}')
+		echo "CEPH drive flag: \$CEPH_DRIVE_IS_PRESENT"
+		if [[ \$CEPH_DRIVE_IS_PRESENT != \$CEPH_DRIVE ]]
+		then
+			echo "Please confirm that raw/block drive is mounted as \$CEPH_DRIVE. Unable to proceed."
+			sleep 2
+			exit 1
+		else
+			echo "Drive found. Proceeding."
+		fi
+	done
 	echo "Worker node processed. Exiting."
 	sleep 2
 	exit
