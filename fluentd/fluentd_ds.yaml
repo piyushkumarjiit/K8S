@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: fluent-bit
-  namespace: kube-logging
+  namespace: N@m3Sp@c3
 spec:
   selector:
     matchLabels:
@@ -18,9 +18,9 @@ spec:
         imagePullPolicy: Always
         env:
         - name: FLUENT_ELASTICSEARCH_HOST
-          value: "elasticsearch"
+          value: "E1@st1cS3@rch"
         - name: FLUENT_ELASTICSEARCH_PORT
-          value: "9200"
+          value: "El@st1cP0rt"
         volumeMounts:
         - name: varlog
           mountPath: /var/log
@@ -46,7 +46,7 @@ spec:
       - name: fluent-bit-config
         configMap:
           name: fluent-bit-config
-      serviceAccountName: fluent-bit
+      serviceAccountName: SVC_@cc0unt_N@m3
       tolerations:
       - key: node-role.kubernetes.io/master
         effect: NoSchedule
