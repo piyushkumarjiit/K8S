@@ -103,7 +103,7 @@ then
 	echo "Cleaning Rook and Ceph related config and zapping drive."
 	yum -y -q install gdisk
 	echo "Installed gdisk."
-	CEPH_DRIVE=('/dev/sdb')
+	CEPH_DRIVE=('/dev/sdb' '/dev/nvme0n1')
 	#DISK='/dev/sdb'
 	for DISK in ${CEPH_DRIVE[*]}
 	do
