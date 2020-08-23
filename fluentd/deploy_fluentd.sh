@@ -42,6 +42,14 @@ else
 	echo "FLUENT_SVC_ACCOUNT_NAME already set. Proceeding."
 fi
 
+if [[ $KIBANA_URL == "" ]]
+then
+	echo "KIBANA_URL not set. Setting as kibana.bifrost.com."
+	KIBANA_URL=kibana.bifrost.com
+else
+	echo "KIBANA_URL already set. Proceeding."
+fi
+
 FLUENTBIT_ACC_ROLE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentd/fluentd_acc_role.yaml
 FLUENTBIT_CONFIG_MAP=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentd/fluentd_config_map.yaml
 FLUENTBIT_DAEMON_SET=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentd/fluentd_ds.yaml
@@ -73,5 +81,24 @@ kubectl rollout status daemonset/fluent-bit -n $LOGGING_NAMESPACE
 
 #Clean yaml files downloaded for deployment
 rm -f fb-ds.yaml fb-configmap.yaml fb-acc-role.yaml
+
+
+echo "Trying to add pattern to index-pattern in Kibana."
+
+echo "Curling:"
+echo '
+{
+  "attributes": {
+    "title": "$LOGSTASH_PREFIX"
+  }
+}'
+
+# curl -X POST $KIBANA_URL:5601/api/saved_objects/index-pattern/my-pattern  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d '
+# {
+#   "attributes": {
+#     "title": "$LOGSTASH_PREFIX"
+#   }
+# }'
+
 
 echo "fluent bit deployment script complete."
