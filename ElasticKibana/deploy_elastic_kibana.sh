@@ -60,9 +60,18 @@ else
 	echo "KIBANA_REPLICA_COUNT already set. Proceeding."
 fi
 
+if [[ $KIBANA_URL == "" ]]
+then
+	echo "KIBANA_URL not set. Setting as kibana.bifrost.com."
+	KIBANA_URL=1
+else
+	echo "KIBANA_URL already set. Proceeding."
+fi
+
 ELASTIC_SVC_ACC_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_elastic_svc.yaml
 ELASTIC_STATEFUL_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_elastic_set.yaml
 KIBANA_DEPLOY_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_kibana.yaml
+KIBANA_INGRESS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_kibana.yaml
 
 kubectl create namespace $LOGGING_NAMESPACE
 
@@ -106,6 +115,14 @@ sed -i "s*El@st1cP0rt*$ELASTIC_SERVICE_PORT*g" kibana_svc_deploy.yaml
 
 kubectl create -f kibana_svc_deploy.yaml
 echo "Kibana deployed."
+
+wget -q $KIBANA_INGRESS_YAML -O kibana_ingress.yaml
+sed -i "s*K1b@n@S3rv1c3*$KIBANA_SERVICE_NAME*g" kibana_ingress.yaml
+sed -i "s*N@m3Sp@c3*$LOGGING_NAMESPACE*g" kibana_ingress.yaml
+sed -i "s*K1b@n@FQDN*$KIBANA_URL*g" kibana_ingress.yaml
+
+kubectl create -f kibana_ingress.yaml
+echo "Kibana ingress created."
 
 #rm -f kibana_svc_deploy.yaml elastic_statefulset.yaml elastic_svc.yaml
 
