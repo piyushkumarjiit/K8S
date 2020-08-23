@@ -94,7 +94,7 @@ sed -i "s*St0r@g3S1z3*$STORAGE_SIZE*g" elastic_statefulset.yaml
 
 kubectl create -f elastic_statefulset.yaml -n $LOGGING_NAMESPACE
 echo "Elastic stateful set created."
-
+echo "Waiting for cluster to be ready before proceeding "
 # Wait for Elastic cluster to be ready before calling Kibana
 CONTINUE_WAITING=$(kubectl get pods -n $LOGGING_NAMESPACE | grep es-cluster-0 | grep Running > /dev/null 2>&1; echo $?)
   while [[ $CONTINUE_WAITING != 0 ]]
