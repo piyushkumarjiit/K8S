@@ -97,7 +97,7 @@ echo "Elastic stateful set created."
 echo "Waiting for cluster to be ready before proceeding "
 # Wait for Elastic cluster to be ready before calling Kibana
 CONTINUE_WAITING=$(kubectl get pods -n $LOGGING_NAMESPACE | grep es-cluster | grep -v Running | wc -l )
-  while [[ $CONTINUE_WAITING -gt 1 ]]
+  while [[ $CONTINUE_WAITING -gt 0 ]]
   do
     sleep 10
     echo -n "."
