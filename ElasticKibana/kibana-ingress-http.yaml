@@ -2,7 +2,7 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: kibana-ingress
-  namespace: N@m3Sp@c3
+  namespace: kube-logging
   annotations:
     kubernetes.io/ingress.class: "nginx"
     cert-manager.io/issuer: "selfsigned-issuer" # does not make a difference unless you have internet reachable service/FQDN.
@@ -11,15 +11,16 @@ metadata:
     nginx.ingress.kubernetes.io/server-snippet: |
       proxy_ssl_verify off;
 spec:
-  rules:
-  - host: K1b@n@FQDN
-    http:
-      paths:
-      - backend:
-          serviceName: K1b@n@S3rv1c3
-          servicePort: 5601
-        path: /
   tls:
   - hosts:
-    - K1b@n@FQDN
-    secretName: K1b@n@FQDN
+    - kibana.bifrost.com
+    secretName: kibana.bifrost.com
+  rules:
+  - host: kibana.bifrost.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: kibana
+          servicePort: 5601
+        
