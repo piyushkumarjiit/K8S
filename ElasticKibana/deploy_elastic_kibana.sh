@@ -81,7 +81,7 @@ sed -i "s*E1@st1cS3rv1c3N@m3*$ELASTIC_SERVICE_NAME*g" elastic_svc.yaml
 sed -i "s*El@st1cP0rt*$ELASTIC_SERVICE_PORT*g" elastic_svc.yaml
 sed -i "s*N@m3Sp@c3*$LOGGING_NAMESPACE*g" elastic_svc.yaml
 
-kubectl create -f elastic_svc.yaml
+kubectl create -f elastic_svc.yaml -n $LOGGING_NAMESPACE
 echo "Elastic service created."
 
 wget -q $ELASTIC_STATEFUL_YAML -O elastic_statefulset.yaml
@@ -92,7 +92,7 @@ sed -i "s*N@m3Sp@c3*$LOGGING_NAMESPACE*g" elastic_statefulset.yaml
 sed -i "s*St0r@g3C1@ssN@m3*$STORAGE_CLASS_NAME*g" elastic_statefulset.yaml
 sed -i "s*St0r@g3S1z3*$STORAGE_SIZE*g" elastic_statefulset.yaml
 
-kubectl create -f elastic_statefulset.yaml
+kubectl create -f elastic_statefulset.yaml -n $LOGGING_NAMESPACE
 echo "Elastic stateful set created."
 
 # Wait for Elastic cluster to be ready before calling Kibana
@@ -113,17 +113,17 @@ sed -i "s*K1b@n@R3pl1c@s*$KIBANA_REPLICA_COUNT*g" kibana_svc_deploy.yaml
 sed -i "s*E1@st1cS3rv1c3N@m3*$ELASTIC_SERVICE_NAME*g" kibana_svc_deploy.yaml
 sed -i "s*El@st1cP0rt*$ELASTIC_SERVICE_PORT*g" kibana_svc_deploy.yaml
 
-kubectl create -f kibana_svc_deploy.yaml
+kubectl create -f kibana_svc_deploy.yaml -n $LOGGING_NAMESPACE
 echo "Kibana deployed."
 
-wget -q $KIBANA_INGRESS_YAML -O kibana_ingress.yaml
+wget -q $KIBANA_INGRESS_YAML -O kibana_ingress.yaml 
 sed -i "s*K1b@n@S3rv1c3*$KIBANA_SERVICE_NAME*g" kibana_ingress.yaml
 sed -i "s*N@m3Sp@c3*$LOGGING_NAMESPACE*g" kibana_ingress.yaml
 sed -i "s*K1b@n@FQDN*$KIBANA_URL*g" kibana_ingress.yaml
 
-kubectl create -f kibana_ingress.yaml
+kubectl create -f kibana_ingress.yaml -n $LOGGING_NAMESPACE
 echo "Kibana ingress created."
 
-#rm -f kibana_svc_deploy.yaml elastic_statefulset.yaml elastic_svc.yaml
+rm -f kibana_svc_deploy.yaml elastic_statefulset.yaml elastic_svc.yaml
 
 echo "Script to deploy Elasticsearch cluster with Kibana completed."
