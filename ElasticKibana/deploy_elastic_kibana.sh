@@ -124,6 +124,6 @@ sed -i "s*K1b@n@FQDN*$KIBANA_URL*g" kibana_ingress.yaml
 kubectl create -f kibana_ingress.yaml -n $LOGGING_NAMESPACE
 echo "Kibana ingress created."
 
-rm -f kibana_svc_deploy.yaml elastic_statefulset.yaml elastic_svc.yaml kibana_ingress.yaml
+#rm -f kibana_svc_deploy.yaml elastic_statefulset.yaml elastic_svc.yaml kibana_ingress.yaml
 
 echo "Script to deploy Elasticsearch cluster with Kibana completed."
