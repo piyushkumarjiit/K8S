@@ -63,7 +63,7 @@ fi
 if [[ $KIBANA_URL == "" ]]
 then
 	echo "KIBANA_URL not set. Setting as kibana.bifrost.com."
-	KIBANA_URL=1
+	KIBANA_URL=kibana.bifrost.com
 else
 	echo "KIBANA_URL already set. Proceeding."
 fi
