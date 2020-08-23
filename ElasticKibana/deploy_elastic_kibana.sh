@@ -71,7 +71,7 @@ fi
 ELASTIC_SVC_ACC_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_elastic_svc.yaml
 ELASTIC_STATEFUL_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_elastic_set.yaml
 KIBANA_DEPLOY_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_kibana.yaml
-KIBANA_INGRESS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_kibana.yaml
+KIBANA_INGRESS_YAML=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/kibana-ingress-http.yaml
 
 kubectl create namespace $LOGGING_NAMESPACE
 
