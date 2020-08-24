@@ -110,12 +110,12 @@ do
 done
 echo ""
 
-curl -X POST $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d "
-{
-    \"attributes\": {
-    \"title\": \"$LOGSTASH_PREFIX\"
-  }
-}"
+#curl -X POST $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d "
+#{
+#    \"attributes\": {
+#    \"title\": \"$LOGSTASH_PREFIX\"
+#  }
+#}"
 
 echo "fluent bit deployment script complete."
 
