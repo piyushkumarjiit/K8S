@@ -22,6 +22,7 @@ KUBELET_AVAILABLE=$(systemctl status kubelet > /dev/null 2>&1; echo $?)
 
 if [[ $KUBECTL_AVAILABLE == 0  ]]
 then
+	kubectl cordon $CURRENT_NODE_IP
 	kubectl drain $CURRENT_NODE_IP --delete-local-data --force --ignore-daemonsets
 	kubectl delete node $CURRENT_NODE_IP
 	echo "Kubectl delete node called."
