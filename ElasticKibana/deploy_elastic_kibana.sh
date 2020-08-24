@@ -121,6 +121,21 @@ sed -i "s*K1b@n@S3rv1c3*$KIBANA_SERVICE_NAME*g" kibana_ingress.yaml
 sed -i "s*N@m3Sp@c3*$LOGGING_NAMESPACE*g" kibana_ingress.yaml
 sed -i "s*K1b@n@FQDN*$KIBANA_URL*g" kibana_ingress.yaml
 
+# Get Kibana Cluster IP
+KIBANA_CLUSTER_IP=$(kubectl get svc -n $LOGGING_NAMESPACE -o wide | grep $KIBANA_SERVICE_NAME | awk -F " " '{print $3}')
+echo "Kibana cluster IP: $KIBANA_CLUSTER_IP"
+
+echo -n "Kibana Service not ready. Waiting ."
+CONTINUE_WAITING=$(curl -s $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern | grep -w "Saved object \[index-pattern\/my-pattern\] not found" > /dev/null 2>&1; echo $? )
+#CONTINUE_WAITING=$(kubectl get pods -n cert-manager | grep cert-manager-webhook | grep Running > /dev/null 2>&1; echo $?)
+while [[ $CONTINUE_WAITING != 0 ]]
+do
+	sleep 10
+	echo -n "."
+ 	CONTINUE_WAITING=$(curl -s $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern | grep -w "Saved object \[index-pattern\/my-pattern\] not found" > /dev/null 2>&1; echo $? )
+done
+echo ""
+echo "Kibana REST API seems to be available. Proceeding."
 kubectl create -f kibana_ingress.yaml -n $LOGGING_NAMESPACE
 echo "Kibana ingress created. You can access Kibana at : $KIBANA_URL"
 
