@@ -29,7 +29,7 @@ fi
 if [[ $LOGSTASH_PREFIX == "" ]]
 then
 	echo "LOGSTASH_PREFIX not set. Setting as fluent-logs."
-	LOGSTASH_PREFIX=fluent-logs
+	LOGSTASH_PREFIX='fluent-logs*'
 else
 	echo "LOGSTASH_PREFIX already set. Proceeding."
 fi
@@ -40,6 +40,14 @@ then
 	FLUENT_SVC_ACCOUNT_NAME=fluent-bit
 else
 	echo "FLUENT_SVC_ACCOUNT_NAME already set. Proceeding."
+fi
+
+if [[ $KIBANA_SERVICE_NAME == "" ]]
+then
+	echo "KIBANA_SERVICE_NAME not set. Setting as kibana."
+	KIBANA_SERVICE_NAME=kibana
+else
+	echo "KIBANA_SERVICE_NAME already set. Proceeding."
 fi
 
 if [[ $KIBANA_URL == "" ]]
@@ -85,20 +93,16 @@ rm -f fb-ds.yaml fb-configmap.yaml fb-acc-role.yaml
 
 echo "Trying to add pattern to index-pattern in Kibana."
 
-echo "Curling:"
-echo '
+# Get Kibana Cluster IP
+KIBANA_CLUSTER_IP=$(kubectl get pods -n $LOGGING_NAMESPACE -o wide | grep $KIBANA_SERVICE_NAME | awk -F " " '{print $6}')
+echo "Kibana clueter IP: $KIBANA_CLUSTER_IP"
+curl -X POST $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d "
 {
-  "attributes": {
-    "title": "$LOGSTASH_PREFIX"
+    \"attributes\": {
+    \"title\": \"$LOGSTASH_PREFIX\"
   }
-}'
-
-# curl -X POST $KIBANA_URL:5601/api/saved_objects/index-pattern/my-pattern  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d '
-# {
-#   "attributes": {
-#     "title": "$LOGSTASH_PREFIX"
-#   }
-# }'
+}"
 
 
 echo "fluent bit deployment script complete."
+
