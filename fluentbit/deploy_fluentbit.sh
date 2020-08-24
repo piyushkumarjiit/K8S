@@ -76,7 +76,7 @@ echo "Service account and role created."
 wget -q $FLUENTBIT_CONFIG_MAP -O fb-configmap.yaml
 # Update variables in template
 sed -i "s*N@m3Sp@c3*$LOGGING_NAMESPACE*g" fb-configmap.yaml
-sed -i "s*L0gSt@shPr3f1x*$LOGSTASH_PREFIX*g" fb-configmap.yaml
+sed -i "s:L0gSt@shPr3f1x:$LOGSTASH_PREFIX:g" fb-configmap.yaml
 kubectl create -f fb-configmap.yaml -n $LOGGING_NAMESPACE
 echo "Config map created."
 
@@ -96,8 +96,20 @@ echo "Template yaml files removed."
 echo "Trying to add pattern to index-pattern in Kibana."
 
 # Get Kibana Cluster IP
-KIBANA_CLUSTER_IP=$(kubectl get pods -n $LOGGING_NAMESPACE -o wide | grep $KIBANA_SERVICE_NAME | awk -F " " '{print $6}')
-echo "Kibana clueter IP: $KIBANA_CLUSTER_IP"
+KIBANA_CLUSTER_IP=$(kubectl get svc -n $LOGGING_NAMESPACE -o wide | grep $KIBANA_SERVICE_NAME | awk -F " " '{print $3}')
+echo "Kibana cluster IP: $KIBANA_CLUSTER_IP"
+
+echo -n "Kibana Service not ready. Waiting ."
+CONTINUE_WAITING=$(curl -s $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern | grep -w "Saved object \[index-pattern\/my-pattern\] not found" > /dev/null 2>&1; echo $? )
+#CONTINUE_WAITING=$(kubectl get pods -n cert-manager | grep cert-manager-webhook | grep Running > /dev/null 2>&1; echo $?)
+while [[ $CONTINUE_WAITING != 0 ]]
+do
+	sleep 10
+	echo -n "."
+ 	CONTINUE_WAITING=$(curl -s $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern | grep -w "Saved object \[index-pattern\/my-pattern\] not found" > /dev/null 2>&1; echo $? )
+done
+echo ""
+
 curl -X POST $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d "
 {
     \"attributes\": {
