@@ -104,19 +104,20 @@ then
 	echo "deploy_graylog_stack.yaml already present. Will use the file as is."
 	# Wait for Graylog cluster to be ready
 	kubectl apply -f deploy_graylog_stack.yaml -n $GRAYLOG_NAMESPACE
-	CONTINUE_WAITING=$(kubectl get pods -n graylog | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $?)
+	CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $? )
 	echo -n "Graylog cluster not ready. Waiting ."
 	while [[ $CONTINUE_WAITING != 0 ]]
 	do
 		sleep 10
 		echo -n "."
-	 	CONTINUE_WAITING=$(kubectl get pods -n graylog | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $?)
+	 	#CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep graylog | grep -v Running | wc -l )
+	 	CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $?)
 	done
 	echo ""
 	# Delete the YAML file
 	rm -f deploy_graylog_stack.yaml
 	# Get Graylog SVC
-	GRAYLOG_EXT_IP=$(kubectl get svc -n graylog | grep d2lsdev-graylog-web | awk -F " " '{print $4}')
+	GRAYLOG_EXT_IP=$(kubectl get svc -n $GRAYLOG_NAMESPACE | grep "$RELEASE_NAME-graylog-web" | awk -F " " '{print $4}')
 	# Get Graylog admin password
 	ADMIN_PASSWD=$(kubectl -n $GRAYLOG_NAMESPACE get secret "$RELEASE_NAME-graylog" -o jsonpath="{['data']['graylog-password-secret']}" | base64 --decode && echo)
 	echo "Login to Graylog ($GRAYLOG_EXT_IP) using admin/$ADMIN_PASSWD"
@@ -167,19 +168,19 @@ else
 
 	# Wait for Graylog cluster to be ready
 	kubectl apply -f deploy_graylog_stack.yaml -n $GRAYLOG_NAMESPACE
-	CONTINUE_WAITING=$(kubectl get pods -n graylog | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $?)
+	CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $? )
 	echo -n "Graylog cluster not ready. Waiting ."
 	while [[ $CONTINUE_WAITING != 0 ]]
 	do
 		sleep 10
 		echo -n "."
-	 	CONTINUE_WAITING=$(kubectl get pods -n graylog | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $?)
+	 	CONTINUE_WAITING=$(kubectl get pods -n $GRAYLOG_NAMESPACE | grep graylog-0 | grep Running | grep 1/1 > /dev/null 2>&1; echo $? )
 	done
 	echo ""
 	# Delete the YAML file
 	rm -f deploy_graylog_stack.yaml
 	# Get Graylog SVC
-	GRAYLOG_EXT_IP=$(kubectl get svc -n graylog | grep d2lsdev-graylog-web | awk -F " " '{print $4}')
+	GRAYLOG_EXT_IP=$(kubectl get svc -n $GRAYLOG_NAMESPACE | grep d2lsdev-graylog-web | awk -F " " '{print $4}')
 	# Get Graylog admin password
 	ADMIN_PASSWD=$(kubectl -n $GRAYLOG_NAMESPACE get secret "$RELEASE_NAME-graylog" -o jsonpath="{['data']['graylog-password-secret']}" | base64 --decode && echo)
 
