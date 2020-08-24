@@ -59,9 +59,9 @@ else
 	echo "KIBANA_URL already set. Proceeding."
 fi
 
-FLUENTBIT_ACC_ROLE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentd/fluentd_acc_role.yaml
-FLUENTBIT_CONFIG_MAP=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentd/fluentd_config_map.yaml
-FLUENTBIT_DAEMON_SET=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentd/fluentd_ds.yaml
+FLUENTBIT_ACC_ROLE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentbit/fluentbit_acc_role.yaml
+FLUENTBIT_CONFIG_MAP=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentbit/fluentbit_config_map.yaml
+FLUENTBIT_DAEMON_SET=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentbit/fluentbit_ds.yaml
 
 #Create the namespace
 kubectl create namespace $LOGGING_NAMESPACE
