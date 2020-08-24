@@ -27,7 +27,7 @@ SETUP_CERT_MANAGER="true"
 #Do we want to setup HAPRoxy+KeepAlived Load Balancer. Allowed values true/false
 EXTERNAL_LB_ENABLED="true"
 # Disable firewall on each Kubernetes node or add rules. Allowed values true/false
-KEEP_FIREWALL_ENABLED="false"
+DISABLE_NODE_FIREWALL="false"
 #All Nodes part of HAPRoxy+KeepAlived Load Balancer 
 LB_NODE_IPS=("192.168.2.205" "192.168.2.111")
 LB_NODE_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
@@ -50,8 +50,8 @@ MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "Kub
 #Do you want to add Worker nodes in this install. Allowed values true/false
 ADD_WORKER_NODES="true"
 #All Worker Nodes
-WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109" "192.168.2.208" "192.168.2.95" "192.168.2.104")
-WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost" "K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
+WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109" "192.168.2.208" "192.168.2.95" "192.168.2.104" "192.168.2.144" "192.168.2.38" "192.168.2.79")
+WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost" "K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost" "K8SCentOS8Node4.bifrost" "K8SCentOS8Node5.bifrost" "K8SCentOS8Node6.bifrost")
 #All K8S nodes (Master + Worker)
 KUBE_CLUSTER_NODE_IPS=(${MASTER_NODE_IPS[*]} ${WORKER_NODE_IPS[*]})
 KUBE_CLUSTER_NODE_NAMES=(${MASTER_NODE_NAMES[*]} ${WORKER_NODE_NAMES[*]})
@@ -84,9 +84,9 @@ POD_NETWORK_CIDR='10.244.0.0/16'
 MASTER_JOIN_COMMAND=""
 WORKER_JOIN_COMMAND=""
 #echo "All Node_NAMES: " ${ALL_NODE_NAMES[*]}
-
+SETUP_EFK_LOGGING="true"
 # Flag to setup Graylog +Elasticsearch + MongoDB for logging. Allowed values true/false
-SETUP_GRAYLOG_LOGGING="true"
+SETUP_GRAYLOG_LOGGING="false"
 # Graylog YAML/Chart values
 GRAYLOG_NAMESPACE=graylog
 RELEASE_NAME="d2lsdev"
@@ -120,12 +120,14 @@ NGINX_LB_DEPLOY_YAML=https://raw.githubusercontent.com/kubernetes/ingress-nginx/
 NGINX_DEPLOY_YAML=https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.34.1/deploy/static/provider/baremetal/deploy.yaml
 
 HELM_INSTALL_SCRIPT=https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-CERT_MGR_DEPLOY=https://github.com/jetstack/cert-manager/releases/download/v0.16.0/cert-manager.yaml
+CERT_MGR_DEPLOY=https://github.com/jetstack/cert-manager/releases/download/v0.16.1/cert-manager.yaml
 SELF_SIGNED_CERT_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ingress/cert_self_signed.yaml
 CERTIFICATE_MOVER=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/certificate_mover.sh
 SETUP_HA_KEEPALIVED_SCRIPT=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/setup_loadbalancer.sh
 PREPARE_NODE_SCRIPT="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
 GRAYLOG_SETUP_SCRIPT="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/graylog/install_graylog.sh"
+FLUENT_BIT_SCRIPT=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentd/deploy_fluentd.sh
+ELASTIC_KIBANA_SCRIPT=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_elastic_kibana.sh
 
 if [[ $SETUP_PRIMARY_MASTER != "true" ]]
 then
@@ -222,9 +224,18 @@ if [[ $EXTERNAL_LB_ENABLED == "true" ]]
 then
 	PRIORITY=200
 	UNICAST_PEER_IP=""
+	NODE=0
 	#Iterate over all Addresses mentioned in LB_NODE_IPS array
 	for node in ${LB_NODE_IPS[*]}
 	do
+		# Set Node Status
+		if [[ $NODE == 0 ]]
+		then
+			NODE_STATUS=MASTER
+		else
+			NODE_STATUS=BACKUP
+		fi
+		((NODE++))
 		#Priority passed to LB subscript in decreasing order. Could be overridden if needed.
 		PRIORITY="$(($PRIORITY - 1))"
 		#Iterate over all Addresses mentioned in LB_NODE_IPS array and set UNICAST_PEER_IP which is set in keepalived.conf
@@ -249,6 +260,7 @@ then
 	    echo "Connected to $node"
 	    cd ~
 	    KUBE_VIP="$KUBE_VIP_1_IP"
+	    INSTANCE_STATE="$NODE_STATUS"
 	    UNICAST_PEER_IP=$FINAL_UNICAST_PEER_IP
 		MASTER_PEER_IP=$MASTER_PEER_IP
 		CALLING_NODE=$CURRENT_NODE_IP
@@ -288,7 +300,7 @@ do
     CALLING_NODE_NAME=$CURRENT_NODE_NAME
     CONTAINER_RUNTIME=$CONTAINER_RUNTIME
     CRI_O_VERSION=$CRI_O_VERSION
-    KEEP_FIREWALL_ENABLED=$KEEP_FIREWALL_ENABLED
+    KEEP_FIREWALL_ENABLED=$DISABLE_NODE_FIREWALL
     yum -y -q install wget dnf
     #wget -q "https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
     wget -q $PREPARE_NODE_SCRIPT
@@ -712,7 +724,7 @@ fi
 # To install Graylog (Mongo + Elasticsearch + Graylog)
 if [[ $SETUP_GRAYLOG_LOGGING == "true" ]]
 then
-	echo "Starting logging installation."
+	echo "Starting Gray log setup."
 	cd $USER_HOME
 	wget -q $GRAYLOG_SETUP_SCRIPT -O setup_graylog_logging.sh
 	chmod 755 setup_graylog_logging.sh
@@ -725,3 +737,28 @@ else
 	echo "Skipping Graylog installation."
 fi
 echo " =========== Graylog installation complete. =========== "
+
+# To install Graylog (Mongo + Elasticsearch + Graylog)
+if [[ $SETUP_EFK_LOGGING == "true" ]]
+then
+	echo "Starting EFK logging setup."
+	cd $USER_HOME
+	wget -q $ELASTIC_KIBANA_SCRIPT -O setup_ek.sh
+	chmod 755 setup_ek.sh
+	. ./setup_ek.sh # source the script to use the variables already set above.
+	echo "Elastic + Kibana setup complete."
+	sleep 2
+	wget -q $FLUENT_BIT_SCRIPT -O setup_fluent_bit.sh
+	chmod 755 setup_fluent_bit.sh
+	. ./setup_fluent_bit.sh # source the script to use the variables already set above.
+	echo "Fluent-bit setup complete."
+	sleep 2
+	cd $USER_HOME
+	rm -f setup_ek.sh setup_fluent_bit.sh
+else
+	echo "Skipping EFK logging setup."
+fi
+echo " =========== EFK installation complete. =========== "
+
+#Sound beep
+echo -e '\a'

@@ -23,8 +23,8 @@ LB_NODES_NAMES=("KubeLBNode1.bifrost" "KubeLBNode2.bifrost")
 MASTER_NODE_IPS=("192.168.2.220" "192.168.2.13" "192.168.2.186" "192.168.2.175" "192.168.2.198" "192.168.2.140")
 MASTER_NODE_NAMES=("KubeMasterCentOS8.bifrost" "KubeMaster2CentOS8.bifrost" "KubeMaster3CentOS8.bifrost" "K8SCentOS8Master1.bifrost" "K8SCentOS8Master2.bifrost" "K8SCentOS8Master3.bifrost")
 #All Worker Nodes
-WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109" "192.168.2.208" "192.168.2.95" "192.168.2.104")
-WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost" "K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost")
+WORKER_NODE_IPS=("192.168.2.251" "192.168.2.108" "192.168.2.109" "192.168.2.208" "192.168.2.95" "192.168.2.104" "192.168.2.144" "192.168.2.38" "192.168.2.79")
+WORKER_NODE_NAMES=("KubeNode1CentOS8.bifrost" "KubeNode2CentOS8.bifrost" "KubeNode3CentOS8.bifrost" "K8SCentOS8Node1.bifrost" "K8SCentOS8Node2.bifrost" "K8SCentOS8Node3.bifrost" "K8SCentOS8Node4.bifrost" "K8SCentOS8Node5.bifrost" "K8SCentOS8Node6.bifrost")
 #All K8S nodes (Worker + Master)
 KUBE_CLUSTER_NODE_IPS=(${WORKER_NODE_IPS[*]} ${MASTER_NODE_IPS[*]})
 KUBE_CLUSTER_NODE_NAMES=(${WORKER_NODE_NAMES[*]} ${MASTER_NODE_NAMES[*]})
@@ -59,6 +59,12 @@ USER_HOME="/home/$ADMIN_USER"
 SETUP_GRAYLOG_LOGGING="true"
 # Graylog YAML/Chart values
 GRAYLOG_NAMESPACE=graylog
+MONITORING_NAMESPACE=monitoring
+STORAGE_NAMESPACE=rook-ceph
+INGRESS_NAMESPACE=ingress-nginx
+CERT_MGR_NAMESPACE=cert-manager
+LOGGING_NAMESPACE=kube-logging
+
 
 #YAML/Git variables
 METAL_LB_NAMESPACE=https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml
@@ -70,11 +76,25 @@ SELF_SIGNED_CERT_TEMPLATE=https://raw.githubusercontent.com/piyushkumarjiit/K8S/
 CALICO_YAML="https://docs.projectcalico.org/v3.14/manifests/calico.yaml"
 
 KUBECTL_AVAILABLE=$(kubectl version > /dev/null 2>&1; echo $?)
-MONITORING_PODS_PRESENT=$(kubectl get pods -n monitoring > /dev/null 2>&1; echo $?)
-STORAGE_PODS_PRESENT=$(kubectl get pods -n rook-ceph > /dev/null 2>&1; echo $?)
-GRAYLOG_PODS_PRESENT=$(kubectl get pods -n graylog > /dev/null 2>&1; echo $?)
+MONITORING_PODS_COUNT=$(kubectl get pods -n $MONITORING_NAMESPACE | wc -l )
+STORAGE_PODS_COUNT=$(kubectl get pods -n $STORAGE_NAMESPACE | wc -l )
+GRAYLOG_PODS_COUNT=$(kubectl get pods -n $GRAYLOG_NAMESPACE | wc -l )
+CERT_PODS_COUNT=$(kubectl get pods -n $CERT_MGR_NAMESPACE | wc -l )
+INGRESS_PODS_COUNT=$(kubectl get pods -n $INGRESS_NAMESPACE | wc -l )
+LOGGING_PODS_COUNT=$(kubectl get pods -n $LOGGING_NAMESPACE | wc -l )
 
-if [[ $SETUP_GRAYLOG_LOGGING == "true" && $GRAYLOG_PODS_PRESENT == 0 ]]
+
+if [[ $LOGGING_PODS_COUNT -gt 0 ]]
+then
+	echo "Starting Logging cleanup."
+	kubectl delete ns $LOGGING_NAMESPACE
+	echo "Logging namespace deleted."
+else
+	echo "Logging pods not found. Skipping."
+fi
+
+
+if [[ $SETUP_GRAYLOG_LOGGING == "true" && $GRAYLOG_PODS_COUNT -gt 0 ]]
 then
 	echo "Starting Graylog cleanup."
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/graylog/remove_graylog.sh
@@ -87,11 +107,12 @@ then
 	echo "Graylog cleanup complete."
 	cd $USER_HOME
 	rm -f remove_graylog.sh
+	kubectl delete ns $GRAYLOG_NAMESPACE
 else
 	echo "Skipping Graylog cleanup."
 fi
 
-if [[ $SETUP_CLUSTER_MONITORING == "true" && $MONITORING_PODS_PRESENT == 0 ]]
+if [[ $SETUP_CLUSTER_MONITORING == "true" && $MONITORING_PODS_COUNT -gt 0 ]]
 then
 	echo "Starting monitoring components cleanup."
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/monitoring/cleanup_monitoring_all.sh
@@ -100,12 +121,12 @@ then
 	echo "Monitoring cleanup complete."
 	cd $USER_HOME
 	rm -f cleanup_monitoring_all.sh
-
+	kubectl delete ns $MONITORING_NAMESPACE
 else
 	echo "Skipping monitoring cleanup."
 fi
 
-if [[ $SETUP_ROOK_INSTALLED == "true" && $STORAGE_PODS_PRESENT == 0 ]]
+if [[ $SETUP_ROOK_INSTALLED == "true" && $STORAGE_PODS_COUNT -gt 0 ]]
 then
 	echo "Starting storage components cleanup."
 	wget -q https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/storage/cleanup_rook_ceph.sh
@@ -113,12 +134,13 @@ then
 	. ./cleanup_rook_ceph.sh # source the script to use the variables already set above.
 	echo "Storage cleanup complete."
 	rm -f cleanup_rook_ceph.sh
+	kubectl delete ns $STORAGE_NAMESPACE
 else
 	echo "Skipping Ceph+Rook cleanup."
 fi
 
 # To cleanup cert-manager
-if [[ $SETUP_CERT_MANAGER == "true" && $KUBECTL_AVAILABLE == 0 ]]
+if [[ $SETUP_CERT_MANAGER == "true" && $CERT_PODS_COUNT -gt 0 ]]
 	then
 		if [[ -f cert_self_signed.yaml ]]
 		then
@@ -148,7 +170,7 @@ else
 	echo "Cert Manager not identified for removal."
 fi
 
-if [[ $SETUP_NGINX_INGRESS == "true" && $KUBECTL_AVAILABLE == 0 ]]
+if [[ $SETUP_NGINX_INGRESS == "true" && $INGRESS_PODS_COUNT -gt 0 ]]
 then
 	if [[ -f ingress_deploy.yaml ]]
 	then
@@ -172,6 +194,7 @@ then
 		kubectl delete -f ingress_deploy.yaml
 		echo "Nginx ingress removed."
 		rm -f ingress_deploy.yaml
+		kubectl delete -f ns $INGRESS_NAMESPACE
 	fi
 else
 	echo "Nginx Ingress not identified for removal."
@@ -190,7 +213,7 @@ fi
 if [[ $KUBECTL_AVAILABLE == 0 ]]
 then
 	echo "Deleting all pods."
-	kubectl delete --all pods
+	kubectl delete pods --all -A
 else
 	echo "Kubectl not present."
 fi
