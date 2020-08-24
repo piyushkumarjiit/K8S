@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: N@m3Sp@c3
+  labels:
+    k8s-app: fluent-bit
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         1
+        Log_Level     info
+        Daemon        off
+        Parsers_File  parsers.conf
+
+    @INCLUDE input-kubernetes.conf
+    @INCLUDE input-systemd.conf
+    @INCLUDE filter-kubernetes.conf
+    @INCLUDE filter-systemd.conf
+    @INCLUDE output-elasticsearch.conf
+
+
+  input-kubernetes.conf: |
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        Parser            docker
+        DB                /var/log/flb_kube.db
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+  input-systemd.conf: |
+    [INPUT]
+        Name            systemd
+        Path            /journal
+        Tag             systemd.*
+
+  output-elasticsearch.conf: |
+    [OUTPUT]
+        Name            es
+        Match           *
+        Host            ${FLUENT_ELASTICSEARCH_HOST}
+        Port            ${FLUENT_ELASTICSEARCH_PORT}
+        Logstash_Format On
+        Logstash_Prefix L0gSt@shPr3f1x
+        Retry_Limit     False
+  
+  filter-kubernetes.conf: |
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Keep_Log            Off
+        Merge_Log           On
+  filter-systemd.conf: |
+    [FILTER]
+        Name modify
+        Match systemd.*
+        Rename _SYSTEMD_UNIT systemd_unit
+        Rename _HOSTNAME hostname
+
+    [FILTER]
+        Name record_modifier
+        Match systemd.*
+        Remove_Key _CURSOR
+        Remove_Key _REALTIME_TIMESTAMP
+        Remove_Key _MONOTONIC_TIMESTAMP
+        Remove_Key _BOOT_ID
+        Remove_Key _MACHINE_ID
+
+  parsers.conf: |
+    [PARSER]
+        Name        docker
+        Format      json
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+        Time_Keep   On
