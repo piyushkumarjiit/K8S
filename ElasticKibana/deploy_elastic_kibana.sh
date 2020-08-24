@@ -122,7 +122,7 @@ sed -i "s*N@m3Sp@c3*$LOGGING_NAMESPACE*g" kibana_ingress.yaml
 sed -i "s*K1b@n@FQDN*$KIBANA_URL*g" kibana_ingress.yaml
 
 kubectl create -f kibana_ingress.yaml -n $LOGGING_NAMESPACE
-echo "Kibana ingress created."
+echo "Kibana ingress created. You can access Kibana at : $KIBANA_URL"
 
 #rm -f kibana_svc_deploy.yaml elastic_statefulset.yaml elastic_svc.yaml kibana_ingress.yaml
 
