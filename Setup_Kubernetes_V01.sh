@@ -110,7 +110,7 @@ CERTIFICATE_MOVER=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/c
 SETUP_HA_KEEPALIVED_SCRIPT=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/LB/setup_loadbalancer.sh
 PREPARE_NODE_SCRIPT="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/prepare_node.sh"
 GRAYLOG_SETUP_SCRIPT="https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/graylog/install_graylog.sh"
-FLUENT_BIT_SCRIPT=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentd/deploy_fluentd.sh
+FLUENT_BIT_SCRIPT=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/fluentbit/deploy_fluentbit.sh
 ELASTIC_KIBANA_SCRIPT=https://raw.githubusercontent.com/piyushkumarjiit/K8S/master/ElasticKibana/deploy_elastic_kibana.sh
 
 if [[ $SETUP_PRIMARY_MASTER != "true" ]]
