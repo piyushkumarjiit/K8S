@@ -26,6 +26,10 @@ Also make sure that raw/block drive is attached to worker nodes for Ceph to form
 <li>AlertManager (using Kube-Prometheus)</li>
 <li>Grafana with presets using mixins (using Kube-Prometheus)</li>
 <li>CertManager</li>
+<li>GrayLog</li>
+<li>Elasticsearch</li>
+<li>Kibana</li>
+<li>Fluent-bit</li>
 
 ### What all the script does:
 <li>Takes care of all dependencies for all components involved (modprobes, firewalld, selinux, swap, DNS, IP Forwarding, CRI-O, Docker etc.)</li>
