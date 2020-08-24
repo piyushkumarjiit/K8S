@@ -1,5 +1,5 @@
 #!/bin/bash
-#Author: Piyush Kumar (piyushkumar.jiit@gmail.com)
+#Author: Piyush Kumar (piyushkumar.jiit@.com)
 # Monitoring setup script. Need to be executed from a host where we have:
 #1. sudo + kubectl access
 #2. Working kubernetes cluster
@@ -95,6 +95,8 @@ then
 	else
 		echo "Jsonnet installation failed."
 	fi
+else
+	echo "JSONNET seems to be available: $JSONNET_INSTALLED "
 fi
 # Install Jsonnet Bundler
 JB_INSTALLED=$(jb -h >/dev/null 2>&1; echo $?)
@@ -112,6 +114,8 @@ then
 	else
 		echo "Jsonnet builder installation failed."
 	fi
+else
+	echo "JB seems to be available: $JB_INSTALLED"
 fi
 
 # Install gojsonttoyaml. Used to generate YAML files later
@@ -130,6 +134,8 @@ then
 	else
 		echo "GoJsonToYaml installation failed."
 	fi
+else
+	echo "JSONTOYAML seems to be available: $JSONTOYAML_INSTALLED"
 fi
 
 # Go HOME
