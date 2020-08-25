@@ -156,6 +156,8 @@ chmod +x monitoring-build.sh
 echo "monitoring-build downloaded and permission updated."
 # Fetch Prometheus PVC example from github repo
 wget -q $PROMETHEUS_PVC_JSONNET -O monitoring-example.jsonnet
+# To fix the temporary bug
+sed -i "s/'{{ \$labels.device }}'/{{ \$labels.device }}/g" $HOME/my-kube-prometheus/vendor/github.com/prometheus/node_exporter/docs/node-mixin/alerts/alerts.libsonnet
 # Update the Storage class in monitoring-example.jsonnet
 sed -i "s/pvc.mixin.spec.withStorageClassName('ssd'),/pvc.mixin.spec.withStorageClassName('$STORAGE_CLASS'),/" monitoring-example.jsonnet
 sed -i "s/pvc.mixin.spec.resources.withRequests({ storage: '100Gi' }/pvc.mixin.spec.resources.withRequests({ storage: '$STORAGE_SIZE' }/" monitoring-example.jsonnet
@@ -212,10 +214,12 @@ else
 	echo "Dry Run complete."
 fi
 
-#Delete binaries copied in /usr/bin
+#Delete binaries copied in /usr/bin or /usr/local/bin
 rm -f /usr/bin/jsonnet
+rm -f /usr/local/bin/jsonnet
 rm -f /usr/bin/jb
+rm -f /usr/local/bin/jb
 rm -f /usr/bin/gojsontoyaml
+rm -f /usr/local/bin/gojsontoyaml
 
 echo "----------- Monitoring setup (Prometheus + Grafana + Alertmanager) complete  ------------ "
-
