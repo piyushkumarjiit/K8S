@@ -178,8 +178,11 @@ echo "Docker and Kubernetes config directories deleted."
 rm -Rf /var/log/containers
 rm -Rf /var/log/pods
 rm -Rf /var/log/crio
-rm -f /var/log/fluentd-*
 echo "Container logs deleted."
+# Delete Fluent-bit data
+rm -f /var/log/fluentd-*
+rm -f /var/log/flb_kube.db
+echo "Fluent-bit logs and DB deleted."
 
 # Delete archieved Journel
 #rm -f /var/log/journal/system@*
