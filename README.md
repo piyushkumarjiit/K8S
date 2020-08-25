@@ -47,7 +47,7 @@ Also make sure that raw/block drive is attached to worker nodes for Ceph to form
 <li>Uses Kube-Prometheus to configure and deploy Prometheus + AlertManager + Grafana </li>
 <li>Sets up Dashboards for Prometheus + AlertManager + Grafana </li>
 <li>Installs Elasticsearch + Kibana + Fluent-bit </li>
-<li>Sets up Dashboards for Kibana </li>
+<li>Sets up Dashboard for Kibana </li>
 
 
 If something is not clear, I would recommend to download the script and take a look as I have added comments to make it easy for others to understand and customize.
