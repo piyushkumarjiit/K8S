@@ -22,7 +22,7 @@ KUBELET_AVAILABLE=$(systemctl status kubelet > /dev/null 2>&1; echo $?)
 
 if [[ $KUBECTL_AVAILABLE == 0  ]]
 then
-	#kubectl cordon $CURRENT_NODE_IP
+	kubectl cordon $CURRENT_NODE_IP
 	kubectl drain $CURRENT_NODE_IP --delete-local-data --force --ignore-daemonsets
 	kubectl delete node $CURRENT_NODE_IP
 	echo "Kubectl delete node called."
@@ -173,6 +173,8 @@ rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose /etc/systemd/system/docker.service.d
 rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-engine  /var/lib/dockershim
 rm -Rf /usr/lib/systemd/system/kubelet.service.d
+# Clean log directory
+rm -f /var/log/containers/*.log
 
 echo "Docker and Kubernetes config directories deleted."
 groupdel docker
