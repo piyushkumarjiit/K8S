@@ -184,7 +184,9 @@ rm -f /var/log/fluentd-*
 rm -f /var/log/flb_kube.db
 echo "Fluent-bit logs and DB deleted."
 
-# Delete archieved Journel
+# Delete archieved Journal
+journalctl --rotate
+sleep 2
 rm -f /var/log/journal/*/system@*
 
 groupdel docker
