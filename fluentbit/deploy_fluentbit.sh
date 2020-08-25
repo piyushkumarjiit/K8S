@@ -30,7 +30,7 @@ fi
 if [[ $LOGSTASH_PREFIX == "" ]]
 then
 	echo "LOGSTASH_PREFIX not set. Setting as fluent-logs."
-	LOGSTASH_PREFIX='fluent-logs*'
+	LOGSTASH_PREFIX='fluent-logs'
 else
 	echo "LOGSTASH_PREFIX already set. Proceeding."
 fi
@@ -98,7 +98,7 @@ echo "Trying to add pattern to index-pattern in Kibana."
 # Get Kibana Cluster IP
 KIBANA_CLUSTER_IP=$(kubectl get svc -n $LOGGING_NAMESPACE -o wide | grep $KIBANA_SERVICE_NAME | awk -F " " '{print $3}')
 echo "Kibana cluster IP: $KIBANA_CLUSTER_IP"
-
+LOGSTASH_PREFIX='fluent-logs*'
 echo -n "Kibana Service not ready. Waiting ."
 CONTINUE_WAITING=$(curl -s $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern | grep -w "Saved object \[index-pattern\/my-pattern\] not found" > /dev/null 2>&1; echo $? )
 #CONTINUE_WAITING=$(kubectl get pods -n cert-manager | grep cert-manager-webhook | grep Running > /dev/null 2>&1; echo $?)
@@ -110,12 +110,12 @@ do
 done
 echo ""
 
-#curl -X POST $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d "
-# {
-#    \"attributes\": {
-#    \"title\": \"$LOGSTASH_PREFIX\"
-#  }
-#}"
+curl -X POST $KIBANA_CLUSTER_IP:5601/api/saved_objects/index-pattern/my-pattern  -H 'kbn-xsrf: true' -H 'Content-Type: application/json' -d "
+{
+    \"attributes\": {
+    \"title\": \"$LOGSTASH_PREFIX\"
+  }
+}"
 
 echo "fluent bit deployment script complete."
 
