@@ -173,10 +173,11 @@ rm -Rf /root/.kube ~/.kube
 rm -Rf /etc/docker /var/lib/docker /var/run/docker.sock ~/.docker /usr/bin/docker-compose /etc/systemd/system/docker.service.d
 rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-engine  /var/lib/dockershim
 rm -Rf /usr/lib/systemd/system/kubelet.service.d
+echo "Docker and Kubernetes config directories deleted."
 # Clean log directory
 rm -f /var/log/containers/*.log
+echo "Container logs deleted."
 
-echo "Docker and Kubernetes config directories deleted."
 groupdel docker
 echo "Docker group deleted."
 
