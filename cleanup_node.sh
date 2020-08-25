@@ -175,8 +175,14 @@ rm -Rf /opt/containerd /var/lib/containerd /var/lib/containers /var/lib/docker-e
 rm -Rf /usr/lib/systemd/system/kubelet.service.d
 echo "Docker and Kubernetes config directories deleted."
 # Clean log directory
-rm -f /var/log/containers/*.log
+rm -Rf /var/log/containers
+rm -Rf /var/log/pods
+rm -Rf /var/log/crio
+rm -f /var/log/fluentd-*
 echo "Container logs deleted."
+
+# Delete archieved Journel
+#rm -f /var/log/journal/system@*
 
 groupdel docker
 echo "Docker group deleted."
