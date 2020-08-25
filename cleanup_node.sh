@@ -187,7 +187,7 @@ echo "Fluent-bit logs and DB deleted."
 # Delete archieved Journal
 journalctl --rotate
 sleep 2
-rm -f /var/log/journal/*/system@*
+#rm -f /var/log/journal/*/system@*
 
 groupdel docker
 echo "Docker group deleted."
